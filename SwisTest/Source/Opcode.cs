@@ -38,7 +38,7 @@ namespace Swis
 		AddFloatRRR = 145,
 		SubtractRRR = 146,
 		SubtractFloatRRR = 147,
-		MuliplyRRR = 148,
+		MultiplyRRR = 148,
 		MultiplyUnsignedRRR = 149,
 		MultiplyFloatRRR = 150,
 		DivideRRR = 151,
@@ -54,7 +54,7 @@ namespace Swis
 		NotOrRRR = 161,
 		AndRRR = 162,
 		NotAndRRR = 163,
-		NotRRR = 164,
+		NotRR = 164,
 		SqrtRR = 165,
 		LogRR = 166,
 		SinRR = 167,
@@ -63,7 +63,7 @@ namespace Swis
 		AsinRR = 170,
 		AcosRR = 171,
 		AtanRR = 172,
-		Atan2RR = 173,
+		Atan2RRR = 173,
 		PowRRR = 174
 	}
 }

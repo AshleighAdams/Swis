@@ -85,7 +85,7 @@ namespace Swis
 			{ "addfRRR", Opcode.AddFloatRRR },
 			{ "subRRR", Opcode.SubtractRRR },
 			{ "subfRRR", Opcode.SubtractRRR },
-			{ "mulRRR", Opcode.MuliplyRRR },
+			{ "mulRRR", Opcode.MultiplyRRR },
 			{ "muluRRR", Opcode.MultiplyUnsignedRRR },
 			{ "mulfRRR", Opcode.MultiplyFloatRRR },
 			{ "divRRR", Opcode.DivideRRR },
@@ -101,7 +101,7 @@ namespace Swis
 			{ "norRRR", Opcode.NotOrRRR },
 			{ "andRRR", Opcode.AndRRR },
 			{ "nandRRR", Opcode.NotAndRRR },
-			{ "notRRR", Opcode.NotRRR },
+			{ "notRR", Opcode.NotRR },
 			{ "sqrtRR", Opcode.SqrtRR },
 			{ "logRR", Opcode.LogRR },
 			{ "sinRR", Opcode.SinRR },
@@ -110,7 +110,7 @@ namespace Swis
 			{ "asinRR", Opcode.AsinRR },
 			{ "acosRR", Opcode.AcosRR },
 			{ "atanRR", Opcode.AtanRR },
-			{ "atan2RRR", Opcode.Atan2RR },
+			{ "atan2RRR", Opcode.Atan2RRR },
 			{ "powRRR", Opcode.PowRRR },
 		};
 
