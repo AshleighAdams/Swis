@@ -310,6 +310,266 @@ namespace Swis
 						dst.I32 = left.I32 + right.I32;
 						break;
 					}
+				case Opcode.AddFloatRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = left.F32 + right.F32;
+						break;
+					}
+				case Opcode.SubtractRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 - right.I32;
+						break;
+					}
+				case Opcode.SubtractFloatRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = left.F32 - right.F32;
+						break;
+					}
+				case Opcode.MultiplyRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 * right.I32;
+						break;
+					}
+				case Opcode.MultiplyUnsignedRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.U32 = left.U32 * right.U32;
+						break;
+					}
+				case Opcode.MultiplyFloatRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = left.F32 * right.F32;
+						break;
+					}
+				case Opcode.DivideRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 / right.I32;
+						break;
+					}
+				case Opcode.DivideUnsignedRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.U32 = left.U32 / right.U32;
+						break;
+					}
+				case Opcode.DivideFloatRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = left.F32 / right.F32;
+						break;
+					}
+				case Opcode.ModulusRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 % right.I32;
+						break;
+					}
+				case Opcode.ModulusFloatRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = left.F32 % right.F32;
+						break;
+					}
+				case Opcode.ShiftLeftRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 << right.I32;
+						break;
+					}
+				case Opcode.ShiftRightRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 >> right.I32;
+						break;
+					}
+				case Opcode.ArithmaticShiftRightRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						throw new NotImplementedException();
+					}
+				case Opcode.OrRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 | right.I32;
+						break;
+					}
+				case Opcode.ExclusiveOrRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 ^ right.I32;
+						break;
+					}
+				case Opcode.NotOrRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 | (~right.I32);
+						break;
+					}
+				case Opcode.AndRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 & right.I32;
+						break;
+					}
+				case Opcode.NotAndRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.I32 = left.I32 & (~right.I32);
+						break;
+					}
+				case Opcode.NotRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.I32 = ~left.I32;
+						break;
+					}
+				case Opcode.SqrtRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Sqrt(left.F32);
+						break;
+					}
+				case Opcode.LogRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Log(left.F32);
+						break;
+					}
+				case Opcode.SinRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Sin(left.F32);
+						break;
+					}
+				case Opcode.CosRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Cos(left.F32);
+						break;
+					}
+				case Opcode.TanRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Tan(left.F32);
+						break;
+					}
+				case Opcode.AsinRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Asin(left.F32);
+						break;
+					}
+				case Opcode.AcosRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Acos(left.F32);
+						break;
+					}
+				case Opcode.AtanRR:
+					ip.I32 += 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						dst.F32 = (float)Math.Atan(left.F32);
+						break;
+					}
+				case Opcode.Atan2RRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = (float)Math.Atan2(left.F32, right.F32);
+						break;
+					}
+				case Opcode.PowRRR:
+					ip.I32 += 1 + 1 + 1 + 1;
+					{
+						ref Register dst = ref this.DecodeRegister(pos + 1);
+						ref Register left = ref this.DecodeRegister(pos + 2);
+						ref Register right = ref this.DecodeRegister(pos + 3);
+						dst.F32 = (float)Math.Pow(left.F32, right.F32);
+						break;
+					}
 				#endregion
 				default:
 					throw new NotImplementedException(); // todo: make it interrupt

@@ -15,16 +15,17 @@ namespace SwisTest
 			string asm = @"
 jmp $main
 number_a:
-	data int 5
+	data float 5
 number_b:
-	data int 10
+	data float 10
 result:
-	data int 0
+	data float 0
 call_stack:
 	data pad 32
 stack:
 	data pad 32
 main:
+	// setup the stacks
 	mov cp, $call_stack
 	mov sp, $stack
 
@@ -32,17 +33,16 @@ main:
 	load tb, $number_b
 	push ta // args
 	push tb
-	call $add_maybe
+	call $do_it
 	pop tc // the result
 	store $result, tc
 	halt
-add_maybe:
+do_it:
 	pop tb
 	pop ta
-	cmp ta, tb
-	je $skip
-	add ta, ta, tb
-skip:
+	sin ta, ta
+	cos tb, tb
+	addf ta, ta, tb
 	push ta
 	ret
 ";
@@ -52,9 +52,18 @@ skip:
 
 			for (int i = 0; i < assembled.Length; i++)
 				mem[i] = assembled[i];
-			
+
 			while (true)
+			{
 				emu.Clock(1);
+
+				Caster c; c.F32 = 0;
+				c.ByteA = emu.Memory[13 + 0];
+				c.ByteB = emu.Memory[13 + 1];
+				c.ByteC = emu.Memory[13 + 2];
+				c.ByteD = emu.Memory[13 + 3];
+				Console.WriteLine(c.F32);
+			}
         }
     }
 }
