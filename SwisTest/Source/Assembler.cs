@@ -10,6 +10,7 @@ namespace Swis
 			{ "ip", NamedRegister.InstructionPointer },
 			{ "sp", NamedRegister.StackPointer },
 			{ "cp", NamedRegister.CallstackPointer },
+			{ "bp", NamedRegister.BasePointer },
 			{ "flags", NamedRegister.Flags },
 			{ "pm", NamedRegister.ProtectedMode },
 			{ "pi", NamedRegister.ProtectedInterrupt },
@@ -20,12 +21,6 @@ namespace Swis
 			{ "gd", NamedRegister.GeneralD },
 			{ "ge", NamedRegister.GeneralE },
 			{ "gf", NamedRegister.GeneralF },
-			{ "gg", NamedRegister.GeneralG },
-			{ "gh", NamedRegister.GeneralH },
-			{ "gi", NamedRegister.GeneralI },
-			{ "gj", NamedRegister.GeneralJ },
-			{ "gk", NamedRegister.GeneralK },
-			{ "gl", NamedRegister.GeneralL },
 
 			{ "ta", NamedRegister.TempA },
 			{ "tb", NamedRegister.TempB },
@@ -33,12 +28,6 @@ namespace Swis
 			{ "td", NamedRegister.TempD },
 			{ "te", NamedRegister.TempE },
 			{ "tf", NamedRegister.TempF },
-			{ "tg", NamedRegister.TempG },
-			{ "th", NamedRegister.TempH },
-			{ "ti", NamedRegister.TempI },
-			{ "tj", NamedRegister.TempJ },
-			{ "tk", NamedRegister.TempK },
-			{ "tl", NamedRegister.TempL },
 		};
 
 		static Dictionary<string, Opcode> OpcodeMap = new Dictionary<string, Opcode>()
@@ -103,7 +92,7 @@ namespace Swis
 			{ "nandRRR", Opcode.NotAndRRR },
 			{ "notRR", Opcode.NotRR },
 			{ "sqrtRR", Opcode.SqrtRR },
-			{ "logRR", Opcode.LogRR },
+			{ "logRRR", Opcode.LogRRR },
 			{ "sinRR", Opcode.SinRR },
 			{ "cosRR", Opcode.CosRR },
 			{ "tanRR", Opcode.TanRR },
@@ -114,7 +103,7 @@ namespace Swis
 			{ "powRRR", Opcode.PowRRR },
 		};
 
-		public static byte[] Assemble(string asm)
+		public static (byte[] binary, Dictionary<string, int> labels) Assemble(string asm)
 		{
 			string[] lines = asm.Split(new char[] { '\n', ';' }, StringSplitOptions.RemoveEmptyEntries);
 			List<byte> bin = new List<byte>();
@@ -288,9 +277,20 @@ namespace Swis
 					{
 						instr += "R";
 						arg = arg.ToLowerInvariant();
+
+						string strsize = "";
+						while (arg[arg.Length - 1] >= '0' && arg[arg.Length - 1] <= '9')
+						{
+							strsize = arg[arg.Length - 1] + strsize;
+							arg = arg.Substring(0, arg.Length - 1);
+						}
+						int size = !string.IsNullOrWhiteSpace(strsize) ? int.Parse(strsize) : Register.NativeSize * 8;
+
 						if (!RegisterMap.TryGetValue(arg, out var reg))
 							throw new Exception($"{i}: unknown register {arg}");
-						instr_bin.Add((byte)reg);
+
+						int regid = ((int)reg << 2) | (int)(Math.Log(size, 2) - 3);
+						instr_bin.Add((byte)regid);
 					}
 				}
 
@@ -314,7 +314,7 @@ namespace Swis
 				bin[ph.pos + 3] = c.ByteD;
 			}
 
-			return bin.ToArray();
+			return (bin.ToArray(), found_placeholders);
 		}
 	}
 }

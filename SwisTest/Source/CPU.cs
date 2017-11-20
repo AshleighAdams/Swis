@@ -21,7 +21,7 @@ namespace Swis
 	public class Emulator
     {
 		Register[] Registers = new Register[64];
-
+		
 		//ref Register StackRegister = null;
 
 		ref Register InstructionPointer
@@ -39,9 +39,20 @@ namespace Swis
 			get { return ref this.Registers[(int)NamedRegister.CallstackPointer]; }
 		}
 
+		ref Register BasePointer
+		{
+			get { return ref this.Registers[(int)NamedRegister.BasePointer]; }
+		}
+
 		ref Register Flags
 		{
 			get { return ref this.Registers[(int)NamedRegister.Flags]; }
+		}
+
+		public bool Halted
+		{
+			get
+			{ return (this.Flags.NativeInt & (int)NamedRegister.FlagsHalted) != 0; }
 		}
 
 		public byte[] Memory { get; set; }
@@ -56,39 +67,83 @@ namespace Swis
 			return this.Memory[position];
 		}
 		
-		protected ref Register DecodeRegister(int position)
+		protected ref Register DecodeRegister(int position, out int size)
 		{
-			byte reg = this.Memory[position];
+			int reg = this.Memory[position];
+
+			size = Register.Pow(2, reg & 0b11);
+			reg = reg >> 2;
+
 			return ref this.Registers[reg];
 		}
 
-		protected void EncodeInt(int position, int value)
+		protected void EncodeInt(int position, int size, int value)
 		{
 			Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
 			c.I32 = value;
-			this.Memory[position + 0] = c.ByteA;
-			this.Memory[position + 1] = c.ByteB;
-			this.Memory[position + 2] = c.ByteC;
-			this.Memory[position + 3] = c.ByteD;
+
+			switch (size)
+			{
+			case 4:
+				this.Memory[position + 3] = c.ByteD;
+				goto case 3;
+			case 3:
+				this.Memory[position + 2] = c.ByteC;
+				goto case 2;
+			case 2:
+				this.Memory[position + 1] = c.ByteB;
+				goto case 1;
+			case 1:
+				this.Memory[position + 0] = c.ByteA;
+				break;
+			default:
+				throw new Exception("invalid read size");
+			}
 		}
 
-		protected int DecodeInt(int position)
+		protected int DecodeInt(int position, int size)
 		{
 			Caster c; c.I32 = 0;
-			c.ByteA = this.Memory[position + 0];
-			c.ByteB = this.Memory[position + 1];
-			c.ByteC = this.Memory[position + 2];
-			c.ByteD = this.Memory[position + 3];
+			switch (size)
+			{
+			case 4:
+				c.ByteD = this.Memory[position + 3];
+				goto case 3;
+			case 3:
+				c.ByteC = this.Memory[position + 2];
+				goto case 2;
+			case 2:
+				c.ByteB = this.Memory[position + 1];
+				goto case 1;
+			case 1:
+				c.ByteA = this.Memory[position + 0];
+				break;
+			default:
+				throw new Exception("invalid read size");
+			}
 			return c.I32;
 		}
 
-		protected float DecodeFloat(int position)
+		protected float DecodeFloat(int position, int size)
 		{
 			Caster c; c.F32 = 0;
-			c.ByteA = this.Memory[position + 0];
-			c.ByteB = this.Memory[position + 1];
-			c.ByteC = this.Memory[position + 2];
-			c.ByteD = this.Memory[position + 3];
+			switch (size)
+			{
+			case 4:
+				c.ByteD = this.Memory[position + 3];
+				goto case 3;
+			case 3:
+				c.ByteC = this.Memory[position + 2];
+				goto case 2;
+			case 2:
+				c.ByteB = this.Memory[position + 1];
+				goto case 1;
+			case 1:
+				c.ByteA = this.Memory[position + 0];
+				break;
+			default:
+				throw new Exception("invalid read size");
+			}
 			return c.F32;
 		}
 
@@ -97,28 +152,29 @@ namespace Swis
 			ref Register ip = ref this.InstructionPointer;
 			ref Register sp = ref this.StackPointer;
 			ref Register cp = ref this.CallstackPointer;
+			ref Register bp = ref this.BasePointer;
 			ref Register flags = ref this.Flags;
 
-			if ((flags.I32 & (int)NamedRegister.FlagsHalted) != 0)
+			if ((flags.NativeInt & (int)NamedRegister.FlagsHalted) != 0)
 				return 0;
 
 			for (int i = 0; i < count; i++)
 			{
-				int pos = ip.I32;
+				int pos = ip.NativeInt;
 				Opcode op = (Opcode)this.Memory[pos];
 
 				switch (op)
 				{
 				#region MISC
-				case Opcode.Nop: ip.I32 += 1;
+				case Opcode.Nop: ip.NativeInt += 1;
 					break;
 				case Opcode.InterruptR:
 				case Opcode.InterruptV:
 				case Opcode.TrapR:
 				case Opcode.TrapV:
-				case Opcode.Halt: ip.I32 += 1;
+				case Opcode.Halt: ip.NativeInt += 1;
 					{
-						flags.I32 |= (int)NamedRegister.FlagsHalted;
+						flags.NativeInt |= (int)NamedRegister.FlagsHalted;
 						break;
 					}
 				case Opcode.Reset:
@@ -127,128 +183,133 @@ namespace Swis
 				
 				#region MEMORY
 				case Opcode.LoadRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
-						ref Register a = ref this.DecodeRegister(pos + 2);
-						r.I32 = this.DecodeInt(a.I32);
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						ref Register a = ref this.DecodeRegister(pos + 2, out int asz);
+						r.SetInteger(rsz, this.DecodeInt(a.GetInteger(asz), rsz));
 						break;
 					}
 				case Opcode.LoadRV:
-					ip.I32 += 1 + 1 + 4;
+					ip.NativeInt += 1 + 1 + 4;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
-						int a = this.DecodeInt(pos + 2);
-						r.I32 = this.DecodeInt(a);
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						int a = this.DecodeInt(pos + 2, Register.NativeSize);
+						r.SetInteger(rsz, this.DecodeInt(a, rsz));
 						break;
 					}
 				case Opcode.StoreRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register a = ref this.DecodeRegister(pos + 1);
-						ref Register r = ref this.DecodeRegister(pos + 2);
-						this.EncodeInt(a.I32, r.I32);
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						ref Register a = ref this.DecodeRegister(pos + 2, out int asz);
+						this.EncodeInt(a.GetInteger(asz), rsz, r.GetInteger(rsz));
 						break;
 					}
 				case Opcode.StoreVR:
-					ip.I32 += 1 + 4 + 1;
+					ip.NativeInt += 1 + 4 + 1;
 					{
-						int a = this.DecodeInt(pos + 1);
-						ref Register r = ref this.DecodeRegister(pos + 1 + 4);
-						this.EncodeInt(a, r.I32);
+						int a = this.DecodeInt(pos + 1, Register.NativeSize);
+						ref Register r = ref this.DecodeRegister(pos + 1 + 4, out int rsz);
+						this.EncodeInt(a, rsz, r.GetInteger(rsz));
 						break;
 					}
 				case Opcode.MoveRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register src = ref this.DecodeRegister(pos + 2);
-						dst.I32 = src.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register src = ref this.DecodeRegister(pos + 2, out int srcsz);
+						dst.SetInteger(dstsz, src.GetInteger(srcsz));
 						break;
 					}
 				case Opcode.MoveRV:
-					ip.I32 += 1 + 1 + 4;
+					ip.NativeInt += 1 + 1 + 4;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
-						int a = this.DecodeInt(pos + 2);
-						r.I32 = a;
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						int v = this.DecodeInt(pos + 2, Register.NativeSize);
+						r.SetInteger(rsz, v);
 						break;
 					}
 				case Opcode.PushR:
-					ip.I32 += 1 + 1;
+					ip.NativeInt += 1 + 1;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
 
-						this.EncodeInt(sp.I32, r.I32);
-						sp.I32 += Register.DataSize;
+						this.EncodeInt(sp.NativeInt, rsz, r.GetInteger(rsz));
+						sp.NativeInt += rsz;
 						break;
 					}
 				case Opcode.PopR:
-					ip.I32 += 1 + 1;
+					ip.NativeInt += 1 + 1;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
 
-						sp.I32 -= Register.DataSize;
-						r.I32 = this.DecodeInt(sp.I32);
+						sp.NativeInt -= rsz;
+						r.SetInteger(rsz, this.DecodeInt(sp.NativeInt, rsz));
 						break;
 					}
 					#endregion
 
 				#region FLOW
-				case Opcode.CallR: ip.I32 += 1 + 1;
+				case Opcode.CallR: ip.NativeInt += 1 + 1;
 					int call_addr = 0;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
-						call_addr = r.I32;
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						call_addr = r.GetInteger(rsz);
 						goto do_call;
 					}
-				case Opcode.CallV: ip.I32 += 1 + 4;
+				case Opcode.CallV: ip.NativeInt += 1 + 4;
 					{
-						call_addr = this.DecodeInt(pos + 1);
+						call_addr = this.DecodeInt(pos + 1, Register.NativeSize);
 						goto do_call;
 					}
 				do_call:
 					{
-						this.EncodeInt(cp.I32, ip.I32); // push our return address
-						cp.I32 += Register.DataSize; // increase the call stack pointer
+						this.EncodeInt(cp.NativeInt, Register.NativeSize, ip.NativeInt); // push our return address
+						cp.NativeInt += Register.NativeSize; // increase the call stack pointer
 
-						ip.I32 = call_addr; // start exectuing there
+						this.EncodeInt(cp.NativeInt, Register.NativeSize, bp.NativeInt);
+						cp.NativeInt += Register.NativeSize;
+
+						ip.NativeInt = call_addr; // start exectuing there
 						break;
 					}
 				
-				case Opcode.Return: ip.I32 += 1;
+				case Opcode.Return: ip.NativeInt += 1;
 					{
-						cp.I32 -= Register.DataSize; // pop the stack
-						int ret_addr = this.DecodeInt(cp.I32); // read the value
+						cp.NativeInt -= Register.NativeSize; // do the same as above in reverse
+						bp.NativeInt = this.DecodeInt(cp.NativeInt, Register.NativeSize); // reset the base ptr
 
-						ip.I32 = ret_addr; // return execution back
+						cp.NativeInt -= Register.NativeSize; // pop the stack
+						int ret_addr = this.DecodeInt(cp.NativeInt, Register.NativeSize); // read the value
+						ip.NativeInt = ret_addr; // return execution back
 						break;
 					}
 
-				case Opcode.JumpV: ip.I32 += 1 + 4;
+				case Opcode.JumpV: ip.NativeInt += 1 + 4;
 					{
-						int to = this.DecodeInt(pos + 1);
-						ip.I32 = to;
+						int to = this.DecodeInt(pos + 1, Register.NativeSize);
+						ip.NativeInt = to;
 						break;
 					}
 						
-				case Opcode.JumpR: ip.I32 += 1 + 4;
+				case Opcode.JumpR: ip.NativeInt += 1 + 4;
 					{
-						ref Register r = ref this.DecodeRegister(pos + 1);
-						ip.I32 = r.I32;
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						ip.NativeInt = r.GetInteger(rsz);
 						break;
 					}
 
-				case Opcode.CompareRR: ip.I32 += 1 + 1 + 1;
+				case Opcode.CompareRR: ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register a = ref this.DecodeRegister(pos + 1);
-						ref Register b = ref this.DecodeRegister(pos + 2);
+						ref Register a = ref this.DecodeRegister(pos + 1, out int asz);
+						ref Register b = ref this.DecodeRegister(pos + 2, out int bsz);
 
-						int iflags = flags.I32;
+						int iflags = flags.NativeInt;
 						iflags &= ~(int)(NamedRegister.FlagsEqual | NamedRegister.FlagsLess | NamedRegister.FlagsGreater);
 
-						float ia = a.I32;
-						float ib = b.I32;
+						float ia = a.GetInteger(asz);
+						float ib = b.GetInteger(bsz);
 
 						bool gt = ia > ib;
 						bool lt = ia < ib;
@@ -258,19 +319,19 @@ namespace Swis
 						iflags = !lt ? iflags : iflags | (int)NamedRegister.FlagsLess;
 						iflags = !gt ? iflags : iflags | (int)NamedRegister.FlagsGreater;
 
-						flags.I32 = iflags;
+						flags.NativeInt = iflags;
 						break;
 					}
-				case Opcode.CompareFloatRR: ip.I32 += 1 + 1;
+				case Opcode.CompareFloatRR: ip.NativeInt += 1 + 1;
 					{
-						ref Register a = ref this.DecodeRegister(pos + 1);
-						ref Register b = ref this.DecodeRegister(pos + 1);
+						ref Register a = ref this.DecodeRegister(pos + 1, out int asz);
+						ref Register b = ref this.DecodeRegister(pos + 1, out int bsz);
 
-						int iflags = flags.I32;
+						int iflags = flags.NativeInt;
 						iflags &= ~(int)(NamedRegister.FlagsEqual | NamedRegister.FlagsLess | NamedRegister.FlagsGreater);
 
-						float fa = a.F32;
-						float fb = b.F32;
+						float fa = a.GetFloat(asz);
+						float fb = b.GetFloat(bsz);
 
 						bool gt = fa > fb;
 						bool lt = fa < fb;
@@ -280,294 +341,297 @@ namespace Swis
 						iflags = !lt ? iflags : iflags | (int)NamedRegister.FlagsLess;
 						iflags = !gt ? iflags : iflags | (int)NamedRegister.FlagsGreater;
 
-						flags.I32 = iflags;
+						flags.NativeInt = iflags;
 						break;
 					}
-				case Opcode.JumpEqualR: ip.I32 += 1 + 1;
+				case Opcode.JumpEqualR: ip.NativeInt += 1 + 1;
 					{
-						ref Register a = ref this.DecodeRegister(pos + 1);
-						int jump_to = this.DecodeInt(a.I32);
-						if ((flags.I32 & (int)NamedRegister.FlagsEqual) != 0)
-							ip.I32 = jump_to;
+						ref Register a = ref this.DecodeRegister(pos + 1, out int asz);
+						int jump_to = a.GetInteger(asz);
+						if ((flags.NativeInt & (int)NamedRegister.FlagsEqual) != 0)
+							ip.NativeInt = jump_to;
 						break;
 					}
-				case Opcode.JumpEqualV: ip.I32 += 1 + 4;
+				case Opcode.JumpEqualV: ip.NativeInt += 1 + 4;
 					{
-						int jump_to = this.DecodeInt(pos + 1);
-						if ((flags.I32 & (int)NamedRegister.FlagsEqual) != 0)
-							ip.I32 = jump_to;
+						int jump_to = this.DecodeInt(pos + 1, Register.NativeSize);
+						if ((flags.NativeInt & (int)NamedRegister.FlagsEqual) != 0)
+							ip.NativeInt = jump_to;
 						break;
 					}
 				#endregion
 
 				#region Transformative
 				case Opcode.AddRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 + right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) + right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.AddFloatRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = left.F32 + right.F32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, left.GetFloat(leftsz) + right.GetFloat(rightsz));
 						break;
 					}
 				case Opcode.SubtractRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 - right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) - right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.SubtractFloatRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = left.F32 - right.F32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, left.GetFloat(leftsz) - right.GetFloat(rightsz));
 						break;
 					}
 				case Opcode.MultiplyRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 * right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) * right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.MultiplyUnsignedRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.U32 = left.U32 * right.U32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetUnsigned(dstsz, left.GetUnsigned(leftsz) * right.GetUnsigned(rightsz));
 						break;
 					}
 				case Opcode.MultiplyFloatRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = left.F32 * right.F32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, left.GetFloat(leftsz) * right.GetFloat(rightsz));
 						break;
 					}
 				case Opcode.DivideRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 / right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) / right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.DivideUnsignedRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.U32 = left.U32 / right.U32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetUnsigned(dstsz, left.GetUnsigned(leftsz) / right.GetUnsigned(rightsz));
 						break;
 					}
 				case Opcode.DivideFloatRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = left.F32 / right.F32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, left.GetFloat(leftsz) / right.GetFloat(rightsz));
 						break;
 					}
 				case Opcode.ModulusRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 % right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) % right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.ModulusFloatRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = left.F32 % right.F32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, left.GetFloat(leftsz) % right.GetFloat(rightsz));
 						break;
 					}
 				case Opcode.ShiftLeftRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 << right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) << right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.ShiftRightRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 >> right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) >> right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.ArithmaticShiftRightRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
 						throw new NotImplementedException();
 					}
 				case Opcode.OrRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 | right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) | right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.ExclusiveOrRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 ^ right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) ^ right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.NotOrRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 | (~right.I32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						//dst.I32 = left.I32 | (~right.I32);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) | (~right.GetInteger(rightsz)));
 						break;
 					}
 				case Opcode.AndRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 & right.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) & right.GetInteger(rightsz));
 						break;
 					}
 				case Opcode.NotAndRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.I32 = left.I32 & (~right.I32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						//dst.I32 = left.I32 & (~right.I32);
+						dst.SetInteger(dstsz, left.GetInteger(leftsz) & (~right.GetInteger(rightsz)));
 						break;
 					}
 				case Opcode.NotRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.I32 = ~left.I32;
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetInteger(dstsz, ~left.GetInteger(leftsz));
 						break;
 					}
 				case Opcode.SqrtRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Sqrt(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Sqrt(left.GetFloat(leftsz)));
 						break;
 					}
-				case Opcode.LogRR:
-					ip.I32 += 1 + 1 + 1;
+				case Opcode.LogRRR:
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Log(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, (float)Math.Log(left.GetFloat(leftsz), right.GetFloat(rightsz)));
 						break;
 					}
 				case Opcode.SinRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Sin(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Sin(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.CosRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Cos(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Cos(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.TanRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Tan(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Tan(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.AsinRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Asin(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Asin(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.AcosRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Acos(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Acos(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.AtanRR:
-					ip.I32 += 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						dst.F32 = (float)Math.Atan(left.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						dst.SetFloat(dstsz, (float)Math.Atan(left.GetFloat(leftsz)));
 						break;
 					}
 				case Opcode.Atan2RRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = (float)Math.Atan2(left.F32, right.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, (float)Math.Atan2(left.GetFloat(leftsz), right.GetFloat(rightsz)));
 						break;
 					}
 				case Opcode.PowRRR:
-					ip.I32 += 1 + 1 + 1 + 1;
+					ip.NativeInt += 1 + 1 + 1 + 1;
 					{
-						ref Register dst = ref this.DecodeRegister(pos + 1);
-						ref Register left = ref this.DecodeRegister(pos + 2);
-						ref Register right = ref this.DecodeRegister(pos + 3);
-						dst.F32 = (float)Math.Pow(left.F32, right.F32);
+						ref Register dst = ref this.DecodeRegister(pos + 1, out int dstsz);
+						ref Register left = ref this.DecodeRegister(pos + 2, out int leftsz);
+						ref Register right = ref this.DecodeRegister(pos + 3, out int rightsz);
+						dst.SetFloat(dstsz, (float)Math.Pow(left.GetFloat(leftsz), right.GetFloat(rightsz)));
 						break;
 					}
 				#endregion
@@ -582,7 +646,7 @@ namespace Swis
 		public void Reset()
 		{
 			for (int i = 0; i < this.Registers.Length; i++)
-				this.Registers[i].U32 = 0;
+				this.Registers[i].NativeUInt = 0;
 		}
 
 		public void Interrupt(int code)

@@ -56,7 +56,7 @@ namespace Swis
 		NotAndRRR = 163,
 		NotRR = 164,
 		SqrtRR = 165,
-		LogRR = 166,
+		LogRRR = 166,
 		SinRR = 167,
 		CosRR = 168,
 		TanRR = 169,
