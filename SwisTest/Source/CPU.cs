@@ -179,8 +179,49 @@ namespace Swis
 					}
 				case Opcode.Reset:
 					throw new NotImplementedException();
+				case Opcode.InRR: ip.NativeInt += 1 + 1 + 1;
+					{
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						ref Register l = ref this.DecodeRegister(pos + 2, out int lsz);
+
+						int line = l.GetInteger(lsz);
+						r.SetInteger(rsz, line); // todo: write actual value
+
+						break;
+					}
+				case Opcode.InRV: ip.NativeInt += 1 + 1 + 4;
+					{
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						int l = this.DecodeInt(pos + 2, Register.NativeSize);
+
+						r.SetInteger(rsz, l);
+						break;
+					}
+				case Opcode.OutRR: ip.NativeInt += 1 + 1 + 1;
+					{
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						ref Register l = ref this.DecodeRegister(pos + 2, out int lsz);
+						
+						int ascii = r.GetInteger(1); // 1 byte, not reg size
+						int line = l.GetInteger(lsz);
+
+						Console.Write((char)ascii);
+						break;
+					}
+				case Opcode.OutRV: ip.NativeInt += 1 + 1 + 4;
+					{
+						ref Register r = ref this.DecodeRegister(pos + 1, out int rsz);
+						int l = this.DecodeInt(pos + 2, Register.NativeSize);
+						
+						int ascii = r.GetInteger(1); // 1 byte, not reg size
+						int line = l;
+
+						Console.Write((char)ascii);
+
+						break;
+					}
 				#endregion
-				
+
 				#region MEMORY
 				case Opcode.LoadRR:
 					ip.NativeInt += 1 + 1 + 1;

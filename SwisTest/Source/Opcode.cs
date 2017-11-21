@@ -10,6 +10,10 @@ namespace Swis
 		TrapR = 3, TrapV = 4,
 		Halt = 5,
 		Reset = 6,
+		InRR = 7,
+		InRV = 8,
+		OutRR = 9,
+		OutRV = 10,
 
 		// memory
 		LoadRR = 48, LoadRV = 49,

@@ -39,6 +39,10 @@ namespace Swis
 			{ "trapV", Opcode.TrapV },
 			{ "halt", Opcode.Halt },
 			{ "reset", Opcode.Reset },
+			{ "inRR", Opcode.InRR },
+			{ "inRV", Opcode.InRV },
+			{ "outRR", Opcode.OutRR },
+			{ "outRV", Opcode.OutRV },
 
 			{ "loadRR", Opcode.LoadRR },
 			{ "loadRV", Opcode.LoadRV },
@@ -110,9 +114,33 @@ namespace Swis
 
 			Dictionary<string, int> found_placeholders = new Dictionary<string, int>();
 			List<(string name, int pos, int defined_line)> placeholders = new List<(string, int, int)>();
-
+			
 			for (int i = 0; i < lines.Length; i++)
 			{
+				int read_nybble(char c)
+				{
+					switch (char.ToLowerInvariant(c))
+					{
+					case '0': return 0;
+					case '1': return 1;
+					case '2': return 2;
+					case '3': return 3;
+					case '4': return 4;
+					case '5': return 5;
+					case '6': return 6;
+					case '7': return 7;
+					case '8': return 8;
+					case '9': return 9;
+					case 'a': return 10;
+					case 'b': return 11;
+					case 'c': return 12;
+					case 'd': return 13;
+					case 'e': return 14;
+					case 'f': return 15;
+					default: throw new Exception($"{i}: data hex has an invalid nybble");
+					}
+				}
+
 				string line = lines[i].Trim();
 
 				int comment = line.IndexOf("//");
@@ -131,7 +159,7 @@ namespace Swis
 					found_placeholders[lbl] = bin.Count;
 					continue;
 				}
-				else if (first == "data")
+				else if (first == ".data")
 				{
 					string[] split = words[1].Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
 					string type = split[0].ToLowerInvariant().Trim();
@@ -148,31 +176,6 @@ namespace Swis
 					{
 						if (value.Length % 2 != 0)
 							throw new Exception($"{i}: data hex missing nybble");
-						
-						int read_nybble(char c)
-						{
-							switch (c)
-							{
-							case '0': return 0;
-							case '1': return 1;
-							case '2': return 2;
-							case '3': return 3;
-							case '4': return 4;
-							case '5': return 5;
-							case '6': return 6;
-							case '7': return 7;
-							case '8': return 8;
-							case '9': return 9;
-							case 'a': return 10;
-							case 'b': return 11;
-							case 'c': return 12;
-							case 'd': return 13;
-							case 'e': return 14;
-							case 'f': return 15;
-							default: throw new Exception($"{i}: data hex has an invalid nybble");
-							}
-						}
-
 						string lower = value.ToLowerInvariant();
 						for (int n = 0; n < value.Length; n += 2)
 						{
@@ -212,6 +215,30 @@ namespace Swis
 						bin.Add(c.ByteB);
 						bin.Add(c.ByteC);
 						bin.Add(c.ByteD);
+					}
+					else if (type == "string")
+					{
+						for (int n = 1; n < value.Length - 1; n++)
+						{
+							char ltr = value[n];
+							if (ltr == '"' || ltr == '\'')
+								throw new Exception($"{i}: data string can't contain a (single)quote");
+
+							if (ltr == '\\')
+							{
+								if (value[n + 1] == 'x')
+								{
+									char a = value[n + 2];
+									char b = value[n + 3];
+									n += 3;
+									bin.Add((byte)((read_nybble(a) << 4) | (read_nybble(b) << 0)));
+									continue;
+								}
+
+								throw new Exception($"{i}: data string error");
+							}
+							bin.Add((byte)ltr);
+						}
 					}
 					else
 						throw new Exception($"{i}: unknown data type {type}");
