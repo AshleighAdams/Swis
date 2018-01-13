@@ -24,7 +24,7 @@ namespace Swis
 		[FieldOffset(0)] public Int32  NativeInt;
 		[FieldOffset(0)] public UInt32 NativeUInt;
 		[FieldOffset(0)] public Single NativeFloat;
-		public const int NativeSize = 4;
+		public const uint NativeSize = 4;
 
 		public int GetInteger(int size)
 		{
@@ -65,6 +65,18 @@ namespace Swis
 		}
 	}
 
+	[Flags]
+	public enum FlagsRegisterFlags
+	{
+		TrapMask  = 0b00000000_00000000_00000000_00000011,
+		Equal     = 0b00000000_00000000_00000000_00000100,
+		Less      = 0b00000000_00000000_00000000_00001000,
+		Greater   = 0b00000000_00000000_00000000_00010000,
+		Overflow  = 0b00000000_00000000_00000000_00100000,
+		Underflow = 0b00000000_00000000_00000000_01000000,
+		Halted    = 0b00000000_00000000_00000000_10000000,
+	}
+
 	public enum NamedRegister
 	{
 		Invalid = 0,
@@ -72,16 +84,7 @@ namespace Swis
 		StackPointer = 2,
 		CallstackPointer = 3,
 		BasePointer = 4,
-
-
 		Flags = 5,
-		FlagsTrapMask   = 0b00000000_00000000_00000000_00000011,
-		FlagsEqual      = 0b00000000_00000000_00000000_00000100,
-		FlagsLess       = 0b00000000_00000000_00000000_00001000,
-		FlagsGreater    = 0b00000000_00000000_00000000_00010000,
-		FlagsOverflow   = 0b00000000_00000000_00000000_00100000,
-		FlagsUnderflow  = 0b00000000_00000000_00000000_01000000,
-		FlagsHalted     = 0b00000000_00000000_00000000_10000000,
 
 		// these can only be touched in ring0
 		ProtectedMode = 6, // mode flags: int1 realmode, int2 ring
@@ -91,10 +94,10 @@ namespace Swis
 		// sss = 2 bits, of the 2^(s+3) size, up to 128 bits
 		// b, s, i, l: gai
 		
-		GeneralA = 32, GeneralB = 33, GeneralC = 34, GeneralD = 35, GeneralE = 36, GeneralF = 37,
+		GeneralA = 16, GeneralB = 17, GeneralC = 18, GeneralD = 19, GeneralE = 20, GeneralF = 21,
 		//GeneralG = 38, GeneralH = 39, GeneralI = 40, GeneralJ = 41, GeneralK = 42, GeneralL = 43,
 
-		TempA = 48, TempB = 49, TempC = 50, TempD = 51, TempE = 52, TempF = 53,
+		TempA = 24, TempB = 25, TempC = 26, TempD = 27, TempE = 28, TempF = 29,
 		//TempG = 54, TempH = 55, TempI = 56, TempJ = 57, TempK = 58, TempL = 59
 	}
 }

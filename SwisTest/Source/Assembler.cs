@@ -34,45 +34,31 @@ namespace Swis
 		{
 			{ "nop", Opcode.Nop },
 			{ "intR", Opcode.InterruptR },
-			{ "intV", Opcode.InterruptV },
 			{ "trapR", Opcode.TrapR },
-			{ "trapV", Opcode.TrapV },
 			{ "halt", Opcode.Halt },
 			{ "reset", Opcode.Reset },
 			{ "inRR", Opcode.InRR },
-			{ "inRV", Opcode.InRV },
 			{ "outRR", Opcode.OutRR },
-			{ "outRV", Opcode.OutRV },
 
 			{ "loadRR", Opcode.LoadRR },
-			{ "loadRV", Opcode.LoadRV },
+			{ "loadRRR", Opcode.LoadRRR },
 			{ "storeRR", Opcode.StoreRR },
-			{ "storeVR", Opcode.StoreVR },
+			{ "storeRRR", Opcode.StoreRRR },
 			{ "movRR", Opcode.MoveRR },
-			{ "movRV", Opcode.MoveRV },
 			{ "pushR", Opcode.PushR },
 			{ "popR", Opcode.PopR },
 			{ "callR", Opcode.CallR },
-			{ "callV", Opcode.CallV },
 			{ "ret", Opcode.Return },
 			{ "jmpR", Opcode.JumpR },
-			{ "jmpV", Opcode.JumpV },
 			{ "cmpRR", Opcode.CompareRR },
 			{ "cmpfRR", Opcode.CompareFloatRR },
 			{ "jeR", Opcode.JumpEqualR },
-			{ "jeV", Opcode.JumpEqualV },
 			{ "jneR", Opcode.JumpNotEqualR },
-			{ "jneV", Opcode.JumpNotEqualV },
 			{ "jlR", Opcode.JumpLessR },
-			{ "jlV", Opcode.JumpLessV },
 			{ "jgR", Opcode.JumpGreaterR },
-			{ "jgV", Opcode.JumpGreaterV },
 			{ "jleR", Opcode.JumpLessR },
-			{ "jleV", Opcode.JumpLessV },
 			{ "jgeR", Opcode.JumpGreaterEqualR },
-			{ "jgeV", Opcode.JumpGreaterEqualV },
 			{ "juoR", Opcode.JumpUnderOverFlowR },
-			{ "juoV", Opcode.JumpUnderOverFlowV },
 
 			{ "addRRR", Opcode.AddRRR },
 			{ "addfRRR", Opcode.AddFloatRRR },
@@ -109,7 +95,7 @@ namespace Swis
 
 		public static (byte[] binary, Dictionary<string, int> labels) Assemble(string asm)
 		{
-			string[] lines = asm.Split(new char[] { '\n', ';' }, StringSplitOptions.RemoveEmptyEntries);
+			string[] lines = asm.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 			List<byte> bin = new List<byte>();
 
 			Dictionary<string, int> found_placeholders = new Dictionary<string, int>();
@@ -143,7 +129,7 @@ namespace Swis
 
 				string line = lines[i].Trim();
 
-				int comment = line.IndexOf("//");
+				int comment = line.IndexOf(";");
 				if (comment >= 0)
 					line = line.Substring(0, comment);
 
@@ -155,7 +141,9 @@ namespace Swis
 				string first = words[0].Trim();
 				if (first.EndsWith(':'))
 				{
-					string lbl = first.Substring(0, first.Length - 1);
+					if (!first.StartsWith("$"))
+						throw new Exception($"{i}: expected $");
+					string lbl = first.Substring(1, first.Length - 2);
 					found_placeholders[lbl] = bin.Count;
 					continue;
 				}
@@ -254,70 +242,266 @@ namespace Swis
 				for (int n = 0; n < args.Length; n++)
 				{
 					string arg = args[n].Trim();
+					instr += 'R';
 
-					if (arg[0] >= '0' && arg[0] <= '9')
+					// encode the operand
 					{
-						instr += 'V';
-						if (arg.EndsWith("f"))
+						uint regid = 0;
+						uint size = 8;
+						uint indirection_size = 0;
+						uint constant = 0;
+						int offset = 0;
+
+						string const_placeholder = null;
+						string offset_placeholder = null;
+						
+						if (arg.EndsWith("]"))
 						{
-							Caster c;
-							c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
-							c.F32 = float.Parse(arg);
-							instr_bin.Add(c.ByteA);
-							instr_bin.Add(c.ByteB);
-							instr_bin.Add(c.ByteC);
-							instr_bin.Add(c.ByteD);
+							string strindrsz = "";
+							if (arg.StartsWith("ptr"))
+							{
+								arg = arg.Substring("ptr".Length);
+								while (arg[0] >= '0' && arg[0] <= '9')
+								{
+									strindrsz += arg[0];
+									arg = arg.Substring(1);
+								}
+								arg = arg.Trim();
+							}
+							if (strindrsz == "")
+								indirection_size = Register.NativeSize * 8;
+							else
+								indirection_size = uint.Parse(strindrsz);
+
+							switch (indirection_size)
+							{
+							default: throw new Exception("invalid indirection size");
+							case 32:
+							case 16:
+							case 8:
+								break;
+							}
+
+							if (arg.StartsWith("[") != arg.EndsWith("]"))
+								throw new Exception("Indirection is conflicting");
+
+							arg = arg.TrimStart('[').TrimEnd(']');
 						}
-						if (arg.EndsWith("u"))
-						{
-							Caster c;
-							c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
-							c.U32 = uint.Parse(arg);
-							instr_bin.Add(c.ByteA);
-							instr_bin.Add(c.ByteB);
-							instr_bin.Add(c.ByteC);
-							instr_bin.Add(c.ByteD);
-						}
+
+						int plusat = arg.IndexOf('+');
+						string regstr = null;
+						string offsetstr = null;
+
+						if (plusat == -1)
+							regstr = arg;
 						else
 						{
-							Caster c;
-							c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
-							c.I32 = int.Parse(arg);
-							instr_bin.Add(c.ByteA);
-							instr_bin.Add(c.ByteB);
-							instr_bin.Add(c.ByteC);
-							instr_bin.Add(c.ByteD);
+							regstr = arg.Substring(0, plusat).Trim();
+							offsetstr = arg.Substring(plusat + 1).Trim();
 						}
-						// it's a value
-					}
-					else if (arg.StartsWith("$"))
-					{
-						instr += 'V';
-						int ph_pos = bin.Count + instr_bin.Count;
-						placeholders.Add((arg.Substring(1), ph_pos, i));
-						instr_bin.Add(0);
-						instr_bin.Add(0);
-						instr_bin.Add(0);
-						instr_bin.Add(0);
-					}
-					else // a register
-					{
-						instr += "R";
-						arg = arg.ToLowerInvariant();
 
-						string strsize = "";
-						while (arg[arg.Length - 1] >= '0' && arg[arg.Length - 1] <= '9')
+						// figure out what regstr is
 						{
-							strsize = arg[arg.Length - 1] + strsize;
-							arg = arg.Substring(0, arg.Length - 1);
+							if ((regstr[0] >= '0' && regstr[0] <= '9') || regstr[0] == '-')
+							{
+								if (regstr.EndsWith("f"))
+								{
+									Caster c;
+									c.U32 = 0;
+									c.F32 = float.Parse(regstr);
+									constant = c.U32;
+									size = 32;
+								}
+								else if (regstr.EndsWith("u"))
+								{
+									Caster c;
+									c.I32 = 0;
+									c.U32 = uint.Parse(regstr);
+									constant = c.U32;
+									size = 32;
+								}
+								else
+								{
+									constant = (uint)int.Parse(regstr);
+									size = 32;
+								}
+							}
+							else if (regstr[0] == '$')
+							{
+								const_placeholder = regstr.Substring(1);
+								size = 32;
+							}
+							else // has to be a register
+							{
+								regstr = regstr.ToLowerInvariant();
+
+								string strsize = "";
+								while (regstr[regstr.Length - 1] >= '0' && regstr[regstr.Length - 1] <= '9')
+								{
+									strsize = regstr[regstr.Length - 1] + strsize;
+									regstr = regstr.Substring(0, regstr.Length - 1);
+								}
+
+								size = !string.IsNullOrWhiteSpace(strsize) ? uint.Parse(strsize) : Register.NativeSize * 8;
+
+								if (!RegisterMap.TryGetValue(regstr, out var reg))
+									throw new Exception($"{i}: unknown register {regstr}");
+								regid = (uint)reg;
+							}
 						}
-						int size = !string.IsNullOrWhiteSpace(strsize) ? int.Parse(strsize) : Register.NativeSize * 8;
 
-						if (!RegisterMap.TryGetValue(arg, out var reg))
-							throw new Exception($"{i}: unknown register {arg}");
+						// figure out what offsetstr is
+						if (offsetstr != null)
+						{
+							if ((offsetstr[0] >= '0' && offsetstr[0] <= '9') || offsetstr[0] == '-')
+								offset = int.Parse(offsetstr);
+							else if (offsetstr[0] == '$')
+								offset_placeholder = offsetstr.Substring(1);
+							else
+								throw new Exception("offset invalid value");
+						}
 
-						int regid = ((int)reg << 2) | (int)(Math.Log(size, 2) - 3);
-						instr_bin.Add((byte)regid);
+						// serialize it, and remember placeholder positions
+						{
+							int enc_size = (int)(Math.Log(size, 2) - 3);
+							int enc_indirection_size = indirection_size > 0 ? (int)(Math.Log(indirection_size, 2) - (3 - 1)) : 0;
+
+							{
+								byte a = (byte)((regid << 3) | (enc_size << 0));
+								instr_bin.Add(a);
+							}
+
+							{
+								byte b = 0b0000_0000;
+
+								// flags
+								b |= (byte)((enc_indirection_size << 5) & 0b1110_0000);
+
+								if (offset != 0 || offset_placeholder != null)
+									b |= 0b0001_0000;
+
+								instr_bin.Add(b);
+							}
+
+							if (regid == 0)
+							{
+								// write the const, or the const placeholder
+								Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
+								c.U32 = constant;
+
+								if (const_placeholder != null)
+								{
+									// check size == 32
+									int ph_pos = bin.Count + instr_bin.Count;
+									placeholders.Add((const_placeholder, ph_pos, i));
+								}
+
+								switch (size)
+								{
+								default: throw new Exception("");
+								case 32:
+									instr_bin.Add(c.ByteA);
+									instr_bin.Add(c.ByteB);
+									instr_bin.Add(c.ByteC);
+									instr_bin.Add(c.ByteD);
+									break;
+								case 16:
+									instr_bin.Add(c.ByteA);
+									instr_bin.Add(c.ByteB);
+									break;
+								case 8:
+									instr_bin.Add(c.ByteA);
+									break;
+								}
+							}
+
+							if (offset != 0 || offset_placeholder != null)
+							{
+								Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
+								c.I32 = offset;
+
+								if (offset_placeholder != null)
+								{
+									int ph_pos = bin.Count + instr_bin.Count;
+									placeholders.Add((offset_placeholder, ph_pos, i));
+								}
+
+								instr_bin.Add(c.ByteA);
+								instr_bin.Add(c.ByteB);
+								instr_bin.Add(c.ByteC);
+								instr_bin.Add(c.ByteD);
+							}
+						}
+					}
+
+					// old
+					{
+						/*
+						if (arg[0] >= '0' && arg[0] <= '9')
+						{
+							instr += 'V';
+							if (arg.EndsWith("f"))
+							{
+								Caster c;
+								c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
+								c.F32 = float.Parse(arg);
+								instr_bin.Add(c.ByteA);
+								instr_bin.Add(c.ByteB);
+								instr_bin.Add(c.ByteC);
+								instr_bin.Add(c.ByteD);
+							}
+							if (arg.EndsWith("u"))
+							{
+								Caster c;
+								c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
+								c.U32 = uint.Parse(arg);
+								instr_bin.Add(c.ByteA);
+								instr_bin.Add(c.ByteB);
+								instr_bin.Add(c.ByteC);
+								instr_bin.Add(c.ByteD);
+							}
+							else
+							{
+								Caster c;
+								c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
+								c.I32 = int.Parse(arg);
+								instr_bin.Add(c.ByteA);
+								instr_bin.Add(c.ByteB);
+								instr_bin.Add(c.ByteC);
+								instr_bin.Add(c.ByteD);
+							}
+							// it's a value
+						}
+						else if (arg.StartsWith("$"))
+						{
+							instr += 'V';
+							int ph_pos = bin.Count + instr_bin.Count;
+							placeholders.Add((arg.Substring(1), ph_pos, i));
+							instr_bin.Add(0);
+							instr_bin.Add(0);
+							instr_bin.Add(0);
+							instr_bin.Add(0);
+						}
+						else // a register
+						{
+							instr += "R";
+							arg = arg.ToLowerInvariant();
+
+							string strsize = "";
+							while (arg[arg.Length - 1] >= '0' && arg[arg.Length - 1] <= '9')
+							{
+								strsize = arg[arg.Length - 1] + strsize;
+								arg = arg.Substring(0, arg.Length - 1);
+							}
+							int size = !string.IsNullOrWhiteSpace(strsize) ? int.Parse(strsize) : Register.NativeSize * 8;
+
+							if (!RegisterMap.TryGetValue(arg, out var reg))
+								throw new Exception($"{i}: unknown register {arg}");
+
+							int regid = ((int)reg << 2) | (int)(Math.Log(size, 2) - 3);
+							instr_bin.Add((byte)regid);
+						}
+						*/
 					}
 				}
 
@@ -332,7 +516,7 @@ namespace Swis
 			foreach (var ph in placeholders)
 			{
 				if (!found_placeholders.TryGetValue(ph.name, out int foundpos))
-					throw new Exception($"{ph.defined_line}: could not find the label ${ph.name}");
+					throw new Exception($"{ph.defined_line}: could not find the label {ph.name}");
 				Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
 				c.I32 = foundpos;
 				bin[ph.pos + 0] = c.ByteA;
