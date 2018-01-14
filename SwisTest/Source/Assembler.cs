@@ -93,6 +93,7 @@ namespace Swis
 			{ "powRRR", Opcode.PowRRR },
 		};
 
+		static char[] _Offset_chars = new char[] { '+', '-' };
 		public static (byte[] binary, Dictionary<string, int> labels) Assemble(string asm)
 		{
 			string[] lines = asm.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -288,16 +289,18 @@ namespace Swis
 							arg = arg.TrimStart('[').TrimEnd(']');
 						}
 
-						int plusat = arg.IndexOf('+');
+						int offsetsignat = arg.IndexOfAny(_Offset_chars);
+						int offset_sign = 0;
 						string regstr = null;
 						string offsetstr = null;
 
-						if (plusat == -1)
+						if (offsetsignat == -1)
 							regstr = arg;
 						else
 						{
-							regstr = arg.Substring(0, plusat).Trim();
-							offsetstr = arg.Substring(plusat + 1).Trim();
+							offset_sign = arg[offsetsignat] == '+' ? 1 : -1;
+							regstr = arg.Substring(0, offsetsignat).Trim();
+							offsetstr = arg.Substring(offsetsignat + 1).Trim();
 						}
 
 						// figure out what regstr is
@@ -354,7 +357,7 @@ namespace Swis
 						if (offsetstr != null)
 						{
 							if ((offsetstr[0] >= '0' && offsetstr[0] <= '9') || offsetstr[0] == '-')
-								offset = int.Parse(offsetstr);
+								offset = int.Parse(offsetstr) * offset_sign;
 							else if (offsetstr[0] == '$')
 								offset_placeholder = offsetstr.Substring(1);
 							else
