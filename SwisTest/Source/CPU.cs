@@ -350,79 +350,7 @@ namespace Swis
 				IndirectionSize = size,
 			};
 		}
-
-		/*
-		protected void EncodeInt(int position, int size, int value)
-		{
-			Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
-			c.I32 = value;
-
-			switch (size)
-			{
-			case 4:
-				this.Memory[position + 3] = c.ByteD;
-				goto case 3;
-			case 3:
-				this.Memory[position + 2] = c.ByteC;
-				goto case 2;
-			case 2:
-				this.Memory[position + 1] = c.ByteB;
-				goto case 1;
-			case 1:
-				this.Memory[position + 0] = c.ByteA;
-				break;
-			default:
-				throw new Exception("invalid read size");
-			}
-		}
-
-		protected int DecodeInt(int position, int size)
-		{
-			Caster c; c.I32 = 0;
-			switch (size)
-			{
-			case 4:
-				c.ByteD = this.Memory[position + 3];
-				goto case 3;
-			case 3:
-				c.ByteC = this.Memory[position + 2];
-				goto case 2;
-			case 2:
-				c.ByteB = this.Memory[position + 1];
-				goto case 1;
-			case 1:
-				c.ByteA = this.Memory[position + 0];
-				break;
-			default:
-				throw new Exception("invalid read size");
-			}
-			return c.I32;
-		}
-
-		protected float DecodeFloat(int position, int size)
-		{
-			Caster c; c.F32 = 0;
-			switch (size)
-			{
-			case 4:
-				c.ByteD = this.Memory[position + 3];
-				goto case 3;
-			case 3:
-				c.ByteC = this.Memory[position + 2];
-				goto case 2;
-			case 2:
-				c.ByteB = this.Memory[position + 1];
-				goto case 1;
-			case 1:
-				c.ByteA = this.Memory[position + 0];
-				break;
-			default:
-				throw new Exception("invalid read size");
-			}
-			return c.F32;
-		}
-		*/
-
+		
 		public int Clock(int count = 1)
 		{
 			ref Register ip = ref this.InstructionPointer;
@@ -479,10 +407,6 @@ namespace Swis
 						sp.NativeUInt += src.ValueSize / 8;
 
 						ptr.Value = src.Value;
-
-						//this.EncodeInt(sp.NativeInt, rsz, r.GetInteger(rsz));
-						//sp.NativeInt += rsz;
-
 						break;
 					}
 				case Opcode.PopR:
@@ -493,9 +417,6 @@ namespace Swis
 						Operand ptr = this.CreatePointer(sp.NativeUInt, dst.ValueSize);
 
 						dst.Value = ptr.Value;
-
-						//sp.NativeInt -= rsz;
-						//r.SetInteger(rsz, this.DecodeInt(sp.NativeInt, rsz));
 						break;
 					}
 				#endregion
