@@ -435,6 +435,7 @@ namespace Swis
 						base_ptr.Value = bp.NativeUInt;
 
 						ip.NativeUInt = loc.Value;
+						bp.NativeUInt = sp.NativeUInt;
 						break;
 					}
 				case Opcode.Return:
