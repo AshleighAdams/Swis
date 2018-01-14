@@ -15,7 +15,7 @@ namespace SwisTest
 			//
 			//
 
-			string asm = System.IO.File.ReadAllText("ProgramTest.asm");
+			string asm = System.IO.File.ReadAllText("TestProgram/program.asm");
 			(byte[] assembled, var labels) = Assembler.Assemble(asm);
 
 			int should_halt = labels["call_stack"];
