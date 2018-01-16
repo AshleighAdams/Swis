@@ -1,5 +1,5 @@
-﻿// compile with clang using `clang++ -cc1 -S program.cpp -emit-llvm`
-
+﻿// compile with clang using `clang++ -cc1 -triple=i386 -S program.cpp -emit-llvm`
+// i386 is little endian and sizeof(void*) = 4
 void out(unsigned int port, unsigned char val)
 {
 	asm volatile ("out %0, %1" : : "r"(port), "r"(val));
@@ -14,14 +14,14 @@ void print(char* str)
 	}
 }
 
-int alloca_test(int value)
+short alloca_test(short value, short* other)
 {
-	int x = 5;
+	short x = 5;
 	if (value > x)
 	{
-		x = x * value;
+		x = value * (*other);
 	}
-	return value;
+	return x;
 }
 
 int main()
