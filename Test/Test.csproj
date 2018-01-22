@@ -6,7 +6,12 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Swis.Builder\Swis.Builder.csproj" />
+    <ProjectReference Include="..\Swis.Emulator\Swis.Emulator.csproj" />
+  </ItemGroup>
 
 </Project>

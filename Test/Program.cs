@@ -25,7 +25,8 @@ namespace SwisTest
 			
 			while (!emu.Halted)
 			{
-				emu.Clock(10);
+				System.Threading.Thread.Sleep(1);
+				emu.Clock(1);
 			}
 
 			//*/

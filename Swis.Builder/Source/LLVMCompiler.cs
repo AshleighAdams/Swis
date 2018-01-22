@@ -181,7 +181,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 				if(return_type != "void")
 					ret_size_bytes = int.Parse(func.Groups["type_size"].Value) / 8;
 
-				if (return_type.EndsWith('*'))
+				if (return_type[return_type.Length - 1] == '*')
 					ret_size_bytes = ptr_size;
 
 				Console.WriteLine($"{return_type} {func_name}({arglist})");
@@ -191,14 +191,14 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 
 				string size_of(string type)
 				{
-					if (type.EndsWith('*'))
+					if (type[type.Length - 1] == '*')
 						return "ptr";
 					return Regex.Match(type, "[0-9]+").Value;
 				}
 
 				string type_deref(string type)
 				{
-					if (type.EndsWith('*'))
+					if (type[type.Length - 1] == '*')
 						return type.Substring(0, type.Length - 1);
 					throw new Exception("deref non ptr");
 				}

@@ -853,6 +853,7 @@ namespace Swis
 
 		public void Interrupt(int code)
 		{
+			throw new NotImplementedException();
 		}
     }
 }

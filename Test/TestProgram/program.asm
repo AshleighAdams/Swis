@@ -9,13 +9,11 @@ mov bp, sp
 call $@main
 halt
 
-;$call_stack:
-;	.data pad 128
 $stack:
 	.data pad 1024
 
 $@_ZZ4mainE3msg:
-	.data string "Hello, world!\x0a\x00"
+	.data string "Hello, world! \x00"
 
 $@_Z3outjh: ; void(u32, u8)
 	out ptr32 [bp - 13], ptr8 [bp - 9]
@@ -46,7 +44,7 @@ $@_Z5printPc: ; void(u8*)
 $@main:
 	; START FUNC CALL
 	; push return placeholders
-	nop
+	;nop
 	; push args
 	push $@_ZZ4mainE3msg
 	; do the call
@@ -54,9 +52,9 @@ $@main:
 	; pop the args
 	pop ta
 	; pop the returns
-	nop
+	;nop
 	; END FUNC CALL
-
+	jmp $@main
 	ret
 
 

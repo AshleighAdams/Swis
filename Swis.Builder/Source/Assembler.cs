@@ -133,13 +133,13 @@ namespace Swis
 				if (comment >= 0)
 					line = line.Substring(0, comment);
 
-				string[] words = line.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+				string[] words = line.Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
 
 				if (words.Length == 0)
 					continue;
 
 				string first = words[0].Trim();
-				if (first.EndsWith(':'))
+				if (first[first.Length - 1] == ':')
 				{
 					if (!first.StartsWith("$"))
 						throw new Exception($"{i}: expected $");
@@ -149,7 +149,7 @@ namespace Swis
 				}
 				else if (first == ".data")
 				{
-					string[] split = words[1].Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+					string[] split = words[1].Trim().Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
 					string type = split[0].ToLowerInvariant().Trim();
 					string value = split[1].Trim();
 
