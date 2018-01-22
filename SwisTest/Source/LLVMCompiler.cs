@@ -233,7 +233,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 					return part;
 				}
 				
-				int bp_offset = 0;
+				int bp_offset = -ptr_size * 2; // -4 is base ptr, and -8 is ret addr
 				{ // assign the basepointer offsets to the argument locals
 					string arg_regex = $@"{type_regex} (?<attr>(signext ))?{namedlocal_regex}";
 					MatchCollection args = Regex.Matches(arglist, arg_regex);

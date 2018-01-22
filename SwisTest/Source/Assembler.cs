@@ -9,7 +9,6 @@ namespace Swis
 		{
 			{ "ip", NamedRegister.InstructionPointer },
 			{ "sp", NamedRegister.StackPointer },
-			{ "cp", NamedRegister.CallstackPointer },
 			{ "bp", NamedRegister.BasePointer },
 			{ "flags", NamedRegister.Flags },
 			{ "pm", NamedRegister.ProtectedMode },

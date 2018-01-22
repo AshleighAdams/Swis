@@ -82,7 +82,6 @@ namespace Swis
 		Invalid = 0,
 		InstructionPointer = 1,
 		StackPointer = 2,
-		CallstackPointer = 3,
 		BasePointer = 4,
 		Flags = 5,
 

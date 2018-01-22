@@ -238,11 +238,6 @@ namespace Swis
 			get { return ref this.Registers[(int)NamedRegister.StackPointer]; }
 		}
 
-		ref Register CallstackPointer
-		{
-			get { return ref this.Registers[(int)NamedRegister.CallstackPointer]; }
-		}
-
 		ref Register BasePointer
 		{
 			get { return ref this.Registers[(int)NamedRegister.BasePointer]; }
@@ -258,7 +253,7 @@ namespace Swis
 			get
 			{ return ((FlagsRegisterFlags)this.Flags.NativeUInt).HasFlag(FlagsRegisterFlags.Halted); }
 		}
-
+		
 		public MemoryController Memory;
 
 		public Emulator()
@@ -355,13 +350,12 @@ namespace Swis
 		{
 			ref Register ip = ref this.InstructionPointer;
 			ref Register sp = ref this.StackPointer;
-			ref Register cp = ref this.CallstackPointer;
 			ref Register bp = ref this.BasePointer;
 			ref Register flags = ref this.Flags;
 
 			if (this.Halted)
 				return 0;
-
+			
 			for (int i = 0; i < count; i++)
 			{
 				Opcode op = this.DecodeOpcode(ref ip.NativeUInt);
@@ -373,6 +367,7 @@ namespace Swis
 					break;
 				case Opcode.Halt:
 					flags.NativeUInt |= (uint)FlagsRegisterFlags.Halted;
+					count = 0; // so we break from the loop
 					break;
 				case Opcode.InRR:
 					{
@@ -424,30 +419,56 @@ namespace Swis
 				case Opcode.CallR:
 					{
 						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						
+						// push ip ; the retaddr
+						{
+							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Register.NativeSize * 8);
+							sp_ptr.Value = ip.NativeUInt;
+							sp.NativeUInt += Register.NativeSize;
+						}
 
-						Operand ret_ptr = this.CreatePointer(cp.NativeUInt, Register.NativeSize * 8);
-						cp.NativeUInt += Register.NativeSize;
+						// push bp
+						{
+							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Register.NativeSize * 8);
+							sp_ptr.Value = bp.NativeUInt;
+							sp.NativeUInt += Register.NativeSize;
+						}
 
-						Operand base_ptr = this.CreatePointer(cp.NativeUInt, Register.NativeSize * 8);
-						cp.NativeUInt += Register.NativeSize;
+						// mov bp, sp
+						{
+							bp.NativeUInt = sp.NativeUInt;
+						}
 
-						ret_ptr.Value = ip.NativeUInt;
-						base_ptr.Value = bp.NativeUInt;
-
-						ip.NativeUInt = loc.Value;
-						bp.NativeUInt = sp.NativeUInt;
+						// jmp loc
+						{
+							ip.NativeUInt = loc.Value;
+						}
+						
 						break;
 					}
 				case Opcode.Return:
 					{
-						cp.NativeUInt -= Register.NativeSize;
-						var base_ptr = this.CreatePointer(cp.NativeUInt, Register.NativeSize * 8);
+						// the reverse of call
 
-						cp.NativeUInt -= Register.NativeSize;
-						var ret_ptr = this.CreatePointer(cp.NativeUInt, Register.NativeSize * 8);
+						// mov sp, bp
+						{
+							sp.NativeUInt = bp.NativeUInt;
+						}
 
-						ip.NativeUInt = ret_ptr.Value;
-						bp.NativeUInt = base_ptr.Value;
+						// pop bp
+						{
+							sp.NativeUInt -= Register.NativeSize;
+							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Register.NativeSize * 8);
+							bp.NativeUInt = sp_ptr.Value;
+						}
+
+						// pop ip ; equiv to:  pop $1 jmp $1
+						{
+							sp.NativeUInt -= Register.NativeSize;
+							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Register.NativeSize * 8);
+							ip.NativeUInt = sp_ptr.Value;
+						}
+						
 						break;
 					}
 				case Opcode.JumpR:

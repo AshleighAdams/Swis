@@ -14,20 +14,23 @@ namespace SwisTest
 
 			//
 			//
-			/*
+			///*
 			string asm = System.IO.File.ReadAllText("TestProgram/program.asm");
 			(byte[] assembled, var labels) = Assembler.Assemble(asm);
 
-			int should_halt = labels["call_stack"];
+			int should_halt = labels["stack"];
 
 			Emulator emu = new Emulator();
 			emu.Memory = new DirectMemoryController(assembled);
 			
 			while (!emu.Halted)
-				emu.Clock(1);
+			{
+				emu.Clock(10);
+			}
 
-			*/
-			Console.WriteLine(LLVMCompiler.Compile(LLVMCompiler.TestIR));
+			//*/
+			//Console.WriteLine(LLVMCompiler.Compile(LLVMCompiler.TestIR));
+
 			Console.ReadLine();
 		}
     }
