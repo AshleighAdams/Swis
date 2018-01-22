@@ -17,55 +17,127 @@ namespace Swis
 		*/
 
 		public static string TestIR = @"
-define void @_Z7reversePci(i8* %str, i32 %length) #0 {
+define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
+  %retval = alloca i8*, align 4
+  %num.addr = alloca i32, align 4
   %str.addr = alloca i8*, align 4
-  %length.addr = alloca i32, align 4
-  %start = alloca i32, align 4
-  %end = alloca i32, align 4
-  %tmp = alloca i8, align 1
+  %base.addr = alloca i32, align 4
+  %i = alloca i32, align 4
+  %negative = alloca i8, align 1
+  %rem = alloca i32, align 4
+  store i32 %num, i32* %num.addr, align 4
   store i8* %str, i8** %str.addr, align 4
-  store i32 %length, i32* %length.addr, align 4
-  store i32 0, i32* %start, align 4
-  %1 = load i32, i32* %length.addr, align 4
-  %sub = sub nsw i32 %1, 1
-  store i32 %sub, i32* %end, align 4
-  br label %2
+  store i32 %base, i32* %base.addr, align 4
+  store i32 0, i32* %i, align 4
+  store i8 0, i8* %negative, align 1
+  %1 = load i32, i32* %num.addr, align 4
+  %cmp = icmp eq i32 %1, 0
+  br i1 %cmp, label %2, label %8
 
-; <label>:2:                                      ; preds = %5, %0
-  %3 = load i32, i32* %start, align 4
-  %4 = load i32, i32* %end, align 4
-  %cmp = icmp slt i32 %3, %4
-  br i1 %cmp, label %5, label %19
+; <label>:2:                                      ; preds = %0
+  %3 = load i8*, i8** %str.addr, align 4
+  %4 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, i32* %i, align 4
+  %arrayidx = getelementptr inbounds i8, i8* %3, i32 %4
+  store i8 48, i8* %arrayidx, align 1
+  %5 = load i8*, i8** %str.addr, align 4
+  %6 = load i32, i32* %i, align 4
+  %arrayidx1 = getelementptr inbounds i8, i8* %5, i32 %6
+  store i8 0, i8* %arrayidx1, align 1
+  %7 = load i8*, i8** %str.addr, align 4
+  store i8* %7, i8** %retval, align 4
+  br label %41
 
-; <label>:5:                                      ; preds = %2
-  %6 = load i8*, i8** %str.addr, align 4
-  %7 = load i32, i32* %start, align 4
-  %add.ptr = getelementptr inbounds i8, i8* %6, i32 %7
-  %8 = load i8, i8* %add.ptr, align 1
-  store i8 %8, i8* %tmp, align 1
-  %9 = load i8*, i8** %str.addr, align 4
-  %10 = load i32, i32* %end, align 4
-  %add.ptr1 = getelementptr inbounds i8, i8* %9, i32 %10
-  %11 = load i8, i8* %add.ptr1, align 1
-  %12 = load i8*, i8** %str.addr, align 4
-  %13 = load i32, i32* %start, align 4
-  %add.ptr2 = getelementptr inbounds i8, i8* %12, i32 %13
-  store i8 %11, i8* %add.ptr2, align 1
-  %14 = load i8, i8* %tmp, align 1
-  %15 = load i8*, i8** %str.addr, align 4
-  %16 = load i32, i32* %end, align 4
-  %add.ptr3 = getelementptr inbounds i8, i8* %15, i32 %16
-  store i8 %14, i8* %add.ptr3, align 1
-  %17 = load i32, i32* %start, align 4
-  %inc = add nsw i32 %17, 1
-  store i32 %inc, i32* %start, align 4
-  %18 = load i32, i32* %end, align 4
-  %dec = add nsw i32 %18, -1
-  store i32 %dec, i32* %end, align 4
-  br label %2
+; <label>:8:                                      ; preds = %0
+  %9 = load i32, i32* %num.addr, align 4
+  %cmp2 = icmp slt i32 %9, 0
+  br i1 %cmp2, label %10, label %14
 
-; <label>:19:                                     ; preds = %2
-  ret void
+; <label>:10:                                     ; preds = %8
+  %11 = load i32, i32* %base.addr, align 4
+  %cmp3 = icmp eq i32 %11, 10
+  br i1 %cmp3, label %12, label %14
+
+; <label>:12:                                     ; preds = %10
+  store i8 1, i8* %negative, align 1
+  %13 = load i32, i32* %num.addr, align 4
+  %sub = sub nsw i32 0, %13
+  store i32 %sub, i32* %num.addr, align 4
+  br label %14
+
+; <label>:14:                                     ; preds = %12, %10, %8
+  br label %15
+
+; <label>:15:                                     ; preds = %25, %14
+  %16 = load i32, i32* %num.addr, align 4
+  %cmp4 = icmp ne i32 %16, 0
+  br i1 %cmp4, label %17, label %30
+
+; <label>:17:                                     ; preds = %15
+  %18 = load i32, i32* %num.addr, align 4
+  %19 = load i32, i32* %base.addr, align 4
+  %rem5 = srem i32 %18, %19
+  store i32 %rem5, i32* %rem, align 4
+  %20 = load i32, i32* %rem, align 4
+  %cmp6 = icmp sgt i32 %20, 9
+  br i1 %cmp6, label %21, label %23
+
+; <label>:21:                                     ; preds = %17
+  %22 = load i32, i32* %rem, align 4
+  %sub7 = sub nsw i32 %22, 10
+  %add = add nsw i32 %sub7, 97
+  br label %25
+
+; <label>:23:                                     ; preds = %17
+  %24 = load i32, i32* %rem, align 4
+  %add8 = add nsw i32 %24, 48
+  br label %25
+
+; <label>:25:                                     ; preds = %23, %21
+  %cond = phi i32 [ %add, %21 ], [ %add8, %23 ]
+  %conv = trunc i32 %cond to i8
+  %26 = load i8*, i8** %str.addr, align 4
+  %27 = load i32, i32* %i, align 4
+  %inc9 = add nsw i32 %27, 1
+  store i32 %inc9, i32* %i, align 4
+  %arrayidx10 = getelementptr inbounds i8, i8* %26, i32 %27
+  store i8 %conv, i8* %arrayidx10, align 1
+  %28 = load i32, i32* %num.addr, align 4
+  %29 = load i32, i32* %base.addr, align 4
+  %div = sdiv i32 %28, %29
+  store i32 %div, i32* %num.addr, align 4
+  br label %15
+
+; <label>:30:                                     ; preds = %15
+  %31 = load i8, i8* %negative, align 1
+  %tobool = trunc i8 %31 to i1
+  br i1 %tobool, label %32, label %35
+
+; <label>:32:                                     ; preds = %30
+  %33 = load i8*, i8** %str.addr, align 4
+  %34 = load i32, i32* %i, align 4
+  %inc11 = add nsw i32 %34, 1
+  store i32 %inc11, i32* %i, align 4
+  %arrayidx12 = getelementptr inbounds i8, i8* %33, i32 %34
+  store i8 45, i8* %arrayidx12, align 1
+  br label %35
+
+; <label>:35:                                     ; preds = %32, %30
+  %36 = load i8*, i8** %str.addr, align 4
+  %37 = load i32, i32* %i, align 4
+  %arrayidx13 = getelementptr inbounds i8, i8* %36, i32 %37
+  store i8 0, i8* %arrayidx13, align 1
+  %38 = load i8*, i8** %str.addr, align 4
+  %39 = load i32, i32* %i, align 4
+  call void @_Z7reversePci(i8* %38, i32 %39)
+  %40 = load i8*, i8** %str.addr, align 4
+  store i8* %40, i8** %retval, align 4
+  br label %41
+
+; <label>:41:                                     ; preds = %35, %2
+  %42 = load i8*, i8** %retval, align 4
+  ret i8* %42
 }";
 		#endregion
 
@@ -222,8 +294,31 @@ define void @_Z7reversePci(i8* %str, i32 %length) #0 {
 					
 				}
 
-				// getelementptrs
+				{ // our asm can set or mutate any register, so implement the phi instruction by renaming both predictate sources to
+				  // the output register
+					string prid_regex = $@"\[ (?<src>{local_regex}), %[0-9]+ \]";
+					string phi_regex = $@"(?<dst>{local_regex}) = phi {type_regex} (?<sources>{prid_regex}(, {prid_regex})+)";
+					MatchCollection phis = Regex.Matches(body, phi_regex);
+
+					List<(string, string)> replacements = new List<(string, string)>();
+
+					foreach (Match phi in phis)
+					{
+						string dst = phi.Groups["dst"].Value;
+						MatchCollection preds = Regex.Matches(phi.Groups["sources"].Value, $@"{prid_regex}");
+
+						foreach (Match pred in preds)
+						{
+							string src = pred.Groups["src"].Value;
+							body = body.Replace($"{src} =", $"{dst} =");
+						}
+
+						body = body.Replace(phi.Value, "");
+					}
+				}
 				
+				// getelementptrs
+
 				// emit the function lable
 				emit_asm($"${func_name}:");
 				// emit the asm to stack-alloc these values:
@@ -294,6 +389,7 @@ define void @_Z7reversePci(i8* %str, i32 %length) #0 {
 						else if ((m = Regex.Match(line, @"<label>:(?<id>[0-9]+):")).Success)
 						{
 							string id = m.Groups["id"].Value;
+							emit_asm($"\t");
 							emit_asm($"\t${func_name}_label_{id}:");
 						}
 						else if ((m = Regex.Match(line, $@"(?<dst>{operand_regex}) = (?<cmp_type>(i|u|f))cmp (?<cmp_method>(sgt|sge|sne|seq|slt|sle)) (?<tp>{type_regex}) (?<left>{operand_regex}), (?<right>{operand_regex})")).Success &&
