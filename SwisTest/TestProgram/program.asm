@@ -1,4 +1,85 @@
-﻿; http://kripken.github.io/mloc_emscripten_talk/llvm.html#/32
+﻿$@_Z11alloca_testsPs:
+	add sp, sp, 10; alloca
+	mov ptr16 [bp + 0], ptr16 [bp - 6]
+	mov ptrptr [bp + 4], ptrptr [bp - 4]
+	mov ptr16 [bp + 8], 5
+	mov %1:16, ptr16 [bp + 0]
+	movsx %conv:32, %1:16
+	mov %2:16, ptr16 [bp + 8]
+	movsx %conv1:32, %2:16
+	cmp %conv:32, %conv1:32
+	jg $@_Z11alloca_testsPs_label_3
+	jmp $@_Z11alloca_testsPs_label_7
+
+	$@_Z11alloca_testsPs_label_3:
+	mov %4:16, ptr16 [bp + 0]
+	movsx %conv2:32, %4:16
+	mov %5:ptr, ptrptr [bp + 4]
+	mov %6:16, ptr16 [%5:ptr]
+	movsx %conv3:32, %6:16
+	mul %mul:32, %conv2:32, %conv3:32
+	mov %conv4:16, %mul:32; trunc
+	mov ptr16 [bp + 8], %conv4:16
+	jmp $@_Z11alloca_testsPs_label_7
+
+	$@_Z11alloca_testsPs_label_7:
+	mov %8:16, ptr16 [bp + 8]
+	mov ptr16 [bp - 8], %8:16
+	ret
+
+
+
+; -8  ret  int16 return_value
+; -7
+; -6  arg  int16 value
+; -5
+; -4  arg  int16* other
+; -3
+; -2
+; -1
+;  0  var  int16 value_copy
+; +1
+; +2  <aligning to 4 bytes>
+; +3  <aligning to 4 bytes>
+; +4  var  int16* other_copy
+; +5
+; +6
+; +7
+; +8  var  int16 x
+; +9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+; http://kripken.github.io/mloc_emscripten_talk/llvm.html#/32
 ; https://github.com/nael8r/How-To-Write-An-LLVM-Register-Allocator/blob/master/HowToWriteAnLLVMRegisterAllocator.rst
 
 mov cp, $call_stack
@@ -56,6 +137,29 @@ $@main:
 	; END FUNC CALL
 
 	ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

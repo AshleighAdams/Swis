@@ -17,35 +17,55 @@ namespace Swis
 		*/
 
 		public static string TestIR = @"
-; Function Attrs: noinline nounwind
-define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
-  %value.addr = alloca i16, align 2
-  %other.addr = alloca i16*, align 4
-  %x = alloca i16, align 2
-  store i16 %value, i16* %value.addr, align 2
-  store i16* %other, i16** %other.addr, align 4
-  store i16 5, i16* %x, align 2
-  %1 = load i16, i16* %value.addr, align 2
-  %conv = sext i16 %1 to i32
-  %2 = load i16, i16* %x, align 2
-  %conv1 = sext i16 %2 to i32
-  %cmp = icmp sgt i32 %conv, %conv1
-  br i1 %cmp, label %3, label %7
+define void @_Z7reversePci(i8* %str, i32 %length) #0 {
+  %str.addr = alloca i8*, align 4
+  %length.addr = alloca i32, align 4
+  %start = alloca i32, align 4
+  %end = alloca i32, align 4
+  %tmp = alloca i8, align 1
+  store i8* %str, i8** %str.addr, align 4
+  store i32 %length, i32* %length.addr, align 4
+  store i32 0, i32* %start, align 4
+  %1 = load i32, i32* %length.addr, align 4
+  %sub = sub nsw i32 %1, 1
+  store i32 %sub, i32* %end, align 4
+  br label %2
 
-; <label>:3:                                      ; preds = %0
-  %4 = load i16, i16* %value.addr, align 2
-  %conv2 = sext i16 %4 to i32
-  %5 = load i16*, i16** %other.addr, align 4
-  %6 = load i16, i16* %5, align 2
-  %conv3 = sext i16 %6 to i32
-  %mul = mul nsw i32 %conv2, %conv3
-  %conv4 = trunc i32 %mul to i16
-  store i16 %conv4, i16* %x, align 2
-  br label %7
+; <label>:2:                                      ; preds = %5, %0
+  %3 = load i32, i32* %start, align 4
+  %4 = load i32, i32* %end, align 4
+  %cmp = icmp slt i32 %3, %4
+  br i1 %cmp, label %5, label %19
 
-; <label>:7:                                      ; preds = %3, %0
-  %8 = load i16, i16* %x, align 2
-  ret i16 %8
+; <label>:5:                                      ; preds = %2
+  %6 = load i8*, i8** %str.addr, align 4
+  %7 = load i32, i32* %start, align 4
+  %add.ptr = getelementptr inbounds i8, i8* %6, i32 %7
+  %8 = load i8, i8* %add.ptr, align 1
+  store i8 %8, i8* %tmp, align 1
+  %9 = load i8*, i8** %str.addr, align 4
+  %10 = load i32, i32* %end, align 4
+  %add.ptr1 = getelementptr inbounds i8, i8* %9, i32 %10
+  %11 = load i8, i8* %add.ptr1, align 1
+  %12 = load i8*, i8** %str.addr, align 4
+  %13 = load i32, i32* %start, align 4
+  %add.ptr2 = getelementptr inbounds i8, i8* %12, i32 %13
+  store i8 %11, i8* %add.ptr2, align 1
+  %14 = load i8, i8* %tmp, align 1
+  %15 = load i8*, i8** %str.addr, align 4
+  %16 = load i32, i32* %end, align 4
+  %add.ptr3 = getelementptr inbounds i8, i8* %15, i32 %16
+  store i8 %14, i8* %add.ptr3, align 1
+  %17 = load i32, i32* %start, align 4
+  %inc = add nsw i32 %17, 1
+  store i32 %inc, i32* %start, align 4
+  %18 = load i32, i32* %end, align 4
+  %dec = add nsw i32 %18, -1
+  store i32 %dec, i32* %end, align 4
+  br label %2
+
+; <label>:19:                                     ; preds = %2
+  ret void
 }";
 		#endregion
 
@@ -58,7 +78,7 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 			//attempt to reuse any temporary variables
 
 			string type_regex = @"(?<type_attr>(signext )*)?(?<type>((?<type_letter>u|i|f)(?<type_size>8|16|32)|void)(?<ptr>\*+)?)";
-			string const_regex = @"(?<const>[0-9]+)";
+			string const_regex = @"(?<const>-?[0-9]+)";
 			string ident_regex = @"(?<id>[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*)";
 			string namedlocal_regex = @"(?<id>[%][-a-zA-Z$._][-a-zA-Z$._0-9]*)";
 			string temp_regex = @"(?<id>[%][[0-9]+)";
@@ -85,7 +105,9 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 				string arglist = func.Groups["arglist"].Value;
 				string body = func.Groups["body"].Value;
 
-				int ret_size_bytes = int.Parse(func.Groups["type_size"].Value) / 8;
+				int ret_size_bytes = 0;
+				if(return_type != "void")
+					ret_size_bytes = int.Parse(func.Groups["type_size"].Value) / 8;
 
 				if (return_type.EndsWith('*'))
 					ret_size_bytes = ptr_size;
@@ -179,7 +201,6 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 					foreach (Match alloca in allocas)
 					{
 						int align = int.Parse(alloca.Groups["align"].Value);
-						int varsize = int.Parse(alloca.Groups["type_size"].Value) / 8;
 						string name = alloca.Groups["id"].Value;
 
 						// align bp to the alignment
@@ -190,6 +211,8 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 						Console.WriteLine($"\t {name} = bp + {bp_offset}");
 
 						// increase the bp offset by the size
+						string varsizestr = size_of(alloca.Groups["type"].Value); // int.Parse(alloca.Groups["type_size"].Value) / 8;
+						int varsize = varsizestr == "ptr" ? ptr_size : int.Parse(varsizestr) / 8;
 						bp_offset += varsize;
 					}
 
@@ -198,6 +221,8 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 						body = body.Remove(allocas[i].Index, allocas[i].Length);
 					
 				}
+
+				// getelementptrs
 				
 				// emit the function lable
 				emit_asm($"${func_name}:");
@@ -207,14 +232,19 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 
 				{ // translate the IR instructions into ASM instructions, but using virtual registers for now
 					string[] lines = body.Split('\n');
-					foreach (string line in lines)
-					{
-						emit_asm($"\t; {line}");
 
-						Match m;
+					for(int line_number = 0; line_number < lines.Length; line_number++)
+					//foreach (string line in lines)
+					{
+						string line = lines[line_number];
+						string next = line_number + 1 >= lines.Length ? "" : lines[line_number + 1];
+						//emit_asm($"\t; {line}");
+
+						Match m, m2;
 
 						if (string.IsNullOrWhiteSpace(line))
 							continue; // transmit the whitespace
+									  // memory
 						else if ((m = Regex.Match(line, $"store (?<src>{type_regex} {operand_regex}), (?<dst>{type_regex} {operand_regex}), align (?<align>[0-9]+)")).Success)
 						{
 							// store i32 %value, i32* %value.addr, align 4
@@ -248,28 +278,99 @@ define signext i16 @_Z11alloca_testsPs(i16 signext %value, i16* %other) #0 {
 
 							emit_asm($"\tmov {to_operand(dst_tp, dst_op)}, {to_operand(src_tp, src_op, indirection: true)}");
 						}
+						// flow
 						// <label>:3:
+						else if ((m = Regex.Match(line, $"ret {type_regex} {operand_regex}")).Success)
+						{
+							string rettp = m.Groups["type"].Value;
+							string retop = m.Groups["operand"].Value;
+							emit_asm($"\tmov {constant_locals["ret"]}, {to_operand(rettp, retop)}");
+							emit_asm($"\tret");
+						}
+						else if ((m = Regex.Match(line, "ret void")).Success)
+						{
+							emit_asm("\tret");
+						}
 						else if ((m = Regex.Match(line, @"<label>:(?<id>[0-9]+):")).Success)
 						{
 							string id = m.Groups["id"].Value;
 							emit_asm($"\t${func_name}_label_{id}:");
+						}
+						else if ((m = Regex.Match(line, $@"(?<dst>{operand_regex}) = (?<cmp_type>(i|u|f))cmp (?<cmp_method>(sgt|sge|sne|seq|slt|sle)) (?<tp>{type_regex}) (?<left>{operand_regex}), (?<right>{operand_regex})")).Success &&
+								(m2 = Regex.Match(next, $@"br i1 {m.Groups["dst"].Value}, label %(?<true>[0-9]+), label %(?<false>[0-9]+)")).Success)
+						{
+							line_number++;
+
+							string type = m.Groups["tp"].Value;
+							string cmp_type = m.Groups["cmp_type"].Value;
+							string cmp_method = m.Groups["cmp_method"].Value;
+							string left = m.Groups["left"].Value;
+							string right = m.Groups["right"].Value;
+
+							string comparer = "";
+							switch (cmp_type)
+							{
+							default: throw new NotImplementedException("unknown compare method " + cmp_method);
+							case "i": comparer = "cmp"; break;
+							case "f": comparer = "cmp"; break;
+							case "u": comparer = "cmpf"; break;
+							}
+
+							// compare part
+							emit_asm($"\t{comparer} {to_operand(type, left)}, {to_operand(type, right)}");
+
+							string jmper = "";
+							switch (cmp_method)
+							{
+							default: throw new NotImplementedException("unknown compare type " + cmp_method);
+							case "sgt": jmper = "jg"; break;
+							case "sge": jmper = "jge"; break;
+							case "slt": jmper = "jl"; break;
+							case "sle": jmper = "jle"; break;
+							case "seq": jmper = "je"; break;
+							case "sne": jmper = "jne"; break;
+							}
+
+							string on_true = $"${func_name}_label_{m2.Groups["true"].Value}";
+							string on_false = $"${func_name}_label_{m2.Groups["false"].Value}";
+
+							emit_asm($"\t{jmper} {on_true}");
+							emit_asm($"\tjmp {on_false}");
 						}
 						else if ((m = Regex.Match(line, @"br label %(?<id>[0-9]+)")).Success)
 						{
 							string id = m.Groups["id"].Value;
 							emit_asm($"\tjmp ${func_name}_label_{id}");
 						}
-						else if ((m = Regex.Match(line, $"ret {type_regex} {operand_regex}")).Success)
+						// transformative
+						else if ((m = Regex.Match(line, $"(?<dst_op>{operand_regex}) = sext (?<src_tp>{type_regex}) (?<src_op>{operand_regex}) to (?<dst_tp>{type_regex})")).Success)
 						{
-							string rettp = m.Groups["type"].Value;
-							string retsz = m.Groups["type_size"].Value;
-							string retop = m.Groups["operand"].Value;
-							emit_asm($"\tmov {constant_locals["ret"]}, {to_operand(rettp, retop)}");
-							emit_asm($"\tret");
+							string src_tp = m.Groups["src_tp"].Value;
+							string src_op = m.Groups["src_op"].Value;
+							string dst_tp = m.Groups["dst_tp"].Value;
+							string dst_op = m.Groups["dst_op"].Value;
+							emit_asm($"\tmov {to_operand(dst_tp, dst_op)}, {to_operand(src_tp, src_op)} ; sigex");
+						}
+						else if ((m = Regex.Match(line, $"(?<dst_op>{operand_regex}) = trunc (?<src_tp>{type_regex}) (?<src_op>{operand_regex}) to (?<dst_tp>{type_regex})")).Success)
+						{
+							string src_tp = m.Groups["src_tp"].Value;
+							string src_op = m.Groups["src_op"].Value;
+							string dst_tp = m.Groups["dst_tp"].Value;
+							string dst_op = m.Groups["dst_op"].Value;
+							emit_asm($"\tmov {to_operand(dst_tp, dst_op)}, {to_operand(src_tp, src_op)} ; trunc");
+						}
+						else if ((m = Regex.Match(line, $"(?<dst_op>{operand_regex}) = (?<action>(add|sub|mul|div))( nsw| nsu)* (?<tp>{type_regex}) (?<left_op>{operand_regex}), (?<right_op>{operand_regex})")).Success)
+						{
+							string act = m.Groups["action"].Value;
+							string tp = m.Groups["tp"].Value;
+							string dst_op = m.Groups["dst_op"].Value;
+							string left_op = m.Groups["left_op"].Value;
+							string right_op = m.Groups["right_op"].Value;
+							emit_asm($"\t{act} {to_operand(tp, dst_op)}, {to_operand(tp, left_op)}, {to_operand(tp, right_op)}");
 						}
 						else
 						{
-							emit_asm($"\tnop");
+							emit_asm($"\t;{line.Trim()}");
 							//throw new Exception($"could not match: {line}");
 						}
 					}
