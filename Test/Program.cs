@@ -17,7 +17,9 @@ namespace SwisTest
 			///*
 			string asm = System.IO.File.ReadAllText("TestProgram/program.asm");
 			(byte[] assembled, _) = Assembler.Assemble(asm);
-			
+
+			System.IO.File.WriteAllBytes("out.bin", assembled);
+
 			Emulator emu = new Emulator();
 			emu.Memory = new DirectMemoryController(assembled);
 			

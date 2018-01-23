@@ -8,13 +8,27 @@ namespace Swis
 	[Serializable]
 	public class DebugData
 	{
+		[Serializable]
+		public enum AsmPtrType
+		{
+			None = 0,
+			Instruction = 1,
+			Operand,
+			DataString,
+			DataSigned,
+			DataUnsigned,
+			DataFloat,
+			DataHex,
+			DataPadding,
+		}
+
 		// what the code here corrosponds to, in absolute position.
-		public Dictionary<uint, (string file, uint from, uint to)> PtrToAsm;
-		public Dictionary<uint, (string file, uint from, uint to)> AsmToSrc;
+		// type =
+		public Dictionary<int, (string file, int from, int to, AsmPtrType type)> PtrToAsm;
+		public Dictionary<int, (string file, int from, int to)> AsmToSrc;
 
 		// for asm disasm
-		public Dictionary<string, uint> Labels;
-		public List<uint> Instructions;
+		public Dictionary<string, int> Labels;
 
 		public static string Serialize(DebugData data)
 		{
