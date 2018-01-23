@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Swis.Emulator\Swis.Emulator.csproj" />
+    <ProjectReference Include="..\Swis.Runtime\Swis.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

@@ -16,10 +16,8 @@ namespace SwisTest
 			//
 			///*
 			string asm = System.IO.File.ReadAllText("TestProgram/program.asm");
-			(byte[] assembled, var labels) = Assembler.Assemble(asm);
-
-			int should_halt = labels["stack"];
-
+			(byte[] assembled, _) = Assembler.Assemble(asm);
+			
 			Emulator emu = new Emulator();
 			emu.Memory = new DirectMemoryController(assembled);
 			

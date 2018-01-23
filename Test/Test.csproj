@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Swis.Builder\Swis.Builder.csproj" />
-    <ProjectReference Include="..\Swis.Emulator\Swis.Emulator.csproj" />
+    <ProjectReference Include="..\Swis.Development\Swis.Development.csproj" />
+    <ProjectReference Include="..\Swis.Runtime\Swis.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

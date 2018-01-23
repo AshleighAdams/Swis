@@ -93,8 +93,16 @@ namespace Swis
 		};
 
 		static char[] _Offset_chars = new char[] { '+', '-' };
-		public static (byte[] binary, Dictionary<string, int> labels) Assemble(string asm)
+		public static (byte[] binary, DebugData dbg) Assemble(string asm)
 		{
+			DebugData dbg = new DebugData();
+			dbg.PtrToAsm = new Dictionary<uint, (string file, uint from, uint to)>();
+			dbg.AsmToSrc = new Dictionary<uint, (string file, uint from, uint to)>();
+			dbg.Labels = new Dictionary<string, uint>();
+			dbg.Instructions = new List<uint>();
+
+			string s = DebugData.Serialize(dbg);
+
 			string[] lines = asm.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 			List<byte> bin = new List<byte>();
 
@@ -527,7 +535,7 @@ namespace Swis
 				bin[ph.pos + 3] = c.ByteD;
 			}
 
-			return (bin.ToArray(), found_placeholders);
+			return (bin.ToArray(), dbg);
 		}
 	}
 }
