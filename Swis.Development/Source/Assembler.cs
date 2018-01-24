@@ -177,11 +177,18 @@ namespace Swis
 
 				if (string.IsNullOrWhiteSpace(line))
 					continue;
-				else if ((m = line.Match(@"(\$[^\s]+) \s* :")).Success)
+				else if ((m = line.Match(@"^\s*(\$[^\s]+) \s* :")).Success)
 				{
 					found_placeholders[m.Groups[1].Value] = bin.Count;
 				}
-				else if ((m = line.Match(@"\.data \s+ ([A-z]+) \s+ (.+)")).Success)
+				//bp_offset += Math.Abs((-bp_offset) % align);
+				else if ((m = line.Match(@"^\s*\.align \s+ (\d+)")).Success)
+				{
+					int align = int.Parse(m.Groups[1].Value);
+					int bytes = align - (bin.Count % align);
+					bin.AddRange(new byte[bytes]);
+				}
+				else if ((m = line.Match(@"^\s*\.data \s+ ([A-z]+) \s+ (.+)")).Success)
 				{
 					string type = m.Groups[1].Value;
 					string value = m.Groups[2].Value;
@@ -242,7 +249,7 @@ namespace Swis
 						}
 						break;
 
-					raw_bytes:
+						raw_bytes:
 						bin.Add(c.ByteA);
 						bin.Add(c.ByteB);
 						bin.Add(c.ByteC);
@@ -305,7 +312,7 @@ namespace Swis
 
 								if (oa_ptr != "")
 									indirection_size = oa_ptr_sz == "" ? Register.NativeSize * 8 : uint.Parse(oa_ptr_sz);
-								
+
 								if (oa_constant != "")
 								{
 									string struint = oa_rx.Groups["uint"].Value;
@@ -358,7 +365,7 @@ namespace Swis
 
 							}
 							#endregion
-							
+
 							#region Serialize operand
 							{
 								int enc_size = (int)(Math.Log(size, 2) - 3);

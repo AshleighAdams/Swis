@@ -9,6 +9,7 @@ mov bp, sp
 call $@main
 halt
 
+.align 4
 $stack:
 	.data pad 1024
 

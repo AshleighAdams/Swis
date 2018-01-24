@@ -276,7 +276,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 						string name = alloca.Groups["id"].Value;
 
 						// align bp to the alignment
-						bp_offset += Math.Abs((-bp_offset) % align);
+						bp_offset += align - (bp_offset % align);
 
 						// assign it a constant offset
 						constant_locals[name] = $"bp + {bp_offset}";
