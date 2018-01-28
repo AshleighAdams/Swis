@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using Operand = Swis.Cpu.Operand;
+
 namespace Swis
 {
 	[StructLayout(LayoutKind.Explicit)]
@@ -60,11 +62,98 @@ namespace Swis
 		//}
 	}
 
-	public class Emulator
-    {
-		protected struct Operand
+	public abstract class ExternalDebugger
+	{
+		public abstract bool Clock(Cpu cpu, MemoryController memory, Register[] registers);
+	}
+
+	public static class CpuExtensions
+	{
+		public static Opcode DecodeOpcode(this MemoryController memory, ref uint ip)
 		{
-			public Emulator Owner;
+			var ret = (Opcode)memory[ip];
+			ip++;
+			return ret;
+		}
+
+		public static Operand DecodeOperand(this MemoryController memory, ref uint ip, Register[] registers)
+		{
+			byte a = memory[ip + 0];
+			byte b = memory[ip + 1];
+			ip += 2;
+
+			uint regid = (uint)((a & 0b11111000) >> 3);
+			uint size = (uint)((a & 0b00000011) >> 0);
+
+			size = Register.Pow(2, size); // to bytes
+
+			uint constant = 0;
+			if (regid == 0)
+			{
+				Caster c; c.U32 = 0;
+
+				switch (size)
+				{
+				default: throw new Exception("invalid register const size");
+				case 32 / 8:
+					c.ByteD = memory[ip + 3];
+					c.ByteC = memory[ip + 2];
+					goto case 16 / 8;
+				case 16 / 8:
+					c.ByteB = memory[ip + 1];
+					goto case 8 / 8;
+				case 8 / 8:
+					c.ByteA = memory[ip + 0];
+					break;
+				}
+
+				ip += size;
+				constant = c.U32;
+			}
+
+			uint indirection_size = (uint)((b & 0b1110_0000) >> 5);
+			bool indirect = indirection_size != 0;
+			if (indirect)
+				indirection_size = Register.Pow(2, indirection_size - 1);
+
+			int offset = 0;
+			if ((b & 0b0001_0000) != 0)
+			{
+				Caster c; c.I32 = 0;
+
+				c.ByteA = memory[ip + 0];
+				c.ByteB = memory[ip + 1];
+				c.ByteC = memory[ip + 2];
+				c.ByteD = memory[ip + 3];
+
+				ip += 4;
+				offset = c.I32;
+			}
+
+			return new Operand
+			{
+				Memory = memory,
+				Registers = registers,
+
+				RegisterID = regid,
+				Size = size << 3,
+				Constant = constant,
+				Indirect = indirect,
+				IndirectionSize = indirection_size << 3,
+				Offset = offset,
+			};
+		}
+	}
+
+	public class Cpu
+    {
+		
+
+		public struct Operand
+		{
+			//public Emulator Owner;
+			public MemoryController Memory;
+			public Register[] Registers;
 
 			public uint RegisterID; // if this is 0, it is a const of Size bits after the flags
 			public UInt32 Constant; // if not using a register, use this
@@ -89,7 +178,7 @@ namespace Swis
 					UInt32 immidiate;
 					{
 						if (this.RegisterID != 0)
-							immidiate = this.Owner.Registers[this.RegisterID].NativeUInt;
+							immidiate = this.Registers[this.RegisterID].NativeUInt;
 						else
 							immidiate = this.Constant;
 					}
@@ -110,14 +199,14 @@ namespace Swis
 						{
 						default: throw new Exception("TODO: register with invalid indirection size");
 						case 32:
-							c.ByteD = this.Owner.Memory[immidiate + 3];
-							c.ByteC = this.Owner.Memory[immidiate + 2];
+							c.ByteD = this.Memory[immidiate + 3];
+							c.ByteC = this.Memory[immidiate + 2];
 							goto case 16;
 						case 16:
-							c.ByteB = this.Owner.Memory[immidiate + 1];
+							c.ByteB = this.Memory[immidiate + 1];
 							goto case 8;
 						case 8:
-							c.ByteA = this.Owner.Memory[immidiate + 0];
+							c.ByteA = this.Memory[immidiate + 0];
 							break;
 						}
 
@@ -138,13 +227,13 @@ namespace Swis
 							throw new Exception("TODO: can't write to an immidiate value, doesn't make sense");
 						}
 
-						this.Owner.Registers[this.RegisterID].NativeUInt = value;
+						this.Registers[this.RegisterID].NativeUInt = value;
 					}
 					else
 					{
 						uint memloc = this.RegisterID == 0 ?
 							this.Constant :
-							this.Owner.Registers[this.RegisterID].NativeUInt;
+							this.Registers[this.RegisterID].NativeUInt;
 
 						if (this.Offset != 0)
 							memloc = (uint)(memloc + this.Offset);
@@ -156,14 +245,14 @@ namespace Swis
 						{
 						default: throw new Exception("TODO: invalid register size");
 						case 32:
-							this.Owner.Memory[memloc + 3] = c.ByteD;
-							this.Owner.Memory[memloc + 2] = c.ByteC;
+							this.Memory[memloc + 3] = c.ByteD;
+							this.Memory[memloc + 2] = c.ByteC;
 							goto case 16;
 						case 16:
-							this.Owner.Memory[memloc + 1] = c.ByteB;
+							this.Memory[memloc + 1] = c.ByteB;
 							goto case 8;
 						case 8:
-							this.Owner.Memory[memloc + 0] = c.ByteA;
+							this.Memory[memloc + 0] = c.ByteA;
 							break;
 						}
 					}
@@ -222,6 +311,7 @@ namespace Swis
 					this.Value = c.U32;
 				}
 			}
+			
 		}
 		
 		Register[] Registers = new Register[32];
@@ -256,89 +346,19 @@ namespace Swis
 		
 		public MemoryController Memory;
 
-		public Emulator()
+		public ExternalDebugger Debugger { get; set; }
+
+		public Cpu()
 		{
 			this.Memory = null;
 		}
-
-		protected Opcode DecodeOpcode(ref uint ip)
-		{
-			Opcode ret = (Opcode)this.Memory[ip];
-			ip += 1;
-			return ret;
-		}
-
-		protected Operand DecodeOperand(ref uint ip)
-		{
-			byte a = this.Memory[ip + 0];
-			byte b = this.Memory[ip + 1];
-			ip += 2;
-
-			uint regid = (uint)((a & 0b11111000) >> 3);
-			uint size  = (uint)((a & 0b00000011) >> 0);
-
-			size = Register.Pow(2, size); // to bytes
-
-			uint constant = 0;
-			if (regid == 0)
-			{
-				Caster c; c.U32 = 0;
-
-				switch (size)
-				{
-				default: throw new Exception("invalid register const size");
-				case 32 / 8:
-					c.ByteD = this.Memory[ip + 3];
-					c.ByteC = this.Memory[ip + 2];
-					goto case 16 / 8;
-				case 16 / 8:
-					c.ByteB = this.Memory[ip + 1];
-					goto case 8 / 8;
-				case 8 / 8:
-					c.ByteA = this.Memory[ip + 0];
-					break;
-				}
-
-				ip += size;
-				constant = c.U32;
-			}
-
-			uint indirection_size = (uint)((b & 0b1110_0000) >> 5);
-			bool indirect = indirection_size != 0;
-			if (indirect)
-				indirection_size = Register.Pow(2, indirection_size - 1);
-
-			int offset = 0;
-			if ((b & 0b0001_0000) != 0)
-			{
-				Caster c; c.I32 = 0;
-
-				c.ByteA = this.Memory[ip + 0];
-				c.ByteB = this.Memory[ip + 1];
-				c.ByteC = this.Memory[ip + 2];
-				c.ByteD = this.Memory[ip + 3];
-
-				ip += 4;
-				offset = c.I32;
-			}
-
-			return new Operand
-			{
-				Owner = this,
-				RegisterID = regid,
-				Size = size << 3,
-				Constant = constant,
-				Indirect = indirect,
-				IndirectionSize = indirection_size << 3,
-				Offset = offset,
-			};
-		}
-
+		
 		protected Operand CreatePointer(uint address, uint size)
 		{
 			return new Operand
 			{
-				Owner = this,
+				Memory = this.Memory,
+				Registers = null,
 				Size = Register.NativeSize * 8, // size of the const (address), not the size of the value at the address
 				Constant = address, // memory location when in indirect mode
 				Indirect = true,
@@ -358,7 +378,11 @@ namespace Swis
 			
 			for (int i = 0; i < count; i++)
 			{
-				Opcode op = this.DecodeOpcode(ref ip.NativeUInt);
+				if (this.Debugger != null)
+					if (!this.Debugger.Clock(this, this.Memory, this.Registers))
+						break;
+
+				Opcode op = this.Memory.DecodeOpcode(ref ip.NativeUInt);
 				
 				switch (op)
 				{
@@ -371,16 +395,16 @@ namespace Swis
 					break;
 				case Opcode.InRR:
 					{
-						Operand lttr = this.DecodeOperand(ref ip.NativeUInt);
-						Operand line = this.DecodeOperand(ref ip.NativeUInt);
+						Operand lttr = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand line = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						lttr.Value = (uint)Console.Read();
 						break;
 					}
 				case Opcode.OutRR:
 					{
-						Operand line = this.DecodeOperand(ref ip.NativeUInt);
-						Operand lttr = this.DecodeOperand(ref ip.NativeUInt);
+						Operand line = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand lttr = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						Console.Write((char)lttr.Value);
 						break;
@@ -389,14 +413,14 @@ namespace Swis
 				#region Memory
 				case Opcode.MoveRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand src = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						dst.Value = src.Value;
 						break;
 					}
 				case Opcode.PushR:
 					{
-						Operand src = this.DecodeOperand(ref ip.NativeUInt);
+						Operand src = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						Operand ptr = this.CreatePointer(sp.NativeUInt, src.ValueSize);
 						sp.NativeUInt += src.ValueSize / 8;
@@ -406,7 +430,7 @@ namespace Swis
 					}
 				case Opcode.PopR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						sp.NativeUInt -= dst.ValueSize / 8;
 						Operand ptr = this.CreatePointer(sp.NativeUInt, dst.ValueSize);
@@ -418,7 +442,7 @@ namespace Swis
 				#region Flow
 				case Opcode.CallR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						
 						// push ip ; the retaddr
 						{
@@ -473,14 +497,14 @@ namespace Swis
 					}
 				case Opcode.JumpR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						ip.NativeUInt = loc.Value;
 						break;
 					}
 				case Opcode.CompareRR:
 					{
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						Int32 l = left.Signed;
 						Int32 r = right.Signed;
@@ -500,8 +524,8 @@ namespace Swis
 					}
 				case Opcode.CompareFloatRR:
 					{
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						float l = left.Float;
 						float r = right.Float;
@@ -521,28 +545,28 @@ namespace Swis
 					}
 				case Opcode.JumpEqualR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags.NativeUInt).HasFlag(FlagsRegisterFlags.Equal))
 							ip.NativeUInt = loc.Value;
 						break;
 					}
 				case Opcode.JumpNotEqualR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						if (!((FlagsRegisterFlags)this.Flags.NativeUInt).HasFlag(FlagsRegisterFlags.Equal))
 							ip.NativeUInt = loc.Value;
 						break;
 					}
 				case Opcode.JumpGreaterR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags.NativeUInt).HasFlag(FlagsRegisterFlags.Greater))
 							ip.NativeUInt = loc.Value;
 						break;
 					}
 				case Opcode.JumpGreaterEqualR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						var flgs = (FlagsRegisterFlags)this.Flags.NativeUInt;
 						if (flgs.HasFlag(FlagsRegisterFlags.Greater) || flgs.HasFlag(FlagsRegisterFlags.Equal))
 							ip.NativeUInt = loc.Value;
@@ -550,14 +574,14 @@ namespace Swis
 					}
 				case Opcode.JumpLessR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags.NativeUInt).HasFlag(FlagsRegisterFlags.Less))
 							ip.NativeUInt = loc.Value;
 						break;
 					}
 				case Opcode.JumpLessEqualR:
 					{
-						Operand loc = this.DecodeOperand(ref ip.NativeUInt);
+						Operand loc = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						var flgs = (FlagsRegisterFlags)this.Flags.NativeUInt;
 						if (flgs.HasFlag(FlagsRegisterFlags.Less) || flgs.HasFlag(FlagsRegisterFlags.Equal))
 							ip.NativeUInt = loc.Value;
@@ -567,9 +591,9 @@ namespace Swis
 				#region Transformative
 				case Opcode.AddRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						// with two's compliment, adding does not need to be sign-aware
 						dst.Value = left.Value + right.Value;
@@ -577,261 +601,261 @@ namespace Swis
 					}
 				case Opcode.AddFloatRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = left.Float + right.Float;
 						break;
 					}
 				case Opcode.SubtractRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value - right.Value;
 						break;
 					}
 				case Opcode.SubtractFloatRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = left.Float - right.Float;
 						break;
 					}
 				case Opcode.MultiplyRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Signed = left.Signed * right.Signed;
 						break;
 					}
 				case Opcode.MultiplyUnsignedRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value * right.Value;
 						break;
 					}
 				case Opcode.MultiplyFloatRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = left.Float * right.Float;
 						break;
 					}
 				case Opcode.DivideRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Signed = left.Signed / right.Signed;
 						break;
 					}
 				case Opcode.DivideUnsignedRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value / right.Value;
 						break;
 					}
 				case Opcode.DivideFloatRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = left.Float / right.Float;
 						break;
 					}
 				case Opcode.ModulusRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value % right.Value;
 						break;
 					}
 				case Opcode.ModulusFloatRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = left.Float % right.Float;
 						break;
 					}
 				case Opcode.ShiftLeftRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value << (int)right.Value;
 						break;
 					}
 				case Opcode.ShiftRightRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value >> (int)right.Value;
 						break;
 					}
 				case Opcode.ArithmaticShiftRightRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						throw new NotImplementedException();
 					}
 				case Opcode.OrRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value | right.Value;
 						break;
 					}
 				case Opcode.ExclusiveOrRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value ^ right.Value;
 						break;
 					}
 				case Opcode.NotOrRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value | (~right.Value);
 						break;
 					}
 				case Opcode.AndRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value & right.Value;
 						break;
 					}
 				case Opcode.NotAndRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = left.Value & (~right.Value);
 						break;
 					}
 				case Opcode.NotRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Value = ~left.Value;
 						break;
 					}
 				case Opcode.SqrtRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Sqrt(left.Float);
 						break;
 					}
 				case Opcode.LogRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Log(left.Float, right.Float);
 						break;
 					}
 				case Opcode.SinRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Sin(left.Float);
 						break;
 					}
 				case Opcode.CosRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Cos(left.Float);
 						break;
 					}
 				case Opcode.TanRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Tan(left.Float);
 						break;
 					}
 				case Opcode.AsinRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Asin(left.Float);
 						break;
 					}
 				case Opcode.AcosRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Acos(left.Float);
 						break;
 					}
 				case Opcode.AtanRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Atan(left.Float);
 						break;
 					}
 				case Opcode.Atan2RRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Atan2(left.Float, right.Float);
 						break;
 					}
 				case Opcode.PowRRR:
 					{
-						Operand dst = this.DecodeOperand(ref ip.NativeUInt);
-						Operand left = this.DecodeOperand(ref ip.NativeUInt);
-						Operand right = this.DecodeOperand(ref ip.NativeUInt);
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						dst.Float = (float)Math.Pow(left.Float, right.Float);
 						break;
@@ -855,5 +879,6 @@ namespace Swis
 		{
 			throw new NotImplementedException();
 		}
-    }
+		
+	}
 }

@@ -14,7 +14,7 @@ $stack:
 	.data pad 1024
 
 $@_ZZ4mainE3msg:
-	.data string "Hello, world! \x00"
+	.data string "Hello, world!\x0a\x00"
 
 $@_Z3outjh: ; void(u32, u8)
 	out ptr32 [bp - 13], ptr8 [bp - 9]
@@ -55,7 +55,6 @@ $@main:
 	; pop the returns
 	;nop
 	; END FUNC CALL
-	jmp $@main
 	ret
 
 

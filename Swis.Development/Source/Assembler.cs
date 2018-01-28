@@ -57,14 +57,14 @@ namespace Swis
 			{ "jneR", Opcode.JumpNotEqualR },
 			{ "jlR", Opcode.JumpLessR },
 			{ "jgR", Opcode.JumpGreaterR },
-			{ "jleR", Opcode.JumpLessR },
+			{ "jleR", Opcode.JumpLessEqualR },
 			{ "jgeR", Opcode.JumpGreaterEqualR },
 			{ "juoR", Opcode.JumpUnderOverFlowR },
 
 			{ "addRRR", Opcode.AddRRR },
 			{ "addfRRR", Opcode.AddFloatRRR },
 			{ "subRRR", Opcode.SubtractRRR },
-			{ "subfRRR", Opcode.SubtractRRR },
+			{ "subfRRR", Opcode.SubtractFloatRRR },
 			{ "mulRRR", Opcode.MultiplyRRR },
 			{ "muluRRR", Opcode.MultiplyUnsignedRRR },
 			{ "mulfRRR", Opcode.MultiplyFloatRRR },
@@ -166,6 +166,7 @@ namespace Swis
 				default: throw new Exception($"{linenum}: data hex has an invalid nybble");
 				}
 			}
+			
 
 			while (true)
 			{
@@ -187,6 +188,15 @@ namespace Swis
 					int align = int.Parse(m.Groups[1].Value);
 					int bytes = align - (bin.Count % align);
 					bin.AddRange(new byte[bytes]);
+				}
+				else if ((m = line.Match(@"^\s*\.loc \s+ (\d+) \s+ (\d+) \s+ (.+) \s* $")).Success)
+				{
+					int locpos = int.Parse(m.Groups[1].Value);
+					int locto = int.Parse(m.Groups[2].Value);
+					string locfile = m.Groups[3].Value;
+					
+
+					dbg.AsmToSrc.Add(bin.Count, (locfile, locpos, locto));
 				}
 				else if ((m = line.Match(@"^\s*\.data \s+ ([A-z]+) \s+ (.+)")).Success)
 				{
