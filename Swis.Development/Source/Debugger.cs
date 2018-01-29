@@ -15,8 +15,9 @@ namespace Swis
 			this.Stream = stream;
 			this.Dbg = dbg;
 
-			foreach (var kv in dbg.Labels)
-				this.ReverseLabels[kv.Value] = kv.Key;
+			if(dbg != null && dbg.Labels != null)
+				foreach (var kv in dbg.Labels)
+					this.ReverseLabels[kv.Value] = kv.Key;
 		}
 
 		Register[] _LastValues;

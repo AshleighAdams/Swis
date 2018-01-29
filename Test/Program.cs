@@ -23,13 +23,13 @@ namespace SwisTest
 
 			Cpu emu = new Cpu();
 			emu.Memory = new DirectMemoryController(assembled);
-			emu.Debugger = new StreamDebugger(Console.Out, dbg);
+			emu.Debugger = new StreamDebugger(Console.Out, null/*dbg*/);
 
 			int clock = 0;
 			while (!emu.Halted)
 			{
 				emu.Clock(1);
-				System.Threading.Thread.Sleep(1000);
+				//System.Threading.Thread.Sleep(1000);
 			}
 
 			//*/
