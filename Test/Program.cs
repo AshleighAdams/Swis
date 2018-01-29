@@ -16,7 +16,13 @@ namespace SwisTest
 			//
 			//
 			///*
-			string asm = System.IO.File.ReadAllText("TestProgram/program.asm");
+			///
+			string asm = LLVMCompiler.Compile(LLVMCompiler.TestIR); // System.IO.File.ReadAllText("TestProgram/program.asm");
+
+			Console.WriteLine(asm);
+			Console.ReadLine();
+			return;
+
 			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
 
 			string x = DebugData.Serialize(dbg);
@@ -31,10 +37,7 @@ namespace SwisTest
 				emu.Clock(1);
 				//System.Threading.Thread.Sleep(1000);
 			}
-
-			//*/
-			//Console.WriteLine(LLVMCompiler.Compile(LLVMCompiler.TestIR));
-
+			
 			Console.ReadLine();
 		}
     }

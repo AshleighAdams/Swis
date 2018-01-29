@@ -186,8 +186,11 @@ namespace Swis
 				else if ((m = line.Match(@"^\s*\.align \s+ (\d+)")).Success)
 				{
 					int align = int.Parse(m.Groups[1].Value);
-					int bytes = align - (bin.Count % align);
-					bin.AddRange(new byte[bytes]);
+					if (bin.Count % align != 0)
+					{
+						int bytes = align - (bin.Count % align);
+						bin.AddRange(new byte[bytes]);
+					}
 				}
 				else if ((m = line.Match(@"^\s*\.loc \s+ (\d+) \s+ (\d+) \s+ (.+) \s* $")).Success)
 				{
