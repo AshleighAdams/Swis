@@ -25,6 +25,28 @@ namespace Swis
 
 					output.ConstantLocals[arg.name] = ToOperand(output, arg.type + "*", $"bp - {-bp_offset}", indirection: true);
 					Console.WriteLine($"\t {arg.name} = bp - {-bp_offset}");
+
+					// optimize a copy out:
+					if(optimize_args)
+					{
+						string argalloc = $"{arg.name}.addr = alloca {arg.type}";
+						string argstore = $"store {arg.type} {arg.name}, {arg.type}* {arg.name}.addr";
+
+						var alloc = output.Code.IndexOf(argalloc);
+						var store = output.Code.IndexOf(argstore);
+
+						var allocend = output.Code.IndexOf('\n', alloc);
+						var storeend = output.Code.IndexOf('\n', store);
+
+						if (alloc == -1 || store == -1 || allocend == -1 || storeend == -1)
+							throw new Exception();
+
+						// remove it
+						output.Code = output.Code.Remove(store, storeend - store);
+						output.Code = output.Code.Remove(alloc, allocend - alloc);
+
+						output.ConstantLocals[arg.name + ".addr"] = ToOperand(output, arg.type, $"bp - {-bp_offset}");
+					}
 				}
 			}
 
