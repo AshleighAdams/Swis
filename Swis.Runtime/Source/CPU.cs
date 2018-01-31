@@ -147,7 +147,9 @@ namespace Swis
 
 	public class Cpu
     {
-		
+		public static int NativeSizeBits = 32;
+		public static int NativeSizeBytes = NativeSizeBits / 8;
+
 
 		public struct Operand
 		{
