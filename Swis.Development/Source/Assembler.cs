@@ -35,6 +35,8 @@ namespace Swis
 		{
 			{ "nop", Opcode.Nop },
 			{ "intR", Opcode.InterruptR },
+			{ "sextRRR", Opcode.SignExtendRRR },
+			{ "zextRRR", Opcode.ZeroExtendRRR },
 			{ "trapR", Opcode.TrapR },
 			{ "halt", Opcode.Halt },
 			{ "reset", Opcode.Reset },
@@ -276,13 +278,13 @@ namespace Swis
 					dbg.PtrToAsm[binpos] = dbginfo;
 					//dbg.PtrToAsm[bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
 				}
-				else if ((m = line.Match(@"([A-z]+) \s+ ( ([^,]+,?)* )")).Success)
+				else if ((m = line.Match(@"([A-z]+) (\s+ (([^,]+,?)+) )?")).Success)
 				{
 					string op = m.Groups[1].Value;
 					int op_pos = pos + m.Groups[1].Index;
 					int op_to = op_pos + m.Groups[1].Length;
-					string args = m.Groups[2].Value;
-					int args_pos = pos + m.Groups[2].Index;
+					string args = m.Groups[3].Value;
+					int args_pos = pos + m.Groups[3].Index;
 					MatchCollection mc = args.Matches("[^,]+");
 
 					string instr = $"{op.ToLowerInvariant()}{"R".Times(mc.Count)}";
@@ -345,8 +347,8 @@ namespace Swis
 										c.F32 = float.Parse(strfloat);
 										constant = c.U32;
 									}
-
-									constant = uint.Parse(oa_constant);
+									else
+										constant = uint.Parse(oa_constant);
 									size = Register.NativeSize * 8;
 								}
 								else if (oa_label != "")
@@ -456,6 +458,7 @@ namespace Swis
 				}
 				else
 				{
+					throw new Exception($"failed to interpret: {line}");
 				}
 			}
 
