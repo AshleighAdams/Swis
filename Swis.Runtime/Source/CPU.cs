@@ -401,15 +401,18 @@ namespace Swis
 						Operand bit = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						
 						uint frombits = bit.Value;
-						uint srcval = src.Value;
 
-						if (frombits <= 1 || frombits >= 32)
+						if (frombits < 1 || frombits >= 32)
 							throw new Exception();
-						
-						uint ext_bitmask = ~((1u << (int)frombits) - 1); // ext 4bits to 8bits = 11110000
-						uint sign = ((1u << (int)(frombits - 1)) & srcval) >> ((int)frombits - 1);
 
-						dst.Value = srcval | (ext_bitmask * sign);
+						uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
+						uint extbits = ~valbits;                  //                      11110000
+						uint signbit = 1u << (int)(frombits - 1); //                      00001000
+
+						uint srcval = src.Value & valbits; // ensure no more bits are present after the sign extension
+						uint sign = (signbit & srcval) >> ((int)frombits - 1);
+
+						dst.Value = srcval | (extbits * sign);
 						break;
 					}
 				case Opcode.ZeroExtendRRR:
@@ -419,10 +422,12 @@ namespace Swis
 						Operand bit = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 
 						uint frombits = bit.Value;
-						if (frombits <= 1 || frombits >= 32)
+						if (frombits < 1 || frombits >= 32)
 							throw new Exception();
 
-						src.Value = dst.Value; // this has zeroextend built into it
+						uint valbits = (1u << (int)frombits) - 1;
+
+						src.Value = dst.Value & valbits;
 						break;
 					}
 				case Opcode.Halt:
