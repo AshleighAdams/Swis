@@ -202,6 +202,8 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 						throw new Exception();
 				}
 
+				RemoveNopJumps(builder);
+
 				all.AppendLine(builder.Assembly.ToString());
 			}
 
