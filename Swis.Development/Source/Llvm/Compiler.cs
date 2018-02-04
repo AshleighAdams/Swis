@@ -165,6 +165,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 
 				BuildMethodLocals(builder, func.ret_type, func.args/*, optimize_args: false*/);
 				ReplacePhis(builder);
+				SimplifyCompareBranches(builder);
 
 				string[] lines = builder.Code.Split('\n');
 				for (int i = 0; i < lines.Length; i++)

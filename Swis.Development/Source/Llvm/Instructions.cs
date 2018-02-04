@@ -7,6 +7,45 @@ namespace Swis
 	public static partial class LlvmIrCompiler
 	{
 		#region Misc
+		[IrInstruction("trunc", "<operand:dst> = trunc <type:src_type> <operand:src> to <type:dst_type>")]
+		private static void Trunc(MethodBuilder output, dynamic args)
+		{
+			int tosz = int.Parse(args.dst_type_size);
+			if (tosz % 8 != 0)
+			{
+				output.Emit(
+					$"and " +
+						$"{ToOperand(output, args.dst_type, args.dst)}, " +
+						$"{ToOperand(output, args.src_type, args.src)}, " +
+						$"{(1 << tosz) - 1} ; trunc to i{tosz}");
+				return;
+			}
+			output.Emit(
+				$"mov " +
+				$"{ToOperand(output, args.dst_type, args.dst)}, " +
+				$"{ToOperand(output, args.src_type, args.src)} ; trunc {args.src_type} -> {args.dst_type}");
+		}
+
+		[IrInstruction("sext", "<operand:dst> = sext <type:src_type> <operand:src> to <type:dst_type>")]
+		private static void Sext(MethodBuilder output, dynamic args)
+		{
+			output.Emit(
+				$"sext " +
+				$"{ToOperand(output, args.dst_type, args.dst)}, " +
+				$"{ToOperand(output, args.src_type, args.src)}, " +
+				$"{args.src_type_size}");
+		}
+
+		[IrInstruction("zext", "<operand:dst> = zext <type:src_type> <operand:src> to <type:dst_type>")]
+		private static void Zext(MethodBuilder output, dynamic args)
+		{
+			output.Emit(
+				$"zext " +
+				$"{ToOperand(output, args.dst_type, args.dst)}, " +
+				$"{ToOperand(output, args.src_type, args.src)}, " +
+				$"{args.src_type_size}");
+		}
+
 		#endregion
 
 		#region Memory
@@ -30,6 +69,14 @@ namespace Swis
 		#endregion
 
 		#region Flow
+
+		static string Targetify(MethodBuilder output, string type, string where)
+		{
+			if (string.IsNullOrWhiteSpace(type)) // is it a label?
+				return $"${output.Id}_label_{where}";
+			return ToOperand(output, type, where);
+		}
+
 		[IrInstruction("ret", "ret <type:type> <operand:what>")]
 		private static void Ret(MethodBuilder output, dynamic args)
 		{
@@ -39,24 +86,66 @@ namespace Swis
 				$"{ToOperand(output, args.type, args.what)}");
 			output.Emit("ret");
 		}
+
+		[IrInstruction("cmpbr", "cmpbr (?<cmptype>[a-z]) <keyword:method> <type:type> <operand:left>, <operand:right>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>$")]
+		private static void Cmpbr(MethodBuilder output, dynamic args)
+		{
+			string ircmp_to_cmp(string m)
+			{
+				switch (m)
+				{
+				case "i": return "";
+				case "f": return "f";
+				case "u": return "u";
+				default: throw new NotImplementedException(m);
+				}
+			}
+			string irmeth_to_asm_inverted(string m)
+			{
+				switch (m)
+				{
+				case "eq": return "ne";
+				case "ne": return "e";
+				case "slt": return "ge";
+				case "ult": return "ge";
+				case "sle": return "g";
+				case "ule": return "g";
+				case "sgt": return "le";
+				case "ugt": return "le";
+				case "sge": return "l";
+				case "uge": return "l";
+				default: throw new NotImplementedException(m);
+				}
+			}
+			// NOTE: ontrue and onfalse are swapped for cleaner code
+			string method = irmeth_to_asm_inverted(args.method);
+			string postfix = ircmp_to_cmp(args.cmptype);
+
+			string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}";
+			string asm2 = $"j{method} {Targetify(output, args.onfalse_type, args.onfalse)}";
+			string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
+			
+			output.Emit(asm1);
+			output.Emit(asm2);
+			output.Emit(asm3);
+		}
+
 		[IrInstruction("br", "br ((label|<type:uncond_type>) %<numeric:uncond>|<type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>)$")]
 		private static void Br(MethodBuilder output, dynamic args)
 		{
-			string targetify(string where, string type)
-			{
-				if (string.IsNullOrWhiteSpace(type)) // is it a label?
-					return $"${output.Id}_label_{where}";
-				return ToOperand(output, type, where);
-			}
-
 			if (!string.IsNullOrWhiteSpace(args.uncond))
-				output.Emit($"jmp {targetify(args.uncond, args.uncond_type)}");
+				output.Emit($"jmp {Targetify(output, args.uncond_type, args.uncond)}");
 			else if (!string.IsNullOrWhiteSpace(args.cond))
 			{
-				output.Emit(";dynamic conditional jumping not yet implemented");
-				// cmp %cond, 0
-				// jne %ontrue
-				// jmp %onfalse
+				if (args.cond_type_size != "1")
+					throw new Exception();
+
+				//output.Emit($"jnz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.ontrue_type, args.ontrue)}");
+				//output.Emit($"jmp {Targetify(output, args.onfalse_type, args.onfalse)}");
+
+				// inverting it generally allows us to optimize a jump out later
+				output.Emit($"jez {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
+				output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
 			}
 			else
 				throw new Exception();

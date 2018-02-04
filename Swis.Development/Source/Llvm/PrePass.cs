@@ -27,7 +27,7 @@ namespace Swis
 					Console.WriteLine($"\t {arg.name} = bp - {-bp_offset}");
 
 					// optimize a copy out:
-					if(optimize_args)
+					if (optimize_args)
 					{
 						string argalloc = $"{arg.name}.addr = alloca {arg.type}";
 						string argstore = $"store {arg.type} {arg.name}, {arg.type}* {arg.name}.addr";
@@ -66,7 +66,7 @@ namespace Swis
 			{ // locals (alloca-s)
 				string alloca_regex = PatternCompile(@"<namedlocal:id> = alloca <type:type>(, align <numeric:align>)\s*");
 
-				output.Code = Regex.Replace(output.Code, alloca_regex, delegate(Match alloca)
+				output.Code = Regex.Replace(output.Code, alloca_regex, delegate (Match alloca)
 				{
 					int align = int.Parse(alloca.Groups["align"].Value);
 					string name = alloca.Groups["id"].Value;
@@ -138,6 +138,58 @@ namespace Swis
 		}
 		*/
 
+		static void SimplifyCompareBranches(MethodBuilder output)
+		{
+			//%cmp = icmp eq i32 %1, 0
+			//br i1 %cmp, label %2, label %8
+
+			// ->
+
+			//cmpbr i eq i32 %1, 0, label %2, label %8
+
+			string rx = PatternCompile(
+				@"<operand:dst> = (?<cmptype>i|u|f)?cmp <keyword:method> <type:type> <operand:left>, <operand:right>" +
+				@"\s*\n\s*" +
+				@"br <type:cond_type> <operand:cond>, (?<ontrue>(label|<type>) %<numeric>), (?<onfalse>(label|<type:onfalse_type>) %<numeric:onfalse>)"
+			);
+
+			output.Code = Regex.Replace(output.Code, rx,
+				delegate (Match m) 
+				{
+					if (m.Groups["cond"].Value != m.Groups["dst"].Value) // only do it if it's the same jump
+						return m.Value;
+
+					bool used_before_or_after(string varname, string code, int from, int to)
+					{
+						int pos = code.IndexOf(varname);
+						while (pos > 0)
+						{
+							if (pos < from | pos > to)
+							{
+								char c = code[pos + varname.Length]; // next char
+								if (!char.IsLetterOrDigit(c))
+									return true;
+							}
+							pos = code.IndexOf(varname, pos + varname.Length);
+						}
+						return false;
+					}
+
+					// if it's used anywhere else, don't
+					if(used_before_or_after(m.Groups["dst"].Value, output.Code, m.Index, m.Index + m.Length))
+						return m.Value;
+
+					string cmptype = m.Groups["cmptype"].Value;
+					string method = m.Groups["method"].Value;
+					string type = m.Groups["type"].Value;
+					string left = m.Groups["left"].Value;
+					string right = m.Groups["right"].Value;
+					string ontrue = m.Groups["ontrue"].Value;
+					string onfalse = m.Groups["onfalse"].Value;
+					return $"cmpbr {cmptype} {method} {type} {left}, {right}, {ontrue}, {onfalse}";
+				});
+		}
+
 		static void ReplacePhis(MethodBuilder output)
 		{
 			//string prid_regex = $@"\[ (?<src>{local_regex}), %[0-9]+ \]";
@@ -145,7 +197,7 @@ namespace Swis
 
 			string phi_regexs = PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)");
 			MatchCollection phis = Regex.Matches(output.Code, phi_regexs);
-			
+
 			foreach (Match phi in phis)
 			{
 				string dst = phi.Groups["dst"].Value;
@@ -158,3 +210,5 @@ namespace Swis
 				output.Code = output.Code.Replace(phi.Value, "");
 			}
 		}
+	}
+}
