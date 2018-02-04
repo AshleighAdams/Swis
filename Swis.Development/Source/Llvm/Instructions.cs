@@ -7,6 +7,19 @@ namespace Swis
 	public static partial class LlvmIrCompiler
 	{
 		#region Misc
+
+		// getelementptr is malformed: %arrayidx = getelementptr inbounds i8, i8* %3, i32 %4
+		[IrInstruction("getelementptr", "<operand:dst> = getelementptr(?<inbounds> inbounds)? <type:basis>(?<indexers>(,( inrange)? <type> <operand>)+)")]
+		private static bool Getelementptr(MethodBuilder output, dynamic args)
+		{
+			bool inbounds = args.inbounds != "";
+			string base_type = args.basis;
+			string indexers = args.indexers;
+
+			output.Emit("no idea");
+			return true;
+		}
+
 		[IrInstruction("trunc", "<operand:dst> = trunc <type:src_type> <operand:src> to <type:dst_type>")]
 		private static bool Trunc(MethodBuilder output, dynamic args)
 		{
