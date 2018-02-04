@@ -36,4 +36,12 @@ namespace Swis
 			output.Assembly.Append(asm);
 		}
 	}
+
+	//todo: convert:
+	// cmp %1:32, 0
+	// j(ne|e) $@_Z4itoaiPci_label_8
+	// jmp...
+	//to:
+	// j(nz|ez) $@_Z4itoaiPci_label_8
+	// jmp...
 }

@@ -121,13 +121,24 @@ namespace Swis
 			string method = irmeth_to_asm_inverted(args.method);
 			string postfix = ircmp_to_cmp(args.cmptype);
 
-			string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}";
-			string asm2 = $"j{method} {Targetify(output, args.onfalse_type, args.onfalse)}";
-			string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
-			
-			output.Emit(asm1);
-			output.Emit(asm2);
-			output.Emit(asm3);
+			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u"))
+			{
+				method = method == "ne" ? "nz" : "ez";
+				string asm2 = $"j{method} {ToOperand(output, args.type, args.left)}, {Targetify(output, args.onfalse_type, args.onfalse)}";
+				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
+				output.Emit(asm2);
+				output.Emit(asm3);
+			}
+			else
+			{
+				string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}";
+				string asm2 = $"j{method} {Targetify(output, args.onfalse_type, args.onfalse)}";
+				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
+
+				output.Emit(asm1);
+				output.Emit(asm2);
+				output.Emit(asm3);
+			}
 		}
 
 		[IrInstruction("br", "br ((label|<type:uncond_type>) %<numeric:uncond>|<type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>)$")]
