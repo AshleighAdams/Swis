@@ -50,7 +50,7 @@ namespace Swis
 		}
 
 		static bool _IsSetup = false;
-		static Dictionary<string, (string regex, MethodInfo func)> IrInstructions = new Dictionary<string, (string regex, MethodInfo func)>();
+		static Dictionary<string, List<(string regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(string regex, MethodInfo func)>>();
 		static Dictionary<string, string> NamedPatternToRegex = new Dictionary<string, string>();
 
 		static void Setup()
@@ -77,7 +77,11 @@ namespace Swis
 				var attrib = func.GetCustomAttribute<IrInstructionAttribute>();
 				if (attrib == null)
 					continue;
-				IrInstructions[attrib.Instruction] = (attrib.Pattern, func);
+
+				if (!IrInstructions.TryGetValue(attrib.Instruction, out var list))
+					list = IrInstructions[attrib.Instruction] = new List<(string regex, MethodInfo func)>();
+
+				list.Add((attrib.Pattern, func));
 			}
 
 		}

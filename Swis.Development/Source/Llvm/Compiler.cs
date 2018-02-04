@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
@@ -178,13 +179,23 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 
 					if ((match = line.PatternMatch(@"^\s*(<operand> = )?<keyword:op>")) != null)
 					{
-						if (IrInstructions.TryGetValue(match.op, out (string pattern, MethodInfo func) var))
+						if (IrInstructions.TryGetValue(match.op, out List<(string pattern, MethodInfo func)> list))
 						{
-							dynamic args = line.PatternMatch(var.pattern);
+							bool good = false;
+							foreach (var var in list)
+							{
+								dynamic args = line.PatternMatch(var.pattern);
 
-							if (args == null)
+								if(args != null)
+									if((bool)var.func.Invoke(null, new object[] { builder, args }))
+									{
+										good = true;
+										break;
+									}
+							}
+
+							if (good == false)
 								throw new Exception($"{match.op} is malformed: {line.Trim()}");
-							var.func.Invoke(null, new object[] { builder, args });
 						}
 						else
 						{
