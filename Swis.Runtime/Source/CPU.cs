@@ -5,6 +5,8 @@ using System.Text;
 
 using Operand = Swis.Cpu.Operand;
 
+// https://github.com/wiremod/Miscellaneous/blob/master/CPU%20%26%20GPU/zcpudocs/zcpudoc.pdf
+
 namespace Swis
 {
 	[StructLayout(LayoutKind.Explicit)]
@@ -779,7 +781,7 @@ namespace Swis
 						dst.Value = ~left.Value;
 						break;
 					}
-				case Opcode.SqrtRR:
+				case Opcode.SqrtFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -787,7 +789,7 @@ namespace Swis
 						dst.Float = (float)Math.Sqrt(left.Float);
 						break;
 					}
-				case Opcode.LogRRR:
+				case Opcode.LogFloatRRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -796,7 +798,7 @@ namespace Swis
 						dst.Float = (float)Math.Log(left.Float, right.Float);
 						break;
 					}
-				case Opcode.SinRR:
+				case Opcode.SinFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -804,7 +806,7 @@ namespace Swis
 						dst.Float = (float)Math.Sin(left.Float);
 						break;
 					}
-				case Opcode.CosRR:
+				case Opcode.CosFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -812,7 +814,7 @@ namespace Swis
 						dst.Float = (float)Math.Cos(left.Float);
 						break;
 					}
-				case Opcode.TanRR:
+				case Opcode.TanFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -820,7 +822,7 @@ namespace Swis
 						dst.Float = (float)Math.Tan(left.Float);
 						break;
 					}
-				case Opcode.AsinRR:
+				case Opcode.AsinFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -828,7 +830,7 @@ namespace Swis
 						dst.Float = (float)Math.Asin(left.Float);
 						break;
 					}
-				case Opcode.AcosRR:
+				case Opcode.AcosFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -836,7 +838,7 @@ namespace Swis
 						dst.Float = (float)Math.Acos(left.Float);
 						break;
 					}
-				case Opcode.AtanRR:
+				case Opcode.AtanFloatRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -844,7 +846,7 @@ namespace Swis
 						dst.Float = (float)Math.Atan(left.Float);
 						break;
 					}
-				case Opcode.Atan2RRR:
+				case Opcode.Atan2FloatRRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
@@ -853,7 +855,7 @@ namespace Swis
 						dst.Float = (float)Math.Atan2(left.Float, right.Float);
 						break;
 					}
-				case Opcode.PowRRR:
+				case Opcode.PowFloatRRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand left = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);

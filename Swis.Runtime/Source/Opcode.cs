@@ -56,15 +56,15 @@ namespace Swis
 		AndRRR = 162,
 		NotAndRRR = 163,
 		NotRR = 164,
-		SqrtRR = 165,
-		LogRRR = 166,
-		SinRR = 167,
-		CosRR = 168,
-		TanRR = 169,
-		AsinRR = 170,
-		AcosRR = 171,
-		AtanRR = 172,
-		Atan2RRR = 173,
-		PowRRR = 174
+		SqrtFloatRR = 165,
+		LogFloatRRR = 166,
+		SinFloatRR = 167,
+		CosFloatRR = 168,
+		TanFloatRR = 169,
+		AsinFloatRR = 170,
+		AcosFloatRR = 171,
+		AtanFloatRR = 172,
+		Atan2FloatRRR = 173,
+		PowFloatRRR = 174
 	}
 }
