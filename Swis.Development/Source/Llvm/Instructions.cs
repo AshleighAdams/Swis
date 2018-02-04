@@ -148,25 +148,25 @@ namespace Swis
 			return true;
 		}
 
-		[IrInstruction("br", "br ((label|<type:uncond_type>) %<numeric:uncond>|<type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>)$")]
-		private static bool Br(MethodBuilder output, dynamic args)
+		[IrInstruction("br", "br (label|<type:uncond_type>) %<operand:uncond>$")]
+		private static bool BrUnconditional(MethodBuilder output, dynamic args)
 		{
-			if (!string.IsNullOrWhiteSpace(args.uncond))
-				output.Emit($"jmp {Targetify(output, args.uncond_type, args.uncond)}");
-			else if (!string.IsNullOrWhiteSpace(args.cond))
-			{
-				if (args.cond_type_size != "1")
-					throw new Exception();
-
-				//output.Emit($"jnz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.ontrue_type, args.ontrue)}");
-				//output.Emit($"jmp {Targetify(output, args.onfalse_type, args.onfalse)}");
-
-				// inverting it generally allows us to optimize a jump out later
-				output.Emit($"jez {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
-				output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
-			}
-			else
+			output.Emit($"jmp {Targetify(output, args.uncond_type, args.uncond)}");
+			return true;
+		}
+		[IrInstruction("br", "br <type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<operand:ontrue>, (label|<type:onfalse_type>) %<operand:onfalse>$")]
+		private static bool BrConditional(MethodBuilder output, dynamic args)
+		{
+			if (args.cond_type_size != "1")
 				throw new Exception();
+
+			//output.Emit($"jnz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.ontrue_type, args.ontrue)}");
+			//output.Emit($"jmp {Targetify(output, args.onfalse_type, args.onfalse)}");
+
+			// inverting it generally allows us to optimize a jump out later
+			output.Emit($"jez {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
+			output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
+			
 			return true;
 		}
 		#endregion
