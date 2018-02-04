@@ -24,8 +24,8 @@ namespace Swis
 					bp_offset -= SizeOfAsInt(arg.type) / 8;
 
 					output.ConstantLocals[arg.name] = ToOperand(output, arg.type + "*", $"bp - {-bp_offset}", indirection: true);
-					Console.WriteLine($"\t {arg.name} = bp - {-bp_offset}");
-
+					output.Emit($"; params: {arg.name} = bp - {-bp_offset}");
+					
 					// optimize a copy out:
 					if (optimize_args)
 					{
@@ -57,7 +57,7 @@ namespace Swis
 				{
 					bp_offset -= SizeOfAsInt(return_type) / 8;
 					output.ConstantLocals["ret"] = ToOperand(output, return_type + "*", $"bp - {-bp_offset}", indirection: true);
-					Console.WriteLine($"\t ret = bp - {-bp_offset}");
+					output.Emit($"; return: ret = bp - {-bp_offset}");
 				}
 			}
 
@@ -77,7 +77,7 @@ namespace Swis
 
 					// assign it a constant offset
 					output.ConstantLocals[name] = $"bp + {bp_offset}";
-					Console.WriteLine($"\t {name} = bp + {bp_offset}");
+					output.Emit($"; locals: {name} = bp + {bp_offset}");
 
 					// increase the bp offset by the size
 					bp_offset += SizeOfAsInt(alloca.Groups["type"].Value) / 8;

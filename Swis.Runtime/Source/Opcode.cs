@@ -7,6 +7,8 @@ namespace Swis
 		// misc
 		Nop = 0, NoOperation = 0,
 		InterruptR = 1,
+		SignExtendRRR = 10,
+		ZeroExtendRRR = 11,
 		TrapR = 3,
 		Halt = 5,
 		Reset = 6,

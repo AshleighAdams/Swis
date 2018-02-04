@@ -393,6 +393,38 @@ namespace Swis
 				#region Misc
 				case Opcode.Nop:
 					break;
+
+				case Opcode.SignExtendRRR:
+					{
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand bit = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						
+						uint frombits = bit.Value;
+						uint srcval = src.Value;
+
+						if (frombits <= 1 || frombits >= 32)
+							throw new Exception();
+						
+						uint ext_bitmask = ~((1u << (int)frombits) - 1); // ext 4bits to 8bits = 11110000
+						uint sign = ((1u << (int)(frombits - 1)) & srcval) >> ((int)frombits - 1);
+
+						dst.Value = srcval | (ext_bitmask * sign);
+						break;
+					}
+				case Opcode.ZeroExtendRRR:
+					{
+						Operand dst = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+						Operand bit = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
+
+						uint frombits = bit.Value;
+						if (frombits <= 1 || frombits >= 32)
+							throw new Exception();
+
+						src.Value = dst.Value; // this has zeroextend built into it
+						break;
+					}
 				case Opcode.Halt:
 					flags.NativeUInt |= (uint)FlagsRegisterFlags.Halted;
 					count = 0; // so we break from the loop

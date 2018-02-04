@@ -14,7 +14,7 @@ namespace Swis
 			if (self.RegisterID == 0)
 			{
 				uint @const = self.Constant;
-				@base = @const.ToString();
+				@base = $"0x{@const:X}";
 
 				if (dbg != null)
 					foreach (var lbl in dbg?.Labels)
@@ -86,6 +86,8 @@ namespace Swis
 		{
 			{ Opcode.Nop, "nop" },
 			{ Opcode.InterruptR, "int" },
+			{ Opcode.SignExtendRRR, "sext" },
+			{ Opcode.ZeroExtendRRR, "zext" },
 			{ Opcode.TrapR, "trap" },
 			{ Opcode.Halt, "halt" },
 			{ Opcode.Reset, "reset" },
@@ -156,6 +158,8 @@ namespace Swis
 		{
 			{ Opcode.Nop, 0 },
 			{ Opcode.InterruptR, 1 },
+			{ Opcode.SignExtendRRR, 3 },
+			{ Opcode.ZeroExtendRRR, 3 },
 			{ Opcode.TrapR, 1 },
 			{ Opcode.Halt, 0 },
 			{ Opcode.Reset, 0 },
