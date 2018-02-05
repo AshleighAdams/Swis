@@ -116,13 +116,19 @@ namespace Swis
 			return ret;
 		}
 
+		// { int x
 
+		class StructInfo
+		{
+			public int Size;
+		}
+		static Dictionary<string, StructInfo> NamedTypes = new Dictionary<string, StructInfo>();
 
 		/// <summary>
-		/// returns "ptr" or /[0-9]+/
+		/// returns 
 		/// </summary>
 		/// <param name="type"></param>
-		/// <returns></returns>
+		/// <returns>"ptr" or /[0-9]+/</returns>
 		static string SizeOf(string type)
 		{
 			if (type == "void")
