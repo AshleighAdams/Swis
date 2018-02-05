@@ -141,14 +141,9 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 		public static string Compile(string code)
 		{
 			LlvmIrCompiler.Setup();
-
-			string parenth_bal = @"\((?<args>(?:[^()]|(?<countera>\()|(?<-countera>\)))+(?(countera)(?!)))\)";
-			string brace_bal   = @"\{(?<body>(?:[^{}]|(?<counterb>\{)|(?<-counterb>\}))+(?(counterb)(?!)))\}";
-
-			//string func_rx = PatternCompile($@"define <type:ret_type> <ident:id>( )*\((?<args>{parenth_bal})\) #<numeric:attrib> {brace_bal}");
-
-			dynamic[] funcs = code.PatternMatches($@"define <type:ret_type> <ident:id>( )*{parenth_bal} #<numeric:attrib> {brace_bal}");
-
+			
+			dynamic[] funcs = code.PatternMatches($@"define <type:ret_type> <ident:id>( )*<parentheses:args> #<numeric:attrib> <braces:body>");
+			
 			StringBuilder all = new StringBuilder();
 
 			foreach (dynamic func in funcs)
@@ -157,14 +152,14 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 			{
 				MethodBuilder builder = new MethodBuilder()
 				{
-					Code = func.body,
+					Code = func.body_inside,
 					Id = func.id,
 				};
 
 				builder.Emit($"${func.id}:");
 				builder.EmitPrefix = "\t";
 
-				BuildMethodLocals(builder, func.ret_type, func.args/*, optimize_args: false*/);
+				BuildMethodLocals(builder, func.ret_type, func.args_inside/*, optimize_args: false*/);
 				ReplacePhis(builder);
 				SimplifyCompareBranches(builder);
 

@@ -8,11 +8,6 @@ namespace Swis
 	{
 		#region Misc
 
-		static (string, int) TypeIndex(string type, int index)
-		{
-			throw new NotImplementedException();
-		}
-
 		// getelementptr is malformed: %arrayidx = getelementptr inbounds i8, i8* %3, i32 %4
 		[IrInstruction("getelementptr", "<operand:dst> = getelementptr(?<inbounds> inbounds)? <type:basis>(?<indexers>(,( inrange)? <type> <operand>)+)")]
 		private static bool Getelementptr(MethodBuilder output, dynamic args)
@@ -21,14 +16,21 @@ namespace Swis
 			string base_type = args.basis;
 			string indexersstr = args.indexers;
 
-			dynamic[] indexers = indexersstr.PatternMatches("<type:type>( inrange)? <operand:index>");
+			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>");
 
 			// atm no dynamic indexing, only static.  will have to emit seperate adds/muls/movs for dynamic indexing
 			string type = base_type;
 			int offset = 0;
 			foreach (dynamic indexer in indexers)
 			{
-				int index = int.Parse(indexer.index);
+				string operand = indexer.index;
+				if (!char.IsDigit(operand[0]))
+				{
+					output.Emit("getelementptr dynamic not imp");
+					return true;
+				}
+
+				int index = int.Parse(operand);
 				(string subtype, int suboffset) = TypeIndex(type, index);
 				offset += suboffset;
 			}

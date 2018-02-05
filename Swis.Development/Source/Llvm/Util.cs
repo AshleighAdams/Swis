@@ -58,10 +58,16 @@ namespace Swis
 			if (_IsSetup)
 				return;
 			_IsSetup = true;
+			
+			NamedPatternToRegex["parentheses"] = PatternCompile(@"\((?<inside>(?:[^\(\)]|(?<__unique__>\()|(?<-__unique__>\)))+(?(__unique__)(?!)))\)");
+			NamedPatternToRegex["braces"]      = PatternCompile(@"\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}");
+			NamedPatternToRegex["brackets"]    = PatternCompile(@"\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]");
+			NamedPatternToRegex["angled"]      = PatternCompile(@"\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>");
 
 			NamedPatternToRegex["keyword"] = PatternCompile(@"[a-z]+");
 			NamedPatternToRegex["numeric"] = PatternCompile(@"[0-9]+");
-			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void)[\*]*");
+			NamedPatternToRegex["array"] = PatternCompile(@"\[[0-9]+ x");
+			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|float|double|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
 			NamedPatternToRegex["const"] = PatternCompile(@"-?[0-9]+");
 			NamedPatternToRegex["ident"] = PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*");
 			NamedPatternToRegex["namedlocal"] = PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*");
@@ -86,8 +92,10 @@ namespace Swis
 
 		}
 
+		static int uniqueid = 0;
 		public static string PatternCompile(string pattern) // <> = sub-regex
 		{
+			pattern = pattern.Replace("__unique__", $"__unique__{uniqueid++}__");
 			// test = "<register:abc>" -> "(?<abc>[%][0-9]+)"
 			// finl = "<test:def>"     -> "(?<def>(?<def.abc>[%][0-9]+))"
 
@@ -99,7 +107,17 @@ namespace Swis
 					throw new Exception($"unknown sub-pattern: {m.Groups["id"].Value}");
 				string prefix = m.Groups["prefix"].Value;
 
-				sub_regex = Regex.Replace(sub_regex, @"\(\?\<([a-zA-Z0-9_.-]+)\>", $@"(?<{prefix}_$1>");
+				sub_regex = Regex.Replace(sub_regex, @"\(\?\<(?<id>[a-zA-Z0-9_.-]+)\>",
+					delegate (Match subid)
+					{
+						string id = subid.Groups["id"].Value;
+						if (id.Contains("__unique__"))
+							return subid.Value;
+						return $@"(?<{prefix}_{id}>";
+					});
+
+				sub_regex = sub_regex.Replace("__unique__", $"__unique__{prefix}__");
+				//$@"(?<{prefix}_$1>");
 
 				return $"(?<{prefix}>{sub_regex})";
 			});
@@ -107,9 +125,8 @@ namespace Swis
 			ret = Regex.Replace(ret, @"(?<!\?)<(?<id>[a-z]+)>", delegate (Match m)
 			{
 				string sub_regex = NamedPatternToRegex[m.Groups["id"].Value];
-
-				//sub_regex = Regex.Replace(sub_regex, @"\(\?\<([a-zA-Z0-9_.-]+)\>", $@"(?<{capture_prefix}.$1>)");
-
+				
+				sub_regex = sub_regex.Replace("__unique__", $"__unique__{uniqueid++}__");
 				return $"({sub_regex})";
 			});
 
@@ -117,12 +134,100 @@ namespace Swis
 		}
 
 		// { int x
+		
+
+		/*
+		struct RT
+		{
+			char A;
+			int B[10][20];
+			char C;
+		};
+		struct ST
+		{
+			int X;
+			double Y;
+			struct RT Z;
+		};
+
+		int* foo(struct ST *s)
+		{
+			return &s[1].Z.B[5][13];
+		}
+		*/
+		// ------------------
+		/*
+		%struct.RT = type { i8, [10 x [20 x i32]], i8 }
+		%struct.ST = type { i32, double, %struct.RT }
+
+		define i32* @foo(%struct.ST* %s) nounwind uwtable readnone optsize ssp {
+		entry:
+		  %arrayidx = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1, i32 2, i32 1, i64 5, i64 13
+		  ret i32* %arrayidx
+		}
+		*/
 
 		class StructInfo
 		{
-			public int Size;
+			int Size;
+			(int offset, string type) Fields;
 		}
-		static Dictionary<string, StructInfo> NamedTypes = new Dictionary<string, StructInfo>();
+
+		static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
+		static Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
+
+		static StructInfo GetStructInfo(string type)
+		{
+			if (StructInfoCache.TryGetValue(type, out var ret))
+				return ret;
+
+			bool aligned = type.StartsWith("<");
+			if (aligned)
+				type.Substring(1, type.Length - 2); // chop the <> off
+
+			if (!type.StartsWith("{"))
+				throw new ArgumentException();
+
+			int cur_size = 0;
+			dynamic[] fields = type.PatternMatches("<type:field>");
+			foreach (dynamic field in fields)
+			{
+			}
+			return null;
+		}
+
+		// gets the offset of a type, and returns the type it has gotten
+		static (string type, int offset) TypeIndex(string type, int index)
+		{
+			if (type.EndsWith("*"))
+			{
+				string deref = TypeDeref(type);
+				int size = SizeOfAsInt(deref);
+				return (deref, size);
+			}
+
+			if(type.StartsWith("%"))
+				type = NamedTypes[type];
+
+			bool aligned = type.StartsWith("<");
+			if (aligned)
+				type.Substring(1, type.Length - 2); // chop the <> off
+
+			if (type.StartsWith("{"))
+			{
+				// a field lookup
+				throw new NotImplementedException();
+			}
+			else if (type.StartsWith("[")) // an array
+			{
+				throw new NotImplementedException();
+			}
+			else
+				throw new Exception($"Can't index type {type}");
+		}
+
+
+
 
 		/// <summary>
 		/// returns 
