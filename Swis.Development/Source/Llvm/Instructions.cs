@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Swis
 {
@@ -13,29 +15,100 @@ namespace Swis
 		private static bool Getelementptr(MethodBuilder output, dynamic args)
 		{
 			bool inbounds = args.inbounds != "";
-			string base_type = args.basis;
+			//string base_type = args.basis;
 			string indexersstr = args.indexers;
 
 			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>");
 
 			// atm no dynamic indexing, only static.  will have to emit seperate adds/muls/movs for dynamic indexing
+			
+			List<string> dynamic_offsets_operands = new List<string>();
+
+			string base_type = indexers[0].type;
+			string base_operand = indexers[0].index;
+
 			string type = base_type;
-			int offset = 0;
-			foreach (dynamic indexer in indexers)
+			int static_offset = 0;
+			
+			for (int i = 1; i < indexers.Length; i++)
 			{
+				dynamic indexer = indexers[i];
+
 				string operand = indexer.index;
+				string operand_type = indexer.type;
+
 				if (!char.IsDigit(operand[0]))
 				{
-					output.Emit("getelementptr dynamic not imp");
-					return true;
+					(string subtype, string genop) = DynamicTypeIndex(output, type, operand_type, operand);
+					dynamic_offsets_operands.Add(genop);
+					type = subtype;
 				}
-
-				int index = int.Parse(operand);
-				(string subtype, int suboffset) = TypeIndex(type, index);
-				offset += suboffset;
+				else
+				{
+					int index = int.Parse(operand);
+					(string subtype, int suboffset) = StaticTypeIndex(type, index);
+					static_offset += suboffset;
+					type = subtype;
+				}
 			}
 
-			output.Emit("no idea");
+			string destop = ToOperand(output, "void*", args.dst);
+			{
+				string baseop;
+				if (static_offset == 0)
+					baseop = $"{ToOperand(output, base_type, base_operand)}";
+				else
+					baseop = $"{ToOperand(output, base_type, base_operand)} + {static_offset}";
+				dynamic_offsets_operands.Insert(0, baseop);
+			}
+
+			// optimize out some add instructions by condensing them down into the operand form a + b + c * 1 if possible
+			(int adds, int muls) simpleop(int index)
+			{
+				string op = dynamic_offsets_operands[index];
+				return (op.PatternMatches(@"\+").Length, op.PatternMatches(@"\*").Length);
+			}
+			for (int i = 0; i < dynamic_offsets_operands.Count;)
+			{
+				var info = simpleop(i);
+				if (info.adds >= 2 || info.muls >= 1)
+				{
+					i++;
+					continue;
+				}
+
+				string condensed = dynamic_offsets_operands[i];
+				while (i + 1 < dynamic_offsets_operands.Count)
+				{
+					var info2 = simpleop(i + 1);
+					if (info.adds + info2.adds + 1 > 2 || info.muls + info2.muls > 1)
+						break;
+
+					info.adds += info2.adds + 1;
+					info.muls += info2.muls;
+
+					condensed = $"{condensed} + {dynamic_offsets_operands[i+1]}";
+					dynamic_offsets_operands.RemoveAt(i + 1);
+				}
+				dynamic_offsets_operands[i] = condensed;
+				i++;
+			}
+			
+			if (dynamic_offsets_operands.Count == 1)
+			{
+				output.Emit($"mov {destop}, {dynamic_offsets_operands[0]} ; getelementptr");
+			}
+			else
+			{
+				string baseop = dynamic_offsets_operands[0];
+				for (int i = 1; i < dynamic_offsets_operands.Count; i++)
+				{
+					int remain = dynamic_offsets_operands.Count - i - 1;
+
+					output.Emit($"add {destop}, {baseop}, {dynamic_offsets_operands[i]} ; getelementptr");
+					baseop = destop;
+				}
+			}
 			return true;
 		}
 

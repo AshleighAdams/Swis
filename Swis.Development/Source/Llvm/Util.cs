@@ -67,7 +67,7 @@ namespace Swis
 			NamedPatternToRegex["keyword"] = PatternCompile(@"[a-z]+");
 			NamedPatternToRegex["numeric"] = PatternCompile(@"[0-9]+");
 			NamedPatternToRegex["array"] = PatternCompile(@"\[[0-9]+ x");
-			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|[a-zA-Z0-9_.]+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
+			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
 			NamedPatternToRegex["const"] = PatternCompile(@"-?[0-9]+");
 			NamedPatternToRegex["ident"] = PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*");
 			NamedPatternToRegex["namedlocal"] = PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*");
@@ -170,7 +170,7 @@ namespace Swis
 		class StructInfo
 		{
 			public int Size;
-			public (int offset, string type)[] Fields;
+			public (string type, int offset)[] Fields;
 		}
 
 		static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
@@ -193,10 +193,10 @@ namespace Swis
 			int cur_size = 0;
 			dynamic[] fields = stype.PatternMatches("<type:type>");
 
-			List<(int offset, string type)> compfields = new List<(int offset, string type)>();
+			List<(string type, int offset)> compfields = new List<(string type, int offset)>();
 			foreach (dynamic field in fields)
 			{
-				compfields.Add((cur_size, field.type));
+				compfields.Add((field.type, cur_size));
 
 				int sz = SizeOfAsInt(field.type);
 
@@ -226,7 +226,7 @@ namespace Swis
 		}
 
 		// gets the offset of a type, and returns the type it has gotten
-		static (string type, int offset) TypeIndex(string type, int index)
+		static (string type, int offset) StaticTypeIndex(string type, int index)
 		{
 			if (type.EndsWith("*"))
 			{
@@ -235,7 +235,7 @@ namespace Swis
 				return (deref, size);
 			}
 
-			if(type.StartsWith("%"))
+			if (type.StartsWith("%"))
 				type = NamedTypes[type];
 
 			bool aligned = type.StartsWith("<");
@@ -245,11 +245,53 @@ namespace Swis
 			if (type.StartsWith("{"))
 			{
 				StructInfo si = GetStructInfo(type);
-				throw new NotImplementedException();
+				return si.Fields[index];
 			}
 			else if (type.StartsWith("[")) // an array
 			{
-				throw new NotImplementedException();
+				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]");
+				string subtype = arry.subtype;
+				int stride = SizeOfAsInt(arry.subtype);
+
+				return (subtype, stride * index);
+			}
+			else
+				throw new Exception($"Can't index type {type}");
+		}
+
+		static (string type, string operand) DynamicTypeIndex(MethodBuilder output, string type, string operand_type, string operand)
+		{
+			if (type.EndsWith("*"))
+			{
+				string deref = TypeDeref(type);
+				int size = SizeOfAsInt(deref);
+				if (size == 8)
+					return (deref, $"{ToOperand(output, operand_type, operand)}");
+				else
+					return (deref, $"{ToOperand(output, operand_type, operand)} * {size / 8}");
+			}
+
+			if (type.StartsWith("%"))
+				type = NamedTypes[type];
+
+			bool aligned = type.StartsWith("<");
+			if (aligned)
+				type.Substring(1, type.Length - 2); // chop the <> off
+
+			if (type.StartsWith("{"))
+			{
+				throw new ArgumentException(); // the offset *can* be found if we make a type-table, but, the type returned is unknowable.
+			}
+			else if (type.StartsWith("[")) // an array
+			{
+				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]");
+				string subtype = arry.subtype;
+				int stride = SizeOfAsInt(arry.subtype);
+
+				if (stride == 8)
+					return (subtype, $"{ToOperand(output, operand_type, operand)}"); // stride * index
+				else
+					return (subtype, $"{ToOperand(output, operand_type, operand)} * {stride / 8}"); // stride * index
 			}
 			else
 				throw new Exception($"Can't index type {type}");
