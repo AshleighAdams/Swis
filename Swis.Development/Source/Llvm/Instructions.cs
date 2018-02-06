@@ -138,26 +138,53 @@ namespace Swis
 				default: throw new NotImplementedException(m);
 				}
 			}
-			string irmeth_to_asm_inverted(string m)
+
+			(string postfix, string method, string thirdop) irfcmp_to_asm_inverted(string m)
 			{
 				switch (m)
 				{
-				case "eq": return "ne";
-				case "ne": return "e";
-				case "slt": return "ge";
-				case "ult": return "ge";
-				case "sle": return "g";
-				case "ule": return "g";
-				case "sgt": return "le";
-				case "ugt": return "le";
-				case "sge": return "l";
-				case "uge": return "l";
+				case "oeq": return ("f", "ne", ", 1");
+				case "ueq": return ("f", "ne", ", 0");
+				case "one": return ("f", "e",  ", 1");
+				case "une": return ("f", "e",  ", 0");
+				case "olt": return ("f", "ge", ", 1");
+				case "ult": return ("f", "ge", ", 0");
+				case "ole": return ("f", "g",  ", 1");
+				case "ule": return ("f", "g",  ", 0");
+				case "ogt": return ("f", "le", ", 1");
+				case "ugt": return ("f", "le", ", 0");
+				case "oge": return ("f", "l",  ", 1");
+				case "uge": return ("f", "l",  ", 0");
 				default: throw new NotImplementedException(m);
 				}
 			}
+			
+			(string postfix, string method, string thirdop) iricmp_to_asm_inverted(string m)
+			{
+				switch (m)
+				{
+				case "eq": return ("u", "ne", "");
+				case "ne": return ("u", "e", "");
+				case "slt": return ("", "ge", "");
+				case "ult": return ("u", "ge", "");
+				case "sle": return ("", "g", "");
+				case "ule": return ("u", "g", "");
+				case "sgt": return ("", "le", "");
+				case "ugt": return ("u", "le", "");
+				case "sge": return ("", "l", "");
+				case "uge": return ("u", "l", "");
+				default: throw new NotImplementedException(m);
+				}
+			}
+
 			// NOTE: ontrue and onfalse are swapped for cleaner code
-			string method = irmeth_to_asm_inverted(args.method);
-			string postfix = ircmp_to_cmp(args.cmptype);
+			string postfix, method, third;
+			if (args.cmptype == "f")
+				(postfix, method, third) = irfcmp_to_asm_inverted(args.method);
+			else if (args.cmptype == "i")
+				(postfix, method, third) = iricmp_to_asm_inverted(args.method);
+			else
+				return false;
 
 			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u"))
 			{
@@ -169,7 +196,7 @@ namespace Swis
 			}
 			else
 			{
-				string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}";
+				string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}{third}";
 				string asm2 = $"j{method} {Targetify(output, args.onfalse_type, args.onfalse)}";
 				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
 

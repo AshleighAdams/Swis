@@ -67,7 +67,7 @@ namespace Swis
 			NamedPatternToRegex["keyword"] = PatternCompile(@"[a-z]+");
 			NamedPatternToRegex["numeric"] = PatternCompile(@"[0-9]+");
 			NamedPatternToRegex["array"] = PatternCompile(@"\[[0-9]+ x");
-			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|float|double|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
+			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|[a-zA-Z0-9_.]+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
 			NamedPatternToRegex["const"] = PatternCompile(@"-?[0-9]+");
 			NamedPatternToRegex["ident"] = PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*");
 			NamedPatternToRegex["namedlocal"] = PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*");
@@ -169,8 +169,8 @@ namespace Swis
 
 		class StructInfo
 		{
-			int Size;
-			(int offset, string type) Fields;
+			public int Size;
+			public (int offset, string type)[] Fields;
 		}
 
 		static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
@@ -180,7 +180,7 @@ namespace Swis
 		{
 			if (StructInfoCache.TryGetValue(type, out var ret))
 				return ret;
-
+			
 			bool aligned = type.StartsWith("<");
 			if (aligned)
 				type.Substring(1, type.Length - 2); // chop the <> off
@@ -188,12 +188,41 @@ namespace Swis
 			if (!type.StartsWith("{"))
 				throw new ArgumentException();
 
+			string stype = type.Substring(1, type.Length - 2); // trim the {}
+
 			int cur_size = 0;
-			dynamic[] fields = type.PatternMatches("<type:field>");
+			dynamic[] fields = stype.PatternMatches("<type:type>");
+
+			List<(int offset, string type)> compfields = new List<(int offset, string type)>();
 			foreach (dynamic field in fields)
 			{
+				compfields.Add((cur_size, field.type));
+
+				int sz = SizeOfAsInt(field.type);
+
+				if(sz % 8 != 0)
+					sz += 8 - (sz % 8);
+
+				cur_size += sz / 8;
 			}
-			return null;
+
+			return StructInfoCache[type] = new StructInfo
+			{
+				Size = cur_size,
+				Fields = compfields.ToArray(),
+			};
+		}
+
+		public static void _teststrutinfo()
+		{
+			Setup();
+			/*%struct.RT = type { i8, [10 x [20 x i32]], i8 }
+			%struct.ST = type { i32, double, %struct.RT }*/
+
+			NamedTypes["%struct.RT"] = "{ i8, [10 x [20 x i32]], i8 }";
+			NamedTypes["%struct.ST"] = "{ i32, double, %struct.RT }";
+
+			StructInfo inf = GetStructInfo(NamedTypes["%struct.ST"]);
 		}
 
 		// gets the offset of a type, and returns the type it has gotten
@@ -215,7 +244,7 @@ namespace Swis
 
 			if (type.StartsWith("{"))
 			{
-				// a field lookup
+				StructInfo si = GetStructInfo(type);
 				throw new NotImplementedException();
 			}
 			else if (type.StartsWith("[")) // an array
@@ -240,7 +269,38 @@ namespace Swis
 				return "0";
 			if (type[type.Length - 1] == '*')
 				return "ptr";
-			return Regex.Match(type, "[0-9]+").Value;
+
+			if (type[0] == '%')
+				type = NamedTypes[type];
+
+			if (type[0] == '{')
+			{
+				StructInfo info = GetStructInfo(type);
+				return $"{info.Size * 8}";
+			}
+
+			if (type[0] == '[')
+			{
+				dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]");
+				dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>");
+
+				int bits = SizeOfAsInt(arry.type);
+				foreach (dynamic size in sizes)
+					bits *= int.Parse(size.sz);
+				return bits.ToString();
+			}
+
+			if (type == "half")
+				return "16";
+			if (type == "float")
+				return "32";
+			if (type == "double")
+				return "64";
+			if (type == "fp128")
+				return "128";
+			if (type[0] == 'i' || type[0] == 'f')
+				return Regex.Match(type, "[0-9]+").Value;
+			throw new NotImplementedException(type);
 		}
 
 		/// ptr info is lost during this

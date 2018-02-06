@@ -12,7 +12,8 @@ namespace SwisTest
         {
 			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 			System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
-			
+
+			LlvmIrCompiler._teststrutinfo();
 			string asm = LlvmIrCompiler.Compile(LlvmIrCompiler.TestIR); // System.IO.File.ReadAllText("TestProgram/program.asm");
 
 			Console.WriteLine(asm);
