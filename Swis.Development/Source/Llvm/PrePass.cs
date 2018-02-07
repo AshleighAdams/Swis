@@ -9,11 +9,11 @@ namespace Swis
 		static void BuildMethodLocals(MethodBuilder output,
 			string return_type, string argslist, bool optimize_args = true)
 		{
-			int bp_offset = -Cpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
+			int bp_offset = -(int)Cpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
 
 			{ // args
 				dynamic[] args = argslist
-					.PatternMatches("<type:type>( <keyword:mods>)* <namedlocal:name>");
+					.PatternMatches("<type:type>( <keyword:mods>)* <namedlocal:name>", IrPatterns);
 				output.Arguments = new(string, string)[args.Length];
 
 				for (int i = args.Length; i-- > 0;)
@@ -21,7 +21,7 @@ namespace Swis
 					dynamic arg = args[i];
 					output.Arguments[i] = (arg.name, arg.type);
 
-					bp_offset -= SizeOfAsInt(arg.type) / 8;
+					bp_offset -= (int)SizeOfAsInt(arg.type) / 8;
 
 					output.ConstantLocals[arg.name] = ToOperand(output, arg.type + "*", $"bp - {-bp_offset}", indirection: true);
 					output.Emit($"; params: {arg.name} = bp - {-bp_offset}");
@@ -51,11 +51,11 @@ namespace Swis
 			}
 
 			{ // ret
-				int ret_bytes = SizeOfAsInt(return_type) / 8;
+				uint ret_bytes = SizeOfAsInt(return_type) / 8;
 
 				if (ret_bytes > 0)
 				{
-					bp_offset -= SizeOfAsInt(return_type) / 8;
+					bp_offset -= (int)SizeOfAsInt(return_type) / 8;
 					output.ConstantLocals["ret"] = ToOperand(output, return_type + "*", $"bp - {-bp_offset}", indirection: true);
 					output.Emit($"; return: ret = bp - {-bp_offset}");
 				}
@@ -64,7 +64,7 @@ namespace Swis
 			bp_offset = 0;
 
 			{ // locals (alloca-s)
-				string alloca_regex = PatternCompile(@"<namedlocal:id> = alloca <type:type>(, align <numeric:align>)\s*");
+				string alloca_regex = Util.PatternCompile(@"<namedlocal:id> = alloca <type:type>(, align <numeric:align>)\s*", IrPatterns);
 
 				output.Code = Regex.Replace(output.Code, alloca_regex, delegate (Match alloca)
 				{
@@ -80,7 +80,7 @@ namespace Swis
 					output.Emit($"; locals: {name} = bp + {bp_offset}");
 
 					// increase the bp offset by the size
-					bp_offset += SizeOfAsInt(alloca.Groups["type"].Value) / 8;
+					bp_offset += (int)SizeOfAsInt(alloca.Groups["type"].Value) / 8;
 
 					return "";
 				});
@@ -147,10 +147,10 @@ namespace Swis
 
 			//cmpbr i eq i32 %1, 0, label %2, label %8
 
-			string rx = PatternCompile(
+			string rx = Util.PatternCompile(
 				@"<operand:dst> = (?<cmptype>i|u|f)?cmp <keyword:method> <type:type> <operand:left>, <operand:right>" +
 				@"\s*\n\s*" +
-				@"br <type:cond_type> <operand:cond>, (?<ontrue>(label|<type>) %<numeric>), (?<onfalse>(label|<type:onfalse_type>) %<numeric:onfalse>)"
+				@"br <type:cond_type> <operand:cond>, (?<ontrue>(label|<type>) %<numeric>), (?<onfalse>(label|<type:onfalse_type>) %<numeric:onfalse>)", IrPatterns
 			);
 
 			output.Code = Regex.Replace(output.Code, rx,
@@ -195,13 +195,13 @@ namespace Swis
 			//string prid_regex = $@"\[ (?<src>{local_regex}), %[0-9]+ \]";
 			//string phi_regex = $@"(?<dst>{local_regex}) = phi {type_regex} (?<sources>{prid_regex}(, {prid_regex})+)";
 
-			string phi_regexs = PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)");
+			string phi_regexs = Util.PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)", IrPatterns);
 			MatchCollection phis = Regex.Matches(output.Code, phi_regexs);
 
 			foreach (Match phi in phis)
 			{
 				string dst = phi.Groups["dst"].Value;
-				dynamic[] preds = phi.Groups["sources"].Value.PatternMatches(@"\[ <local:src>, %<numeric:pred> \]");
+				dynamic[] preds = phi.Groups["sources"].Value.PatternMatches(@"\[ <local:src>, %<numeric:pred> \]", IrPatterns);
 				//MatchCollection preds = Regex.Matches(phi.Groups["sources"].Value, $@"{prid_regex}");
 
 				foreach (dynamic pred in preds)

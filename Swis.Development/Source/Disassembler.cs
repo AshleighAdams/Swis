@@ -7,10 +7,38 @@ namespace Swis
 {
 	public static class Disassembler
 	{
+		// TODO: when c# supports it, make self a ref
 		public static string Disassemble(this Operand self, DebugData dbg)
 		{
-			string @base = "";
+			string @base;
+			
+			string do_part(sbyte regid, byte size, uint @const, bool signed = false)
+			{
+				return "notimp";
+			}
 
+			switch (self.AddressingMode)
+			{
+			case 0:
+				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)}";
+				break;
+			case 1:
+				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}";
+				break;
+			case 2:
+				@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD, self.ConstDSigned)}";
+				break;
+			case 3:
+				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" +
+					$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD, self.ConstDSigned)}";
+				break;
+			default:
+				@base = "???";
+				break;
+			}
+
+			#region OLD
+			/*
 			if (self.RegisterID == 0)
 			{
 				uint @const = self.Constant;
@@ -39,10 +67,12 @@ namespace Swis
 				else
 					@base = $"{@base} - {-self.Offset}";
 			}
+			*/
+			#endregion
 
 			if (self.Indirect)
 			{
-				if (self.IndirectionSize == Register.NativeSize * 8)
+				if (self.IndirectionSize == Cpu.NativeSizeBits)
 					@base = $"[{@base}]";
 				else
 					@base = $"ptr{self.IndirectionSize} [{@base}]";
@@ -53,6 +83,7 @@ namespace Swis
 
 		public static Dictionary<NamedRegister, string> RegisterMapReverse = new Dictionary<NamedRegister, string>()
 		{
+			{ NamedRegister.TickCount, "tsc" },
 			{ NamedRegister.InstructionPointer, "ip" },
 			{ NamedRegister.StackPointer, "sp" },
 			{ NamedRegister.BasePointer, "bp"},

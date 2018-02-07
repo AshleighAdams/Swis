@@ -79,7 +79,7 @@ namespace Swis
 
 	public enum NamedRegister
 	{
-		Invalid = 0,
+		TickCount = 0,
 		InstructionPointer = 1,
 		StackPointer = 2,
 		BasePointer = 4,
@@ -89,10 +89,18 @@ namespace Swis
 		ProtectedMode = 6, // mode flags: int1 realmode, int2 ring
 		ProtectedInterrupt = 7, // interrupt handler address
 
+		StackSegment = 8,
+		CodeSegment = 9,
+		DataSegment = 10,
+		ExtraSegment = 11,
+		FSegment = 12,
+		GSegment = 13,
+		XtraSegment = 14,
+
 		// 0bnnnnnn_ss
 		// sss = 2 bits, of the 2^(s+3) size, up to 128 bits
 		// b, s, i, l: gai
-		
+
 		GeneralA = 16, GeneralB = 17, GeneralC = 18, GeneralD = 19, GeneralE = 20, GeneralF = 21,
 		//GeneralG = 38, GeneralH = 39, GeneralI = 40, GeneralJ = 41, GeneralK = 42, GeneralL = 43,
 

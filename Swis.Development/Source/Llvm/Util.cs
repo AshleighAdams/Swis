@@ -51,7 +51,9 @@ namespace Swis
 
 		static bool _IsSetup = false;
 		static Dictionary<string, List<(string regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(string regex, MethodInfo func)>>();
-		static Dictionary<string, string> NamedPatternToRegex = new Dictionary<string, string>();
+		static Dictionary<string, string> IrPatterns = new Dictionary<string, string>();
+
+		
 
 		static void Setup()
 		{
@@ -59,22 +61,18 @@ namespace Swis
 				return;
 			_IsSetup = true;
 			
-			NamedPatternToRegex["parentheses"] = PatternCompile(@"\((?<inside>(?:[^\(\)]|(?<__unique__>\()|(?<-__unique__>\)))+(?(__unique__)(?!)))\)");
-			NamedPatternToRegex["braces"]      = PatternCompile(@"\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}");
-			NamedPatternToRegex["brackets"]    = PatternCompile(@"\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]");
-			NamedPatternToRegex["angled"]      = PatternCompile(@"\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>");
+			
 
-			NamedPatternToRegex["keyword"] = PatternCompile(@"[a-z]+");
-			NamedPatternToRegex["numeric"] = PatternCompile(@"[0-9]+");
-			NamedPatternToRegex["array"] = PatternCompile(@"\[[0-9]+ x");
-			NamedPatternToRegex["type"] = PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**");
-			NamedPatternToRegex["const"] = PatternCompile(@"-?[0-9]+");
-			NamedPatternToRegex["ident"] = PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*");
-			NamedPatternToRegex["namedlocal"] = PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*");
-			NamedPatternToRegex["global"] = PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*");
-			NamedPatternToRegex["register"] = PatternCompile(@"[%][0-9]+");
-			NamedPatternToRegex["local"] = PatternCompile(@"<namedlocal>|<register>");
-			NamedPatternToRegex["operand"] = PatternCompile(@"<const>|<local>");
+			IrPatterns["keyword"]    = Util.PatternCompile(@"[a-z]+", IrPatterns);
+			IrPatterns["array"]      = Util.PatternCompile(@"\[[0-9]+ x", IrPatterns);
+			IrPatterns["type"]       = Util.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
+			IrPatterns["const"]      = Util.PatternCompile(@"-?[0-9]+", IrPatterns);
+			IrPatterns["ident"]      = Util.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["namedlocal"] = Util.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["global"]     = Util.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["register"]   = Util.PatternCompile(@"[%][0-9]+", IrPatterns);
+			IrPatterns["local"]      = Util.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
+			IrPatterns["operand"]    = Util.PatternCompile(@"<const>|<local>", IrPatterns);
 
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
@@ -90,47 +88,6 @@ namespace Swis
 				list.Add((attrib.Pattern, func));
 			}
 
-		}
-
-		static int uniqueid = 0;
-		public static string PatternCompile(string pattern) // <> = sub-regex
-		{
-			pattern = pattern.Replace("__unique__", $"__unique__{uniqueid++}__");
-			// test = "<register:abc>" -> "(?<abc>[%][0-9]+)"
-			// finl = "<test:def>"     -> "(?<def>(?<def.abc>[%][0-9]+))"
-
-			string ret = Regex.Replace(pattern, "[ ]+", @"\s+");
-
-			ret = Regex.Replace(ret, @"(?<!\(\?)<(?<id>[a-z]+):(?<prefix>[a-zA-Z0-9_.-]+)>", delegate (Match m)
-			{
-				if (!NamedPatternToRegex.TryGetValue(m.Groups["id"].Value, out string sub_regex))
-					throw new Exception($"unknown sub-pattern: {m.Groups["id"].Value}");
-				string prefix = m.Groups["prefix"].Value;
-
-				sub_regex = Regex.Replace(sub_regex, @"\(\?\<(?<id>[a-zA-Z0-9_.-]+)\>",
-					delegate (Match subid)
-					{
-						string id = subid.Groups["id"].Value;
-						if (id.Contains("__unique__"))
-							return subid.Value;
-						return $@"(?<{prefix}_{id}>";
-					});
-
-				sub_regex = sub_regex.Replace("__unique__", $"__unique__{prefix}__");
-				//$@"(?<{prefix}_$1>");
-
-				return $"(?<{prefix}>{sub_regex})";
-			});
-
-			ret = Regex.Replace(ret, @"(?<!\?)<(?<id>[a-z]+)>", delegate (Match m)
-			{
-				string sub_regex = NamedPatternToRegex[m.Groups["id"].Value];
-				
-				sub_regex = sub_regex.Replace("__unique__", $"__unique__{uniqueid++}__");
-				return $"({sub_regex})";
-			});
-
-			return ret;
 		}
 
 		// { int x
@@ -169,8 +126,8 @@ namespace Swis
 
 		class StructInfo
 		{
-			public int Size;
-			public (string type, int offset)[] Fields;
+			public uint Size;
+			public (string type, uint offset)[] Fields;
 		}
 
 		static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
@@ -190,15 +147,15 @@ namespace Swis
 
 			string stype = type.Substring(1, type.Length - 2); // trim the {}
 
-			int cur_size = 0;
-			dynamic[] fields = stype.PatternMatches("<type:type>");
+			uint cur_size = 0;
+			dynamic[] fields = stype.PatternMatches("<type:type>", IrPatterns);
 
-			List<(string type, int offset)> compfields = new List<(string type, int offset)>();
+			List<(string type, uint offset)> compfields = new List<(string type, uint offset)>();
 			foreach (dynamic field in fields)
 			{
 				compfields.Add((field.type, cur_size));
 
-				int sz = SizeOfAsInt(field.type);
+				uint sz = SizeOfAsInt(field.type);
 
 				if(sz % 8 != 0)
 					sz += 8 - (sz % 8);
@@ -231,8 +188,8 @@ namespace Swis
 			if (type.EndsWith("*"))
 			{
 				string deref = TypeDeref(type);
-				int size = SizeOfAsInt(deref);
-				return (deref, size);
+				uint size = SizeOfAsInt(deref);
+				return (deref, (int)size);
 			}
 
 			if (type.StartsWith("%"))
@@ -245,15 +202,16 @@ namespace Swis
 			if (type.StartsWith("{"))
 			{
 				StructInfo si = GetStructInfo(type);
-				return si.Fields[index];
+				(string a, uint b) = si.Fields[index];
+				return (a, (int)b);
 			}
 			else if (type.StartsWith("[")) // an array
 			{
-				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]");
+				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
 				string subtype = arry.subtype;
-				int stride = SizeOfAsInt(arry.subtype);
+				uint stride = SizeOfAsInt(arry.subtype);
 
-				return (subtype, stride * index);
+				return (subtype, (int)stride * index);
 			}
 			else
 				throw new Exception($"Can't index type {type}");
@@ -264,7 +222,7 @@ namespace Swis
 			if (type.EndsWith("*"))
 			{
 				string deref = TypeDeref(type);
-				int size = SizeOfAsInt(deref);
+				uint size = SizeOfAsInt(deref);
 				if (size == 8)
 					return (deref, $"{ToOperand(output, operand_type, operand)}");
 				else
@@ -284,9 +242,9 @@ namespace Swis
 			}
 			else if (type.StartsWith("[")) // an array
 			{
-				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]");
+				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
 				string subtype = arry.subtype;
-				int stride = SizeOfAsInt(arry.subtype);
+				uint stride = SizeOfAsInt(arry.subtype);
 
 				if (stride == 8)
 					return (subtype, $"{ToOperand(output, operand_type, operand)}"); // stride * index
@@ -323,12 +281,12 @@ namespace Swis
 
 			if (type[0] == '[')
 			{
-				dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]");
-				dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>");
+				dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns);
+				dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>", IrPatterns);
 
-				int bits = SizeOfAsInt(arry.type);
+				uint bits = SizeOfAsInt(arry.type);
 				foreach (dynamic size in sizes)
-					bits *= int.Parse(size.sz);
+					bits *= uint.Parse(size.sz);
 				return bits.ToString();
 			}
 
@@ -346,12 +304,12 @@ namespace Swis
 		}
 
 		/// ptr info is lost during this
-		static int SizeOfAsInt(string type)
+		static uint SizeOfAsInt(string type)
 		{
 			string sz = SizeOf(type);
 			if (sz == "ptr")
 				return Cpu.NativeSizeBits;
-			return int.Parse(sz);
+			return uint.Parse(sz);
 		}
 
 		static string TypeDeref(string type)

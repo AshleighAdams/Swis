@@ -15,10 +15,10 @@ namespace Swis
 
 			//$x:
 
-			string rx = PatternCompile(
+			string rx = Util.PatternCompile(
 				@"jmp (?<target>\$[a-zA-Z0-9@%#-_\.]+)" +
 				@"(?<ws>\s*\n\s*)+" +
-				@"(?<dest>\$[^:]+):"
+				@"(?<dest>\$[^:]+):", IrPatterns
 			);
 
 			string asm = output.Assembly.ToString();

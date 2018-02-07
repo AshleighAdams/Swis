@@ -142,7 +142,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 		{
 			LlvmIrCompiler.Setup();
 			
-			dynamic[] funcs = code.PatternMatches($@"define <type:ret_type> <ident:id>( )*<parentheses:args> #<numeric:attrib> <braces:body>");
+			dynamic[] funcs = code.PatternMatches($@"define <type:ret_type> <ident:id>( )*<parentheses:args> #<numeric:attrib> <braces:body>", IrPatterns);
 			
 			StringBuilder all = new StringBuilder();
 
@@ -172,14 +172,14 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 
 					dynamic match;
 
-					if ((match = line.PatternMatch(@"^\s*(<operand> = )?<keyword:op>")) != null)
+					if ((match = line.PatternMatch(@"^\s*(<operand> = )?<keyword:op>", IrPatterns)) != null)
 					{
 						if (IrInstructions.TryGetValue(match.op, out List<(string pattern, MethodInfo func)> list))
 						{
 							bool good = false;
 							foreach (var var in list)
 							{
-								dynamic args = line.PatternMatch(var.pattern);
+								dynamic args = line.PatternMatch(var.pattern, IrPatterns);
 
 								if(args != null)
 									if((bool)var.func.Invoke(null, new object[] { builder, args }))
@@ -199,7 +199,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 						}
 						continue;
 					}
-					else if ((match = line.PatternMatch(@"[<]label[>]:<numeric:id>:")) != null)
+					else if ((match = line.PatternMatch(@"[<]label[>]:<numeric:id>:", IrPatterns)) != null)
 					{
 						builder.Emit("");
 						builder.Emit($"${builder.Id}_label_{match.id}:");

@@ -80,77 +80,145 @@ namespace Swis
 
 		public static Operand DecodeOperand(this MemoryController memory, ref uint ip, Register[] registers)
 		{
-			byte a = memory[ip + 0];
-			byte b = memory[ip + 1];
-			ip += 2;
+			byte master = memory[ip + 0];
+			ip += 1;
 
-			uint regid = (uint)((a & 0b11111000) >> 3);
-			uint size = (uint)((a & 0b00000011) >> 0);
+			byte indirection_size = (byte)((master & 0b1110_0000u) >> 5);
+			byte addressing_mode = (byte)((master & 0b0001_1000u) >> 3);
+			byte segment = (byte)((master & 0b0000_0111u) >> 0);
 
-			size = Register.Pow(2, size); // to bytes
-
-			uint constant = 0;
-			if (regid == 0)
+			switch (indirection_size)
 			{
-				Caster c; c.U32 = 0;
-
-				switch (size)
-				{
-				default: throw new Exception("invalid register const size");
-				case 32 / 8:
-					c.ByteD = memory[ip + 3];
-					c.ByteC = memory[ip + 2];
-					goto case 16 / 8;
-				case 16 / 8:
-					c.ByteB = memory[ip + 1];
-					goto case 8 / 8;
-				case 8 / 8:
-					c.ByteA = memory[ip + 0];
-					break;
-				}
-
-				ip += size;
-				constant = c.U32;
+			case 0: break;
+			case 1: indirection_size = 8; break;
+			case 2: indirection_size = 16; break;
+			case 3: indirection_size = 32; break;
+			//case 4: indirection_size = 64; break;
+			default: throw new Exception();
 			}
 
-			uint indirection_size = (uint)((b & 0b1110_0000) >> 5);
-			bool indirect = indirection_size != 0;
-			if (indirect)
-				indirection_size = Register.Pow(2, indirection_size - 1);
+			sbyte rida, ridb, ridc, ridd;
+			byte sza, szb, szc, szd;
+			uint cona, conb, conc, cond;
+			bool dsign = false;
 
-			int offset = 0;
-			if ((b & 0b0001_0000) != 0)
+			bool decode_part(out sbyte regid, out byte size, out uint @const, ref uint ipinside) // returns true if signed
 			{
-				Caster c; c.I32 = 0;
+				byte control = memory[ipinside + 0];
+				ipinside += 1;
 
-				c.ByteA = memory[ip + 0];
-				c.ByteB = memory[ip + 1];
-				c.ByteC = memory[ip + 2];
-				c.ByteD = memory[ip + 3];
+				if ((control & 0b1000_0000u) != 0) // is it a constant?
+				{
+					uint extra_bytes = ((control & 0b0110_0000u) >> 5);
+					bool signed = (control & 0b0001_0000u) != 0;
+					switch (extra_bytes)
+					{
+					case 0: goto default;
+					case 1: goto default;
+					case 2: goto default;
+					case 3: extra_bytes = 4; break;
+					default: break;
+					}
 
-				ip += 4;
-				offset = c.I32;
+					uint total;
+					if (extra_bytes != 4)
+					{
+						// todo: check endianness here
+						total = (control & 0b0000_1111u);
+						for (int i = 0; i < extra_bytes; i++)
+						{
+							uint constpart = memory[ipinside + 0];
+							ipinside += 1;
+							total |= constpart << (i * 8 + 4);
+						}
+						if (signed)
+							total = Cpu.SignExtend(total, 4 + extra_bytes * 8);
+					}
+					else
+					{
+						uint a = memory[ipinside + 0];
+						uint b = memory[ipinside + 1];
+						uint c = memory[ipinside + 2];
+						uint d = memory[ipinside + 3];
+						total = 0
+							| (a << 0)
+							| (b << 8)
+							| (c << 16)
+							| (d << 24);
+						ipinside += 4;
+					}
+					regid = -1;
+					size = 32; // todo: maybe
+					@const = total;
+					return signed;
+				}
+				else
+				{
+					@const = 0;
+					regid = (sbyte)((control & 0b0111_1100u) >> 2);
+					uint szid = ((control & 0b0000_0011u) >> 0);
+					switch (szid)
+					{
+					case 0: size = 8; break;
+					case 1: size = 16; break;
+					case 2: size = 32; break;
+					//case 3: size = 64; break;
+					default: throw new Exception();
+					}
+					return false;
+				}
+			}
+
+			switch (addressing_mode)
+			{
+			case 0: // a
+				decode_part(out rida, out sza, out cona, ref ip);
+				ridb = ridc = ridd = -1;
+				szb = szc = szd = 0;
+				conb = conc = cond = 0;
+				break;
+			case 1: // a + b
+				decode_part(out rida, out sza, out cona, ref ip);
+				decode_part(out ridb, out szb, out conb, ref ip);
+				ridc = ridd = -1;
+				szc = szd = 0;
+				conc = cond = 0;
+				break;
+			case 2: // c * d
+				decode_part(out ridc, out szc, out conc, ref ip);
+				dsign = decode_part(out ridd, out szd, out cond, ref ip);
+				rida = ridb = -1;
+				sza = szb = 0;
+				cona = conb = 0;
+				break;
+			case 3: // a + b + c * d
+				decode_part(out rida, out sza, out cona, ref ip);
+				decode_part(out ridb, out szb, out conb, ref ip);
+				decode_part(out ridc, out szc, out conc, ref ip);
+				dsign = decode_part(out ridd, out szd, out cond, ref ip);
+				break;
+			default:
+				throw new Exception();
 			}
 
 			return new Operand
 			{
 				Memory = memory,
 				Registers = registers,
-
-				RegisterID = regid,
-				Size = size << 3,
-				Constant = constant,
-				Indirect = indirect,
-				IndirectionSize = indirection_size << 3,
-				Offset = offset,
+				RegIdA = rida, RegIdB = ridb, RegIdC = ridc, RegIdD = ridd,
+				ConstA = cona, ConstB = conb, ConstC = conc, ConstD = conc, ConstDSigned = dsign,
+				SizeA = sza, SizeB = szb, SizeC = szc, SizeD = szd,
+				IndirectionSize = indirection_size,
+				Segment = segment,
+				AddressingMode = addressing_mode,
 			};
 		}
 	}
 
 	public class Cpu
     {
-		public static int NativeSizeBits = 32;
-		public static int NativeSizeBytes = NativeSizeBits / 8;
+		public static uint NativeSizeBits = 32;
+		public static uint NativeSizeBytes = NativeSizeBits / 8;
 
 
 		public struct Operand
@@ -159,18 +227,75 @@ namespace Swis
 			public MemoryController Memory;
 			public Register[] Registers;
 
-			public uint RegisterID; // if this is 0, it is a const of Size bits after the flags
-			public UInt32 Constant; // if not using a register, use this
-			public uint Size; // the size of the register
-			public bool Indirect; // mov 1, blah: mem[1] = blah; mov [1], blah: mem[mem[1]] = blah
-			public uint IndirectionSize;
-			public int Offset; // mov ga, bp + 4; ga = bp.int + 4; // mov ga, [bp + 4]; ga = mem[bp.int + 4]
+			public bool ConstDSigned; // if to do smul for c*d
+			public sbyte RegIdA, RegIdB, RegIdC, RegIdD;
+			public byte SizeA, SizeB, SizeC, SizeD;
+			public uint ConstA, ConstB, ConstC, ConstD;
+			
+			public byte IndirectionSize;
+			public byte AddressingMode;
+			public byte Segment;
+
+			public bool Indirect
+			{
+				get
+				{
+					return this.IndirectionSize != 0;
+				}
+			}
 
 			public uint ValueSize // the effective size
 			{
 				get
 				{
-					return this.Indirect ? this.IndirectionSize : this.Size;
+					if (this.Indirect)
+						return this.IndirectionSize;
+					switch (this.AddressingMode)
+					{
+					case 0: return this.SizeA;
+					case 1: return (uint)Cpu.NativeSizeBits;
+					case 2: return (uint)Cpu.NativeSizeBits;
+					case 3: return (uint)Cpu.NativeSizeBits;
+					default:  throw new NotImplementedException();
+					}
+				}
+			}
+
+			UInt32 InsideValue
+			{
+				get
+				{
+					Register[] regs = this.Registers;
+
+					uint part_value(sbyte regid, byte size, uint @const)
+					{
+						if (regid == -1)
+							return @const;
+						else
+							return (uint)(regs[regid].NativeUInt & (((ulong)1u << size) - 1));
+					}
+
+					uint total = 0;
+					switch (this.AddressingMode)
+					{
+					case 0:
+						return part_value(this.RegIdA, this.SizeA, this.ConstA);
+					case 1:
+						return part_value(this.RegIdA, this.SizeA, this.ConstA)
+							+ part_value(this.RegIdB, this.SizeB, this.ConstB);
+					case 2:
+						return total;
+					case 3:
+						total =  part_value(this.RegIdA, this.SizeA, this.ConstA);
+						total += part_value(this.RegIdB, this.SizeB, this.ConstB);
+						if (this.ConstDSigned) // does this need the caster?
+							return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC)
+								* (int)part_value(this.RegIdD, this.SizeD, this.ConstD));
+						else
+							return total + part_value(this.RegIdC, this.SizeC, this.ConstC)
+								* part_value(this.RegIdD, this.SizeD, this.ConstD);
+					default: throw new NotImplementedException();
+					}
 				}
 			}
 
@@ -178,39 +303,27 @@ namespace Swis
 			{
 				get
 				{
-					// get the immidiate value
-					UInt32 immidiate;
-					{
-						if (this.RegisterID != 0)
-							immidiate = this.Registers[this.RegisterID].NativeUInt;
-						else
-							immidiate = this.Constant;
-					}
-
-					// offset
-					{
-						if (this.Offset != 0)
-							immidiate = (UInt32)(immidiate + this.Offset);
-					}
+					// get the inside value
+					UInt32 inside = this.InsideValue;
 
 					// indirection
 					{
 						if (!this.Indirect)
-							return immidiate;
+							return inside;
 
 						Caster c; c.U32 = 0;
 						switch (this.IndirectionSize)
 						{
 						default: throw new Exception("TODO: register with invalid indirection size");
 						case 32:
-							c.ByteD = this.Memory[immidiate + 3];
-							c.ByteC = this.Memory[immidiate + 2];
+							c.ByteD = this.Memory[inside + 3];
+							c.ByteC = this.Memory[inside + 2];
 							goto case 16;
 						case 16:
-							c.ByteB = this.Memory[immidiate + 1];
+							c.ByteB = this.Memory[inside + 1];
 							goto case 8;
 						case 8:
-							c.ByteA = this.Memory[immidiate + 0];
+							c.ByteA = this.Memory[inside + 0];
 							break;
 						}
 
@@ -219,28 +332,24 @@ namespace Swis
 				}
 				set
 				{
+					// either indirection or address_mode == 0
 					// cap it to the register memory size:
-					value = (uint)((ulong)value & ((1ul << (int)this.Size) - 1));
+					value = (uint)((ulong)value & ((1ul << (int)this.SizeA) - 1));
 
 					if (!this.Indirect)
 					{
 						// change the register
-						if (this.RegisterID == 0 || this.Offset != 0)
+						if (this.AddressingMode != 0)
 						{
 							// nonsensical, halt
-							throw new Exception("TODO: can't write to an immidiate value, doesn't make sense");
+							throw new Exception("TODO: can't write to a computed value, doesn't make sense");
 						}
 
-						this.Registers[this.RegisterID].NativeUInt = value;
+						this.Registers[this.RegIdA].NativeUInt = value;
 					}
 					else
 					{
-						uint memloc = this.RegisterID == 0 ?
-							this.Constant :
-							this.Registers[this.RegisterID].NativeUInt;
-
-						if (this.Offset != 0)
-							memloc = (uint)(memloc + this.Offset);
+						uint memloc = this.InsideValue;
 
 						Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
 						c.U32 = value;
@@ -319,8 +428,12 @@ namespace Swis
 		}
 		
 		Register[] Registers = new Register[32];
-		
+
 		//ref Register StackRegister = null;
+		ref Register TimeStampCounter
+		{
+			get { return ref this.Registers[(int)NamedRegister.TickCount]; }
+		}
 
 		ref Register InstructionPointer
 		{
@@ -363,15 +476,31 @@ namespace Swis
 			{
 				Memory = this.Memory,
 				Registers = null,
-				Size = Register.NativeSize * 8, // size of the const (address), not the size of the value at the address
-				Constant = address, // memory location when in indirect mode
-				Indirect = true,
-				IndirectionSize = size,
+				RegIdA = -1,
+				SizeA = (byte)Cpu.NativeSizeBits, // size of the const (address), not the size of the value at the address
+				ConstA = address,
+				IndirectionSize = (byte)size,
 			};
 		}
-		
+
+		public static uint SignExtend(uint src, uint frombits)
+		{
+			if (frombits < 1 || frombits >= 32)
+				throw new Exception();
+
+			uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
+			uint extbits = ~valbits;                  //                      11110000
+			uint signbit = 1u << (int)(frombits - 1); //                      00001000
+
+			uint srcval = src & valbits; // ensure no more bits are present after the sign extension
+			uint sign = (signbit & srcval) >> ((int)frombits - 1);
+
+			return srcval | (extbits * sign);
+		}
+
 		public int Clock(int count = 1)
 		{
+			ref Register tsc = ref this.TimeStampCounter;
 			ref Register ip = ref this.InstructionPointer;
 			ref Register sp = ref this.StackPointer;
 			ref Register bp = ref this.BasePointer;
@@ -400,19 +529,7 @@ namespace Swis
 						Operand src = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						Operand bit = this.Memory.DecodeOperand(ref ip.NativeUInt, this.Registers);
 						
-						uint frombits = bit.Value;
-
-						if (frombits < 1 || frombits >= 32)
-							throw new Exception();
-
-						uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
-						uint extbits = ~valbits;                  //                      11110000
-						uint signbit = 1u << (int)(frombits - 1); //                      00001000
-
-						uint srcval = src.Value & valbits; // ensure no more bits are present after the sign extension
-						uint sign = (signbit & srcval) >> ((int)frombits - 1);
-
-						dst.Value = srcval | (extbits * sign);
+						dst.Value = SignExtend(src.Value, bit.Value);
 						break;
 					}
 				case Opcode.ZeroExtendRRR:
@@ -487,7 +604,7 @@ namespace Swis
 						
 						// push ip ; the retaddr
 						{
-							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Register.NativeSize * 8);
+							Operand sp_ptr = this.CreatePointer(sp.NativeUInt, Cpu.NativeSizeBits);
 							sp_ptr.Value = ip.NativeUInt;
 							sp.NativeUInt += Register.NativeSize;
 						}
@@ -905,6 +1022,8 @@ namespace Swis
 				default:
 					throw new NotImplementedException(); // todo: make it interrupt
 				}
+
+				tsc.NativeUInt++;
 			}
 
 			return count;

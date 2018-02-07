@@ -9,12 +9,21 @@ namespace Swis
 	{
 		static Dictionary<string, NamedRegister> RegisterMap = new Dictionary<string, NamedRegister>()
 		{
+			{ "tsc", NamedRegister.TickCount },
 			{ "ip", NamedRegister.InstructionPointer },
 			{ "sp", NamedRegister.StackPointer },
 			{ "bp", NamedRegister.BasePointer },
 			{ "flags", NamedRegister.Flags },
 			{ "pm", NamedRegister.ProtectedMode },
 			{ "pi", NamedRegister.ProtectedInterrupt },
+
+			{ "ss", NamedRegister.StackSegment },
+			{ "cs", NamedRegister.CodeSegment },
+			{ "ds", NamedRegister.DataSegment },
+			{ "es", NamedRegister.ExtraSegment },
+			{ "fs", NamedRegister.FSegment },
+			{ "gs", NamedRegister.GSegment },
+			{ "xs", NamedRegister.XtraSegment },
 
 			{ "ga", NamedRegister.GeneralA },
 			{ "gb", NamedRegister.GeneralB },
@@ -99,6 +108,36 @@ namespace Swis
 		static char[] _Offset_chars = new char[] { '+', '-' };
 		public static (byte[] binary, DebugData dbg) Assemble(string asm)
 		{
+			Dictionary<string, string> named_patterns = new Dictionary<string, string>();
+			Dictionary<string, string> named_patterns_cache = new Dictionary<string, string>();
+			string pattern_compile_optional_whitespace(string x)
+			{
+				if (named_patterns_cache.TryGetValue(x, out string ret))
+					return ret;
+				return named_patterns_cache[x] = Util.PatternCompile(x.Replace(" ", @"\s*"), named_patterns);
+			}
+
+			named_patterns["register"] = pattern_compile_optional_whitespace(@"(?<name>[a-zA-Z]+)(?<sz>[0-9]*)");
+			named_patterns["constant"] = pattern_compile_optional_whitespace(@"0x[a-fA-F0-9]+|\-?[0-9\.]+f|\-?[0-9]+|\$[a-zA-Z0-9._@]+");
+			named_patterns["rc"]       = pattern_compile_optional_whitespace(@"<register>|<constant>");
+
+			named_patterns["a"] = pattern_compile_optional_whitespace("<rc:a>");
+			named_patterns["b"] = pattern_compile_optional_whitespace("<rc:a> [+] <rc:b>");
+			named_patterns["c"] = pattern_compile_optional_whitespace("<rc:c> [*] <rc:d>");
+			named_patterns["d"] = pattern_compile_optional_whitespace(
+				"<rc:a> [+] <rc:b> [+] <rc:c> [*] <rc:d>|" + // a + b + c * d
+				"<rc:a> [+] <rc:c> [*] <rc:d> [+] <rc:b>|" + // a + c * d + b
+				"<rc:c> [*] <rc:d> [+] <rc:a> [+] <rc:b>");  // c * d + a + b
+			// these must be transformed into the right d form
+			named_patterns["d1"] = pattern_compile_optional_whitespace("<rc:a> [+] <rc:b> [+] <rc:c>"); // a + b + c * 1
+			named_patterns["d2"] = pattern_compile_optional_whitespace( // to:  // a + 0 + c * d
+				"<rc:a> [+] <rc:c> [*] <rc:d>|" + // from: a + c * d
+				"<rc:c> [*] <rc:d> [+] <rc:a>");  // from: c * d + a
+
+			named_patterns["forms"] = pattern_compile_optional_whitespace("<a:a>|<b:b>|<c:c>|<d:d>|<d1:d1>|<d2:d2>");
+			
+			//named_patterns["___"] = Util.PatternCompile(___, named_patterns);
+			
 			DebugData dbg = new DebugData();
 			dbg.PtrToAsm = new Dictionary<int, (string file, int from, int to, DebugData.AsmPtrType type)>();
 			dbg.AsmToSrc = new Dictionary<int, (string file, int from, int to)>();
@@ -300,20 +339,158 @@ namespace Swis
 						int oa_pos = args_pos + opm.Index;
 						int oa_to = oa_pos + opm.Length;
 
+						// convert - x into + -x
+
+						oa = Regex.Replace(oa, @"-(\s*)\-([0-9])", "+$1$2");
+						oa = Regex.Replace(oa, @"-(\s*)([0-9])", "+$1-$2");
+						
 						dbg.PtrToAsm[bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
 
 						// encode the operand
 						{
-							uint regid = 0;
-							uint size = 8;
-							uint indirection_size = 0;
-							uint constant = 0;
-							int offset = 0;
-							string const_placeholder = null;
-							string offset_placeholder = null;
+							//(uint regid, uint regsz, uint @const, uint constsz, string constplaceholder)[] parts = new 
+							//(uint regid, uint regsz, uint @const, uint constsz, string constplaceholder)[4];
+							uint regid_a = 0, regid_b = 0, regid_c = 0, regid_d = 0;
+							uint regsz_a = 0, regsz_b = 0, regsz_c = 0, regsz_d = 0;
+							uint const_a = 0, const_b = 0, const_c = 0, const_d = 0;
+							uint constsz_a = 0, constsz_b = 0, constsz_c = 0, constsz_d = 0;
+							string const_placeholder_a = null, const_placeholder_b = null, const_placeholder_c = null, const_placeholder_d = null;
 
+							uint addressing_mode = 0;
+							uint indirection_size = 0;
+							uint segmentid = 0;
+							
 							#region Parse operand
 							{
+
+								string operanducmp = @"^ (?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[)? <forms:form> \]? $";
+								string operandpttn = pattern_compile_optional_whitespace(operanducmp);
+								dynamic match = oa.PatternMatch(operandpttn, named_patterns);
+								if (match == null)
+									throw new Exception($"Failed to parse operand: \"{oa}\"");
+
+								if (match.indirection != "")
+								{
+									if (match.indirection_size == "")
+										indirection_size = (uint)Cpu.NativeSizeBits;
+									else
+										indirection_size = uint.Parse(match.indirection_size);
+
+									uint first = (uint)NamedRegister.StackSegment - 1;
+									switch (((string)match.segment).ToLowerInvariant())
+									{
+									case "":   segmentid = 0; break;
+									case "ss": segmentid = (uint)NamedRegister.StackSegment - first; break;
+									case "cs": segmentid = (uint)NamedRegister.CodeSegment - first; break;
+									case "ds": segmentid = (uint)NamedRegister.DataSegment - first; break;
+									case "es": segmentid = (uint)NamedRegister.ExtraSegment - first; break;
+									case "fs": segmentid = (uint)NamedRegister.FSegment - first; break;
+									case "gs": segmentid = (uint)NamedRegister.GSegment - first; break;
+									case "xs": segmentid = (uint)NamedRegister.XtraSegment - first; break;
+									default: throw new Exception($"unknown segment: {match.segment}");
+									}
+								}
+
+								void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string const_placeholder)
+								{
+									regid = 0;
+									regsz = 0;
+									@const = 0;
+									constsz = 0;
+									const_placeholder = null;
+
+									Caster c; c.U32 = 0;
+
+									if (input.StartsWith("0x"))
+									{
+										throw new NotImplementedException();
+										return;
+									}
+									else if (char.IsDigit(input[0]) && input.EndsWith("f"))
+									{
+										c.F32 = float.Parse(input);
+										@const = c.U32;
+										constsz = 32;
+									}
+									else if (char.IsDigit(input[0]))
+									{
+										@const = uint.Parse(input);
+										constsz = (uint)Math.Ceiling(Math.Log(@const + 1, 2)); // number of bits needed to store it
+										return;
+									}
+									else if (input[0] == '-') // negatives must be encoded in full to keep all the sign bits (twos compliment), or i could TODO: use a signextend bit
+									{
+										c.I32 = int.Parse(input);
+										@const = c.U32;
+										constsz = 32;
+										return;
+									}
+									else if (input[0] == '$')
+									{
+										const_placeholder = input;
+										constsz = 32;
+										return;
+									}
+									else
+									{
+										// must be a register
+										string reg_only = Regex.Replace(input, @"\d+", "");
+										string size_only = Regex.Match(input, @"\d+").Value;
+
+										if (!RegisterMap.TryGetValue(reg_only.ToLowerInvariant(), out var reg))
+											throw new Exception($"{linenum}: unknown register {input}");
+										regid = (uint)reg;
+
+										if (size_only == "")
+											regsz = (uint)Cpu.NativeSizeBits;
+										else
+											regsz = uint.Parse(size_only);
+									}
+								}
+
+								if (match.form_a != "")
+								{
+									addressing_mode = 0;
+									read_operand(match.form_a_a, out regid_a, out regsz_a, out const_a, out constsz_a, out const_placeholder_a);
+								}
+								else if (match.form_b != "")
+								{
+									addressing_mode = 1;
+									read_operand(match.form_b_a, out regid_a, out regsz_a, out const_a, out constsz_a, out const_placeholder_a);
+									read_operand(match.form_b_b, out regid_b, out regsz_b, out const_b, out constsz_b, out const_placeholder_b);
+								}
+								else if (match.form_c != "")
+								{
+									addressing_mode = 2;
+									read_operand(match.form_c_c, out regid_c, out regsz_c, out const_c, out constsz_c, out const_placeholder_c);
+									read_operand(match.form_c_d, out regid_d, out regsz_d, out const_d, out constsz_d, out const_placeholder_d);
+								}
+								else if (match.form_d != "")
+								{
+									addressing_mode = 3;
+									read_operand(match.form_d_a, out regid_a, out regsz_a, out const_a, out constsz_a, out const_placeholder_a);
+									read_operand(match.form_d_b, out regid_b, out regsz_b, out const_b, out constsz_b, out const_placeholder_b);
+									read_operand(match.form_d_c, out regid_c, out regsz_c, out const_c, out constsz_c, out const_placeholder_c);
+									read_operand(match.form_d_d, out regid_d, out regsz_d, out const_d, out constsz_d, out const_placeholder_d);
+								}
+								else if (match.form_d1 != "")
+								{
+									addressing_mode = 3;
+									read_operand(match.form_d1_a, out regid_a, out regsz_a, out const_a, out constsz_a, out const_placeholder_a);
+									read_operand(match.form_d1_b, out regid_b, out regsz_b, out const_b, out constsz_b, out const_placeholder_b);
+									read_operand(match.form_d1_c, out regid_c, out regsz_c, out const_c, out constsz_c, out const_placeholder_c);
+									read_operand("1", out regid_d, out regsz_d, out const_d, out constsz_d, out const_placeholder_d);
+								}
+								else if (match.form_d2 != "")
+								{
+									addressing_mode = 3;
+									read_operand(match.form_d2_a, out regid_a, out regsz_a, out const_a, out constsz_a, out const_placeholder_a);
+									read_operand("0", out regid_b, out regsz_b, out const_b, out constsz_b, out const_placeholder_b);
+									read_operand(match.form_d2_c, out regid_c, out regsz_c, out const_c, out constsz_c, out const_placeholder_c);
+									read_operand(match.form_d2_d, out regid_d, out regsz_d, out const_d, out constsz_d, out const_placeholder_d);
+								}
+								#region OLD
+								/*
 								Match oa_rx = oa.Match(@"^ \s* (?<ptr> (ptr(?<ptr_sz>8|16|32|64))? \s* \[)? \s* (?<base> (?!ptr) [a-zA-Z]+(?<base_sz>8|16|32|64)? | (?<constant> (?<uint>\d+) | (?<int>\-\d+) | (?<float>[-+]?\d+.\d+) ) | (?<label>\$[^\s\]]+) ) \s* ((?<sign>[+-]) \s* (?<offset>[0-9]+|(?<offset_label>\$[^\s\]]+)) )? \s* \]? \s* $");
 								string oa_ptr = oa_rx.Groups["ptr"].Value;
 								string oa_ptr_sz = oa_rx.Groups["ptr_sz"].Value;
@@ -377,11 +554,130 @@ namespace Swis
 								}
 								if (oa_offset != "")
 									offset = int.Parse($"{oa_sign}{oa_offset}");
-
+								*/
+								#endregion
 							}
 							#endregion
 
 							#region Serialize operand
+
+							uint enc_indir_size = indirection_size > 0u ? (uint)(Math.Log(indirection_size, 2) - (3 - 1)) : 0u;
+
+							byte master = (byte)(0
+								| ((enc_indir_size  & 0b111) << 5)
+								| ((addressing_mode & 0b11)  << 3)
+								| ((segmentid       & 0b111) << 0)
+							);
+							bin.Add(master);
+							
+							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string const_placeholder)
+							{
+								if (regsz == 0)
+								{
+									uint value4bits;
+									uint extra = 0;
+									byte extraa = 0, extrab = 0, extrac = 0, extrad = 0;
+
+									if (constsz <= 4 + 2 * 8) // can we store it in <= 2.5 bytes
+									{
+										value4bits = @const & 0b1111;
+										@const = @const >> 4;
+
+										if (constsz > 4 + 0 * 8)
+										{
+											extra = 1;
+											extraa = (byte)(@const & 0b1111_1111);
+											@const = @const >> 8;
+										}
+
+										if (constsz > 4 + 1 * 8)
+										{
+											extra = 2;
+											extrab = (byte)(@const & 0b1111_1111);
+											@const = @const >> 8;
+										}
+									}
+									else
+									{
+										value4bits = 0;
+										extra = 4;
+										extraa = (byte)(@const & 0b1111_1111);
+										@const = @const >> 8;
+										extrab = (byte)(@const & 0b1111_1111);
+										@const = @const >> 8;
+										extrac = (byte)(@const & 0b1111_1111);
+										@const = @const >> 8;
+										extrad = (byte)(@const & 0b1111_1111);
+										@const = @const >> 8;
+									}
+									
+									uint enc_xtr;
+
+									switch (extra)
+									{
+									case 0: enc_xtr = 0; break;
+									case 1: enc_xtr = 1; break;
+									case 2: enc_xtr = 2; break;
+									case 4: enc_xtr = 3; break;
+									default: throw new Exception(extra.ToString());
+									}
+
+									byte constbyte = (byte)(0
+										| ((1          & 0b1)     << 7) // is_constant
+										| ((enc_xtr    & 0b11)    << 5) // extra_bytes
+										| ((0          & 0b1)     << 4) // reserved sign_extend
+										| ((value4bits & 0b1111)  << 0) // value
+									);
+									bin.Add(constbyte);
+
+									if (const_placeholder != null) // remember the placeholder pos
+										placeholders.Add((const_placeholder, bin.Count, linenum));
+
+									if (extra >= 1)
+										bin.Add(extraa);
+									if (extra >= 2)
+										bin.Add(extrab);
+									if (extra >= 3)
+										bin.Add(extrac);
+									if (extra >= 4)
+										bin.Add(extrad);
+								}
+								else
+								{
+									uint enc_rsz = (uint)(Math.Log(regsz, 2) - 3);
+									byte registerbyte = (byte)(0
+										| ((0       & 0b1)     << 7) // is_constant
+										| ((regid   & 0b11111) << 2)
+										| ((enc_rsz & 0b11)    << 0)
+									);
+									bin.Add(registerbyte);
+								}
+							}
+
+							switch (addressing_mode)
+							{
+							case 0:
+								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+								break;
+							case 1:
+								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+								seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
+								break;
+							case 2:
+								seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
+								seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
+								break;
+							case 3:
+								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+								seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
+								seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
+								seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
+								break;
+							default: throw new Exception($"bad addressing mode {addressing_mode}");
+							}
+
+							#region OLD
+							/*
 							{
 								int enc_size = (int)(Math.Log(size, 2) - 3);
 								int enc_indirection_size = indirection_size > 0 ? (int)(Math.Log(indirection_size, 2) - (3 - 1)) : 0;
@@ -452,6 +748,8 @@ namespace Swis
 									bin.Add(c.ByteD);
 								}
 							}
+							*/
+							#endregion
 							#endregion
 						}
 					}

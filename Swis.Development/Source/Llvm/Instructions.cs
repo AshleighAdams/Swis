@@ -18,7 +18,7 @@ namespace Swis
 			//string base_type = args.basis;
 			string indexersstr = args.indexers;
 
-			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>");
+			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>", IrPatterns);
 
 			// atm no dynamic indexing, only static.  will have to emit seperate adds/muls/movs for dynamic indexing
 			
@@ -66,7 +66,7 @@ namespace Swis
 			(int adds, int muls) simpleop(int index)
 			{
 				string op = dynamic_offsets_operands[index];
-				return (op.PatternMatches(@"\+").Length, op.PatternMatches(@"\*").Length);
+				return (op.PatternMatches(@"\+", IrPatterns).Length, op.PatternMatches(@"\*", IrPatterns).Length);
 			}
 			for (int i = 0; i < dynamic_offsets_operands.Count;)
 			{

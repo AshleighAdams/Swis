@@ -1,0 +1,45 @@
+// in asm: ptrN s:[a + b + c * d]
+// note, c*d is done thru signed mul if d sign_extend set
+
+byte0: master
+	// 0: 0
+	// 1: 8
+	// 2: 16
+	// 3: 32
+	// 4: 64
+	// 5-7: unused
+	int3 indirection_size;
+	
+	// 0: a
+	// 1: a + b
+	// 2: c * d
+	// 3: a + b + (c * d)
+	int2 addressing_mode;
+	
+	int3 segment; // code
+
+byte{1,4}:
+	bit1 is_constant;
+	
+	constant:
+		// 0: 0
+		// 1: 1
+		// 2: 2
+		// 3: 4
+		int2 extra_bytes;
+		int1 signed; // reserved but not used, negatives currently 32bit, used to extend and for smul
+		extra_bytes != 4: // so we can place a label here easily
+			int4 value;
+		else:
+			int4 unused;
+		
+		byte{extra_bytes}:
+			int8 value;
+	
+	register:
+		int5 registerid;
+		// 0: 8
+		// 1: 16
+		// 2: 32
+		// 3: 64
+		int2 registersize;
