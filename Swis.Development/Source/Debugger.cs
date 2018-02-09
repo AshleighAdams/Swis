@@ -20,29 +20,29 @@ namespace Swis
 					this.ReverseLabels[kv.Value] = kv.Key;
 		}
 
-		Register[] _LastValues;
-		public override bool Clock(Cpu cpu, MemoryController memory, Register[] registers)
+		uint[] _LastValues;
+		public override bool Clock(Cpu cpu, MemoryController memory)
 		{
 			StringBuilder sb = new StringBuilder();
 
 			{ // write the registers
 				if (this._LastValues == null)
-					this._LastValues = new Register[registers.Length];
+					this._LastValues = new uint[cpu.Registers.Length];
 
-				for (int i = 0; i < registers.Length; i++)
+				for (int i = 0; i < cpu.Registers.Length; i++)
 				{
-					if (this._LastValues[i].NativeUInt != registers[i].NativeUInt)
+					if (this._LastValues[i] != cpu.Registers[i])
 					{
-						this._LastValues[i].NativeUInt = registers[i].NativeUInt;
+						this._LastValues[i] = cpu.Registers[i];
 						NamedRegister r = (NamedRegister)i;
 
-						if (this.ReverseLabels.TryGetValue((int)registers[i].NativeUInt, out string lbl))
+						if (this.ReverseLabels.TryGetValue((int)cpu.Registers[i], out string lbl))
 							sb.Append($" {r.Disassemble()} = {lbl}");
 						else
 						{
 							string lblnear = null;
 							int lblnearloc = 0;
-							for (int n = (int)registers[i].NativeUInt; n-- > 0;)
+							for (int n = (int)cpu.Registers[i]; n-- > 0;)
 							{
 								if (this.ReverseLabels.TryGetValue(n, out lblnear))
 								{
@@ -52,9 +52,9 @@ namespace Swis
 							}
 
 							if(lblnear == null)
-								sb.Append($" {r.Disassemble()} = 0x{registers[i].NativeUInt:X}");
+								sb.Append($" {r.Disassemble()} = 0x{cpu.Registers[i]:X}");
 							else
-								sb.Append($" {r.Disassemble()} = {lblnear} + 0x{registers[i].NativeUInt - lblnearloc:X}");
+								sb.Append($" {r.Disassemble()} = {lblnear} + 0x{cpu.Registers[i] - lblnearloc:X}");
 						}
 					}
 				}
@@ -62,9 +62,9 @@ namespace Swis
 				sb.Clear();
 			}
 			{ // write the instruction
-				uint original_ip = registers[(int)NamedRegister.InstructionPointer].NativeUInt;
+				uint original_ip = cpu.InstructionPointer;
 				uint ip = original_ip;
-				(Opcode op, Cpu.Operand[] args) = memory.DisassembleInstruction(ref ip);
+				(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip);
 
 
 				sb.Append(op.Disassemble());

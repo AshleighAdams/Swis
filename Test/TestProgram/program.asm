@@ -43,6 +43,8 @@ $@_Z5printPc: ; void(u8*)
 	ret
 
 $@main:
+	mov gf, 0
+	$loopmain:
 	; START FUNC CALL
 	; push return placeholders
 	;nop
@@ -55,6 +57,9 @@ $@main:
 	; pop the returns
 	;nop
 	; END FUNC CALL
+	add gf, gf, 1
+	cmp gf, 10
+	jle $loopmain
 	ret
 
 

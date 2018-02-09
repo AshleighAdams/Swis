@@ -9,7 +9,7 @@ namespace Swis
 	{
 		static Dictionary<string, NamedRegister> RegisterMap = new Dictionary<string, NamedRegister>()
 		{
-			{ "tsc", NamedRegister.TickCount },
+			{ "tsc", NamedRegister.TimeStampCounter },
 			{ "ip", NamedRegister.InstructionPointer },
 			{ "sp", NamedRegister.StackPointer },
 			{ "bp", NamedRegister.BasePointer },

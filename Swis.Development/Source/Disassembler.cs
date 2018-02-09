@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using Operand = Swis.Cpu.Operand;
-
 namespace Swis
 {
 	public static class Disassembler
@@ -83,7 +81,7 @@ namespace Swis
 
 		public static Dictionary<NamedRegister, string> RegisterMapReverse = new Dictionary<NamedRegister, string>()
 		{
-			{ NamedRegister.TickCount, "tsc" },
+			{ NamedRegister.TimeStampCounter, "tsc" },
 			{ NamedRegister.InstructionPointer, "ip" },
 			{ NamedRegister.StackPointer, "sp" },
 			{ NamedRegister.BasePointer, "bp"},

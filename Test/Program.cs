@@ -21,7 +21,7 @@ namespace SwisTest
 			//Console.WriteLine(asm);
 			//Console.ReadLine();
 			//return;
-
+			/*
 			byte[] test = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
 			var dm = new DirectMemoryController(test);
 
@@ -34,8 +34,7 @@ namespace SwisTest
 
 			string abc = Convert.ToString(whatitis, 2);
 			string def = Convert.ToString(shouldbe, 2);
-
-			Console.ReadLine();
+			*/
 
 			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
 
@@ -44,16 +43,28 @@ namespace SwisTest
 
 			string x = DebugData.Serialize(dbg);
 
-			Cpu emu = new Cpu();
-			emu.Memory = new DirectMemoryController(assembled);
-			emu.Debugger = new StreamDebugger(Console.Out, dbg);
-			Console.ReadLine();
-			while (!emu.Halted)
+
+			var mem = new IntArrayMemoryController(assembled);
+
+			Cpu cpu = new Cpu
 			{
-				emu.Clock(1);
-				System.Threading.Thread.Sleep(10);
-			}
+				Memory = mem,
+				//Debugger = new StreamDebugger(Console.Out, dbg),
+			};
 			
+			DateTime start = DateTime.UtcNow;
+			
+			while (!cpu.Halted)
+			{
+				cpu.Clock(1000);
+				System.Threading.Thread.Sleep(16);
+			}
+
+			DateTime end = DateTime.UtcNow;
+
+			Console.WriteLine(end - start);
+			Console.WriteLine(cpu.TimeStampCounter);
+
 			Console.ReadLine();
 		}
     }

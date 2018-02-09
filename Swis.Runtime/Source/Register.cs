@@ -3,68 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Swis
 {
-	[StructLayout(LayoutKind.Explicit)]
-	public struct Register
-	{
-		public static int Pow(int a, int b)
-		{
-			int result = 1;
-			for (int i = 0; i < b; i++)
-				result *= a;
-			return result;
-		}
-		public static uint Pow(uint a, uint b)
-		{
-			uint result = 1;
-			for (uint i = 0; i < b; i++)
-				result *= a;
-			return result;
-		}
-
-		[FieldOffset(0)] public Int32  NativeInt;
-		[FieldOffset(0)] public UInt32 NativeUInt;
-		[FieldOffset(0)] public Single NativeFloat;
-		public const uint NativeSize = 4;
-
-		public int GetInteger(int size)
-		{
-			int bitmask = Pow(2, size * 8) - 1;
-			return this.NativeInt & bitmask;
-		}
-
-		public void SetInteger(int size, int value)
-		{
-			int bitmask = Pow(2, size * 8) - 1;
-			this.NativeInt = value & bitmask; //  | (this.NativeUInt & ~bitmask); keep the higher bits? we're not
-		}
-
-		public uint GetUnsigned(int size)
-		{
-			uint bitmask = Pow(2, (uint)size * 8) - 1;
-			return this.NativeUInt & bitmask;
-		}
-
-		public void SetUnsigned(int size, uint value)
-		{
-			uint bitmask = Pow(2, Pow(2, (uint)size + 3)) - 1;
-			this.NativeUInt = value & bitmask;
-		}
-
-		public float GetFloat(int size)
-		{
-			if (size != 4)
-				throw new Exception("invalid register for float");
-			return this.NativeFloat;
-		}
-
-		public void SetFloat(int size, float value)
-		{
-			if (size != 4)
-				throw new Exception("invalid register for float");
-			this.NativeFloat = value;
-		}
-	}
-
 	[Flags]
 	public enum FlagsRegisterFlags
 	{
@@ -79,7 +17,7 @@ namespace Swis
 
 	public enum NamedRegister
 	{
-		TickCount = 0,
+		TimeStampCounter = 0,
 		InstructionPointer = 1,
 		StackPointer = 2,
 		BasePointer = 4,
