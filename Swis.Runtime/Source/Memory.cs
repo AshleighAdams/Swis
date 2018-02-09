@@ -26,6 +26,65 @@ namespace Swis
 
 	}
 
+	public unsafe class PointerMemoryController : MemoryController
+	{
+		public byte* Ptr;
+		public byte[] Memory;
+		int Length;
+		GCHandle MemoryHandle; // to pin it; call .Free() to unpin it
+		public PointerMemoryController(byte[] memory) // TODO: use Span<>
+		{
+			this.Memory = new byte[memory.Length + 4];
+			for (uint i = 0; i < memory.Length; i++)
+				this.Memory[i] = memory[i];
+			//this.Ptr = &this.Memory;
+			this.Length = memory.Length;
+			this.MemoryHandle = GCHandle.Alloc(this.Memory, GCHandleType.Pinned);
+			this.Ptr = (byte*)this.MemoryHandle.AddrOfPinnedObject().ToPointer();
+			//Marshal.UnsafeAddrOfPinnedArrayElement(this.Memory, 0);
+		}
+
+		public override byte this[uint x, bool y]
+		{
+			get
+			{
+				if (x > this.Length) throw new IndexOutOfRangeException();
+				return *(this.Ptr + x);
+			}
+			set
+			{
+				if (x > this.Length) throw new IndexOutOfRangeException();
+				*(this.Ptr + x) = value;
+			}
+		}
+
+		public override uint this[uint x, uint bits] // unaligned access
+		{
+			get
+			{
+				if (x > this.Length) throw new IndexOutOfRangeException();
+				switch (bits)
+				{
+				case 8: return *(Byte*)(this.Ptr + x);
+				case 16: return *(UInt16*)(this.Ptr + x);
+				case 32: return *(UInt32*)(this.Ptr + x);
+				default: throw new Exception();
+				}
+			}
+			set
+			{
+				if (x > Length) throw new IndexOutOfRangeException();
+				switch (bits)
+				{
+				case 8: *(Byte*)(this.Ptr + x) = (byte)value; break;
+				case 16: *(UInt16*)(this.Ptr + x) = (UInt16)value; break;
+				case 32: *(UInt32*)(this.Ptr + x) = (UInt32)value; break;
+				default: throw new Exception();
+				}
+			}
+		}
+	}
+
 	public class IntArrayMemoryController : MemoryController // 25% slower than the pointer version, but garunteed safe
 	{
 		public uint[] Memory;

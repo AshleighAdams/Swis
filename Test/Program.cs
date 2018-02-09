@@ -45,6 +45,7 @@ namespace SwisTest
 
 
 			var mem = new IntArrayMemoryController(assembled);
+			//var mem = new PointerMemoryController(assembled);
 
 			Cpu cpu = new Cpu
 			{
