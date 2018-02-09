@@ -63,16 +63,16 @@ namespace Swis
 			
 			
 
-			IrPatterns["keyword"]    = Util.PatternCompile(@"[a-z]+", IrPatterns);
-			IrPatterns["array"]      = Util.PatternCompile(@"\[[0-9]+ x", IrPatterns);
-			IrPatterns["type"]       = Util.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
-			IrPatterns["const"]      = Util.PatternCompile(@"-?[0-9]+", IrPatterns);
-			IrPatterns["ident"]      = Util.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
-			IrPatterns["namedlocal"] = Util.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
-			IrPatterns["global"]     = Util.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
-			IrPatterns["register"]   = Util.PatternCompile(@"[%][0-9]+", IrPatterns);
-			IrPatterns["local"]      = Util.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
-			IrPatterns["operand"]    = Util.PatternCompile(@"<const>|<local>", IrPatterns);
+			IrPatterns["keyword"]    = LlvmUtil.PatternCompile(@"[a-z]+", IrPatterns);
+			IrPatterns["array"]      = LlvmUtil.PatternCompile(@"\[[0-9]+ x", IrPatterns);
+			IrPatterns["type"]       = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
+			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9]+", IrPatterns);
+			IrPatterns["ident"]      = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["namedlocal"] = LlvmUtil.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["register"]   = LlvmUtil.PatternCompile(@"[%][0-9]+", IrPatterns);
+			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
+			IrPatterns["operand"]    = LlvmUtil.PatternCompile(@"<const>|<local>", IrPatterns);
 
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);

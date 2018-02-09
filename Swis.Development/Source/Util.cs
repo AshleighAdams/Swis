@@ -11,7 +11,7 @@ namespace System.Runtime.CompilerServices
 
 namespace Swis
 {
-    public static class Util
+    public static class LlvmUtil
     {
 		static Dictionary<string, Regex> _RegexCache = new Dictionary<string, Regex>();
 		static Dictionary<string, string> GlobalNamedPatterns = new Dictionary<string, string>();

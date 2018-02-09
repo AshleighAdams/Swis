@@ -58,7 +58,7 @@ $@main:
 	;nop
 	; END FUNC CALL
 	add gf, gf, 1
-	cmp gf, 100
+	cmp gf, 100000
 	jle $loopmain
 	ret
 

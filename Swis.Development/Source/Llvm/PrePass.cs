@@ -64,7 +64,7 @@ namespace Swis
 			bp_offset = 0;
 
 			{ // locals (alloca-s)
-				string alloca_regex = Util.PatternCompile(@"<namedlocal:id> = alloca <type:type>(, align <numeric:align>)\s*", IrPatterns);
+				string alloca_regex = LlvmUtil.PatternCompile(@"<namedlocal:id> = alloca <type:type>(, align <numeric:align>)\s*", IrPatterns);
 
 				output.Code = Regex.Replace(output.Code, alloca_regex, delegate (Match alloca)
 				{
@@ -147,7 +147,7 @@ namespace Swis
 
 			//cmpbr i eq i32 %1, 0, label %2, label %8
 
-			string rx = Util.PatternCompile(
+			string rx = LlvmUtil.PatternCompile(
 				@"<operand:dst> = (?<cmptype>i|u|f)?cmp <keyword:method> <type:type> <operand:left>, <operand:right>" +
 				@"\s*\n\s*" +
 				@"br <type:cond_type> <operand:cond>, (?<ontrue>(label|<type>) %<numeric>), (?<onfalse>(label|<type:onfalse_type>) %<numeric:onfalse>)", IrPatterns
@@ -195,7 +195,7 @@ namespace Swis
 			//string prid_regex = $@"\[ (?<src>{local_regex}), %[0-9]+ \]";
 			//string phi_regex = $@"(?<dst>{local_regex}) = phi {type_regex} (?<sources>{prid_regex}(, {prid_regex})+)";
 
-			string phi_regexs = Util.PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)", IrPatterns);
+			string phi_regexs = LlvmUtil.PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)", IrPatterns);
 			MatchCollection phis = Regex.Matches(output.Code, phi_regexs);
 
 			foreach (Match phi in phis)

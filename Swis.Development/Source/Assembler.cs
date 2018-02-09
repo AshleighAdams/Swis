@@ -114,7 +114,7 @@ namespace Swis
 			{
 				if (named_patterns_cache.TryGetValue(x, out string ret))
 					return ret;
-				return named_patterns_cache[x] = Util.PatternCompile(x.Replace(" ", @"\s*"), named_patterns);
+				return named_patterns_cache[x] = LlvmUtil.PatternCompile(x.Replace(" ", @"\s*"), named_patterns);
 			}
 
 			named_patterns["register"] = pattern_compile_optional_whitespace(@"(?<name>[a-zA-Z]+)(?<sz>[0-9]*)");

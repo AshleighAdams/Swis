@@ -15,7 +15,7 @@ namespace Swis
 
 			//$x:
 
-			string rx = Util.PatternCompile(
+			string rx = LlvmUtil.PatternCompile(
 				@"jmp (?<target>\$[a-zA-Z0-9@%#-_\.]+)" +
 				@"(?<ws>\s*\n\s*)+" +
 				@"(?<dest>\$[^:]+):", IrPatterns

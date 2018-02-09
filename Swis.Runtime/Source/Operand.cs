@@ -186,14 +186,14 @@ namespace Swis
 	{
 		public static Opcode DecodeOpcode(this MemoryController memory, ref uint ip)
 		{
-			var ret = (Opcode)memory[ip, true];
+			var ret = (Opcode)memory[ip];
 			ip++;
 			return ret;
 		}
 
 		public static Operand DecodeOperand(this MemoryController memory, ref uint ip, uint[] registers)
 		{
-			byte master = memory[ip + 0, true];
+			byte master = memory[ip + 0];
 			ip += 1;
 
 			byte indirection_size = (byte)((master & 0b1110_0000u) >> 5);
@@ -217,7 +217,7 @@ namespace Swis
 
 			bool decode_part(out sbyte regid, out byte size, out uint @const, ref uint ipinside) // returns true if signed
 			{
-				byte control = memory[ipinside + 0, true];
+				byte control = memory[ipinside + 0];
 				ipinside += 1;
 
 				if ((control & 0b1000_0000u) != 0) // is it a constant?
@@ -241,7 +241,7 @@ namespace Swis
 						for (int i = 0; i < extra_bytes; i++)
 						{
 							// TODO: use the aligned accessor
-							uint constpart = memory[ipinside + 0, true];
+							uint constpart = memory[ipinside + 0];
 							ipinside += 1;
 							total |= constpart << (i * 8 + 4);
 						}

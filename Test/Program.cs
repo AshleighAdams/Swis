@@ -45,7 +45,8 @@ namespace SwisTest
 			Cpu cpu = new Cpu
 			{
 				Memory = new PointerMemoryController(assembled),
-				Debugger = new StreamDebugger(Console.Out, dbg),
+				//Memory = new ByteArrayMemoryController(assembled),
+				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
 
 			DateTime start = DateTime.UtcNow;
@@ -54,17 +55,17 @@ namespace SwisTest
 			DateTime next = DateTime.UtcNow;
 			while (true)
 			{
-				double target_frequency = 10000;
-				double clocks = target_frequency / tickrate;
+				//double target_frequency = 10000;
+				double clocks = 100; // target_frequency / tickrate;
 				cpu.Clock((int)clocks);
 
 				if (cpu.Halted)
 					break;
 
-				next = next.AddSeconds(1.0 / tickrate);
-				int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
-				if (ms > 0)
-					System.Threading.Thread.Sleep(ms);
+				//next = next.AddSeconds(1.0 / tickrate);
+				//int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+				//if (ms > 0)
+				//	System.Threading.Thread.Sleep(ms);
 			}
 
 			DateTime end = DateTime.UtcNow;
@@ -80,8 +81,8 @@ namespace SwisTest
 
 			string asm = null;
 			
-			asm = IrCompileTest();
-			//ExecuteTest(asm);
+			//asm = IrCompileTest();
+			ExecuteTest(asm);
 
 			Console.ReadLine();
 		}
