@@ -7,16 +7,19 @@ namespace SwisTest
 {
     class Program
     {
-
-        static void Main(string[] args)
-        {
-			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
-			System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
-
+		static string IrCompileTest()
+		{
 			LlvmIrCompiler._teststrutinfo();
-			string asm = 
-				//LlvmIrCompiler.Compile(LlvmIrCompiler.TestIR);
-				System.IO.File.ReadAllText("TestProgram/program.asm");
+			string ir = LlvmIrCompiler.TestIR;
+			string asm = LlvmIrCompiler.Compile(ir);
+			Console.WriteLine(asm);
+			return asm;
+		}
+
+		static void ExecuteTest(string asm)
+		{
+			asm = asm ?? System.IO.File.ReadAllText("TestProgram/program.asm");
+			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
 
 			//Console.WriteLine(asm);
 			//Console.ReadLine();
@@ -36,35 +39,49 @@ namespace SwisTest
 			string def = Convert.ToString(shouldbe, 2);
 			*/
 
-			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
-
-			//Console.ReadLine();
-			//return;
-
-			string x = DebugData.Serialize(dbg);
-
-
-			var mem = new IntArrayMemoryController(assembled);
-			//var mem = new PointerMemoryController(assembled);
+			//string x = DebugData.Serialize(dbg);
+			
 
 			Cpu cpu = new Cpu
 			{
-				Memory = mem,
-				//Debugger = new StreamDebugger(Console.Out, dbg),
+				Memory = new PointerMemoryController(assembled),
+				Debugger = new StreamDebugger(Console.Out, dbg),
 			};
-			
+
 			DateTime start = DateTime.UtcNow;
-			
-			while (!cpu.Halted)
+
+			double tickrate = 66.666;
+			DateTime next = DateTime.UtcNow;
+			while (true)
 			{
-				cpu.Clock(1000);
-				System.Threading.Thread.Sleep(16);
+				double target_frequency = 10000;
+				double clocks = target_frequency / tickrate;
+				cpu.Clock((int)clocks);
+
+				if (cpu.Halted)
+					break;
+
+				next = next.AddSeconds(1.0 / tickrate);
+				int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+				if (ms > 0)
+					System.Threading.Thread.Sleep(ms);
 			}
 
 			DateTime end = DateTime.UtcNow;
 
 			Console.WriteLine(end - start);
 			Console.WriteLine(cpu.TimeStampCounter);
+		}
+
+		static void Main(string[] args)
+        {
+			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+			System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+
+			string asm = null;
+			
+			asm = IrCompileTest();
+			//ExecuteTest(asm);
 
 			Console.ReadLine();
 		}

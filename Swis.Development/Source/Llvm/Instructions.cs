@@ -198,7 +198,7 @@ namespace Swis
 			return true;
 		}
 
-		[IrInstruction("cmpbr", "cmpbr (?<cmptype>[a-z]) <keyword:method> <type:type> <operand:left>, <operand:right>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>$")]
+		[IrInstruction("cmpbr", @"cmpbr (?<cmptype>[a-z]) <keyword:method> <type:type> <operand:left>, <operand:right>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>\s*$")]
 		private static bool Cmpbr(MethodBuilder output, dynamic args)
 		{
 			string ircmp_to_cmp(string m)
@@ -259,9 +259,10 @@ namespace Swis
 			else
 				return false;
 
+			// can we optimize it into a jz/jnz call?
 			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u"))
 			{
-				method = method == "ne" ? "nz" : "ez";
+				method = method == "ne" ? "nz" : "z";
 				string asm2 = $"j{method} {ToOperand(output, args.type, args.left)}, {Targetify(output, args.onfalse_type, args.onfalse)}";
 				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
 				output.Emit(asm2);
@@ -280,13 +281,13 @@ namespace Swis
 			return true;
 		}
 
-		[IrInstruction("br", "br (label|<type:uncond_type>) %<operand:uncond>$")]
+		[IrInstruction("br", @"br (label|<type:uncond_type>) %<operand:uncond>\s*$")]
 		private static bool BrUnconditional(MethodBuilder output, dynamic args)
 		{
 			output.Emit($"jmp {Targetify(output, args.uncond_type, args.uncond)}");
 			return true;
 		}
-		[IrInstruction("br", "br <type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<operand:ontrue>, (label|<type:onfalse_type>) %<operand:onfalse>$")]
+		[IrInstruction("br", @"br <type:cond_type> <operand:cond>, (label|<type:ontrue_type>) %<operand:ontrue>, (label|<type:onfalse_type>) %<operand:onfalse>\s*$")]
 		private static bool BrConditional(MethodBuilder output, dynamic args)
 		{
 			if (args.cond_type_size != "1")
@@ -296,7 +297,7 @@ namespace Swis
 			//output.Emit($"jmp {Targetify(output, args.onfalse_type, args.onfalse)}");
 
 			// inverting it generally allows us to optimize a jump out later
-			output.Emit($"jez {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
+			output.Emit($"jz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
 			output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
 			
 			return true;
