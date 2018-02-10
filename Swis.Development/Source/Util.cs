@@ -22,10 +22,10 @@ namespace Swis
 			if (GlobalPatternsSetup) return;
 			GlobalPatternsSetup = true;
 
-			GlobalNamedPatterns["parentheses"] = PatternCompile(@"\((?<inside>(?:[^\(\)]|(?<__unique__>\()|(?<-__unique__>\)))+(?(__unique__)(?!)))\)", GlobalNamedPatterns);
-			GlobalNamedPatterns["braces"]      = PatternCompile(@"\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}", GlobalNamedPatterns);
-			GlobalNamedPatterns["brackets"]    = PatternCompile(@"\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]", GlobalNamedPatterns);
-			GlobalNamedPatterns["angled"]      = PatternCompile(@"\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>", GlobalNamedPatterns);
+			GlobalNamedPatterns["parentheses"] = PatternCompile(@"\(\)|\((?<inside>(?:[^\(\)]|(?<__unique__>\()|(?<-__unique__>\)))+(?(__unique__)(?!)))\)", GlobalNamedPatterns);
+			GlobalNamedPatterns["braces"]      = PatternCompile(@"\{\}|\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}", GlobalNamedPatterns);
+			GlobalNamedPatterns["brackets"]    = PatternCompile(@"\[\]|\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]", GlobalNamedPatterns);
+			GlobalNamedPatterns["angled"]      = PatternCompile(@"\<\>|\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>", GlobalNamedPatterns);
 
 			GlobalNamedPatterns["alpha"]       = PatternCompile(@"[a-zA-Z]+", GlobalNamedPatterns);
 			GlobalNamedPatterns["numeric"]     = PatternCompile(@"[0-9]+", GlobalNamedPatterns);
@@ -44,7 +44,7 @@ namespace Swis
 
 			string ret = Regex.Replace(pattern, "[ ]+", @"\s+");
 
-			ret = Regex.Replace(ret, @"(?<!\(\?)<(?<id>[a-z]+):(?<prefix>[a-zA-Z0-9_.-]+)>", delegate (Match m)
+			ret = Regex.Replace(ret, @"(?<!\(\?)<(?<id>[a-zA-Z0-9_\.]+):(?<prefix>[a-zA-Z0-9_.-]+)>", delegate (Match m)
 			{
 				if (!named.TryGetValue(m.Groups["id"].Value, out string sub_regex))
 					if (!GlobalNamedPatterns.TryGetValue(m.Groups["id"].Value, out sub_regex))
