@@ -12,6 +12,7 @@ namespace Swis
 		public abstract uint this[uint x, uint bits] { get; set; }
 	}
 
+	// very slightly quicker, but memory is pinned and thus can't be moved.
 	public unsafe class PointerMemoryController : MemoryController
 	{
 		public byte* Ptr;

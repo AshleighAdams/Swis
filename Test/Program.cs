@@ -81,8 +81,8 @@ namespace SwisTest
 
 			string asm = null;
 			
-			//asm = IrCompileTest();
-			ExecuteTest(asm);
+			asm = IrCompileTest();
+			//ExecuteTest(asm);
 
 			Console.ReadLine();
 		}

@@ -19,8 +19,6 @@ namespace Swis
 			string indexersstr = args.indexers;
 
 			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>", IrPatterns);
-
-			// atm no dynamic indexing, only static.  will have to emit seperate adds/muls/movs for dynamic indexing
 			
 			List<string> dynamic_offsets_operands = new List<string>();
 
