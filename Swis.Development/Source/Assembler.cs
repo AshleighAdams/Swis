@@ -125,6 +125,7 @@ namespace Swis
 			{ "divfRRR", Opcode.DivideFloatRRR },
 			{ "modRRR", Opcode.ModulusRRR },
 			{ "modfRRR", Opcode.ModulusFloatRRR },
+			{ "moduRRR", Opcode.ModulusUnsignedRRR },
 			{ "shlRRR", Opcode.ShiftRightRRR },
 			{ "shrRRR", Opcode.ShiftLeftRRR },
 			{ "ashrRRR", Opcode.ArithmaticShiftRightRRR },
@@ -283,7 +284,7 @@ namespace Swis
 
 					dbg.AsmToSrc.Add(bin.Count, (locfile, locpos, locto));
 				}
-				else if ((m = line.Match(@"^\s*\.data \s+ ([A-z]+) \s+ (.+)")).Success)
+				else if ((m = line.Match(@"^\s*\.data \s+ ([A-Za-z][A-Za-z0-9]*) \s+ (.+)")).Success)
 				{
 					string type = m.Groups[1].Value;
 					string value = m.Groups[2].Value;
@@ -308,19 +309,38 @@ namespace Swis
 						for (int n = 0; n < value.Length; n += 2)
 							bin.Add((byte)((read_nybble(value[n + 0]) << 4) | (read_nybble(value[n + 1]) << 0)));
 						break;
-					case "int":
+
+					case "int32": case "i32":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.I32 = int.Parse(value);
-						goto raw_bytes;
-					case "uint":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataUnsigned;
-						c.U32 = uint.Parse(value);
-						goto raw_bytes;
+						c.I32 = Int32.Parse(value);
+						goto four_bytes;
+					case "int16": case "i16":
+						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+						c.I32 = Int16.Parse(value);
+						goto two_bytes;
+					case "int8": case "i8":
+						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+						c.I32 = SByte.Parse(value);
+						goto one_byte;
+
+					case "uint32": case "u32":
+						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+						c.U32 = UInt32.Parse(value);
+						goto four_bytes;
+					case "uint16": case "u16":
+						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+						c.U32 = UInt16.Parse(value);
+						goto two_bytes;
+					case "uint8": case "u8":
+						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+						c.U32 = Byte.Parse(value);
+						goto one_byte;
+						
 					case "float":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataFloat;
 						c.F32 = float.Parse(value);
-						goto raw_bytes;
-					case "string":
+						goto four_bytes;
+					case "ascii":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataString;
 						value = value.Trim();
 						for (int n = 1; n < value.Length - 1; n++)
@@ -344,7 +364,14 @@ namespace Swis
 						}
 						break;
 
-						raw_bytes:
+					one_byte:
+						bin.Add(c.ByteA);
+						break;
+					two_bytes:
+						bin.Add(c.ByteA);
+						bin.Add(c.ByteB);
+						break;
+					four_bytes:
 						bin.Add(c.ByteA);
 						bin.Add(c.ByteB);
 						bin.Add(c.ByteC);

@@ -26,10 +26,12 @@ namespace Swis
 			GlobalNamedPatterns["braces"]      = PatternCompile(@"\{\}|\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}", GlobalNamedPatterns);
 			GlobalNamedPatterns["brackets"]    = PatternCompile(@"\[\]|\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]", GlobalNamedPatterns);
 			GlobalNamedPatterns["angled"]      = PatternCompile(@"\<\>|\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>", GlobalNamedPatterns);
+			GlobalNamedPatterns["string"]      = PatternCompile(@"""(?<inside>.+)(?<!\\)""", GlobalNamedPatterns);
 
 			GlobalNamedPatterns["alpha"]       = PatternCompile(@"[a-zA-Z]+", GlobalNamedPatterns);
 			GlobalNamedPatterns["numeric"]     = PatternCompile(@"[0-9]+", GlobalNamedPatterns);
 			GlobalNamedPatterns["alphanumeric"]= PatternCompile(@"[a-zA-Z0-9]+", GlobalNamedPatterns);
+
 		}
 
 		static int uniqueid = 0;

@@ -453,6 +453,15 @@ namespace Swis
 						dst.Float = left.Float % right.Float;
 						break;
 					}
+				case Opcode.ModulusUnsignedRRR:
+					{
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
+
+						dst.Value = left.Value % right.Value;
+						break;
+					}
 				case Opcode.ShiftLeftRRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);

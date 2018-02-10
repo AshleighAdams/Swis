@@ -52,6 +52,7 @@ namespace Swis
 		DivideFloatRRR = 153,
 		ModulusRRR = 154,
 		ModulusFloatRRR = 155,
+		ModulusUnsignedRRR = 175,
 		ShiftLeftRRR = 156,
 		ShiftRightRRR = 157,
 		ArithmaticShiftRightRRR = 158,

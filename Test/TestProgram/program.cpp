@@ -16,8 +16,7 @@ void reverse(char str[], int length)
 		end--;
 	}
 }
-
-char* itoa(int num, char* str, int base)
+extern "C" char* itoa(int num, char* str, int base)
 {
 	int i = 0;
 	bool negative = false;
@@ -61,51 +60,51 @@ void out(unsigned int port, unsigned char val)
 	// i = immediate, g = register, memory, or immediate
 	// X = any operand
 	asm("out %0, %1"
-		:                      // outputs
-	: "X"(port), "X"(val)  // inputs
-		: // valid registers
+		:                     // outputs
+	    : "X"(port), "X"(val) // inputs
+		:                     // valid registers
 		);
 }
 
-void put(char c)
+extern "C" void put(char c)
 {
 	asm("out 0, %0"
 		:        // outputs
-	: "X"(c) // inputs
+	    : "X"(c) // inputs
 		:        // valid registers
 		);
 }
 
-void puts(const char* str)
+extern "C" void puts(const char* str)
 {
 	while (*str != 0)
 	{
-		out(0, *str);
+		put(*str);
 		str++;
 	}
 }
+static unsigned long int next = 229729204;
+extern "C" int rand(void) // RAND_MAX assumed to be 32767
+{
+	next = next * 1103515245 + 12345;
+	return (unsigned int)(next / 65536) % 32768;
+}
+extern "C" void srand(unsigned int seed)
+{
+	next = seed;
+}
 
-/*
-static unsigned long int next = 1;
-int rand(void) // RAND_MAX assumed to be 32767
-{
-next = next * 1103515245 + 12345;
-return (unsigned int)(next/65536) % 32768;
-}
-void srand(unsigned int seed)
-{
-next = seed;
-}
-*/
 
 int main()
 {
 	char output[sizeof(int) * 8 + 1];
+	puts("Hello world.\n");
 	for (int i = 1330; i < 1340; i++)
 	{
-		itoa(i, output, 10);
+		itoa(rand(), output, 10);
 		puts(output);
 		put('\n');
 	}
+	puts("Execution: finished!\n");
 	return 0;
 }

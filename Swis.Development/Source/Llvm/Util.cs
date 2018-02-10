@@ -300,7 +300,7 @@ namespace Swis
 			IrPatterns["keyword"]    = LlvmUtil.PatternCompile(@"[a-z]+", IrPatterns);
 			IrPatterns["array"]      = LlvmUtil.PatternCompile(@"\[[0-9]+ x", IrPatterns);
 			IrPatterns["type"]       = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
-			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9]+", IrPatterns);
+			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?", IrPatterns);
 			IrPatterns["ident"]      = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["namedlocal"] = LlvmUtil.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
@@ -314,7 +314,12 @@ namespace Swis
 				@"dereferenceable\((0|1)\)|" +
 				@"dereferenceable_or_null\((0|1)\)|" +
 				"swiftself|swifterror" + "))*", IrPatterns);
-
+			
+			IrPatterns["linkage"] = LlvmUtil.PatternCompile("private|internal|available_externally|linkonce|weak|common|appending|extern_weak|linkonce_odr|weak_odr|external", IrPatterns);
+			IrPatterns["preemptionspecifier"] = LlvmUtil.PatternCompile("dso_preemptable|dso_local", IrPatterns);
+			IrPatterns["visibility"] = LlvmUtil.PatternCompile("default|hidden|protected", IrPatterns);
+			IrPatterns["dllstorageclass"] = LlvmUtil.PatternCompile("dllimport|dllexport", IrPatterns);
+			IrPatterns["threadlocal"] = LlvmUtil.PatternCompile(@"thread_local\((localdynamic|initialexec|localexec)\)", IrPatterns);
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
 			foreach (MethodInfo func in funcs)

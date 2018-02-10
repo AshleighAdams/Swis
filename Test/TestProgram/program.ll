@@ -3,6 +3,10 @@ source_filename = "program.cpp"
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386"
 
+@_ZL4next = internal global i32 229729204, align 4
+@.str = private unnamed_addr constant [14 x i8] c"Hello world.\0A\00", align 1
+@.str.1 = private unnamed_addr constant [22 x i8] c"Execution: finished!\0A\00", align 1
+
 ; Function Attrs: noinline nounwind
 define void @_Z7reversePci(i8* %str, i32 %length) #0 {
   %str.addr = alloca i8*, align 4
@@ -56,7 +60,7 @@ define void @_Z7reversePci(i8* %str, i32 %length) #0 {
 }
 
 ; Function Attrs: noinline nounwind
-define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
+define i8* @itoa(i32 %num, i8* %str, i32 %base) #0 {
   %retval = alloca i8*, align 4
   %num.addr = alloca i32, align 4
   %str.addr = alloca i8*, align 4
@@ -192,7 +196,7 @@ define void @_Z3outjh(i32 %port, i8 zeroext %val) #0 {
 }
 
 ; Function Attrs: noinline nounwind
-define void @_Z3putc(i8 signext %c) #0 {
+define void @put(i8 signext %c) #0 {
   %c.addr = alloca i8, align 1
   store i8 %c, i8* %c.addr, align 1
   %1 = load i8, i8* %c.addr, align 1
@@ -201,7 +205,7 @@ define void @_Z3putc(i8 signext %c) #0 {
 }
 
 ; Function Attrs: noinline nounwind
-define void @_Z4putsPKc(i8* %str) #0 {
+define void @puts(i8* %str) #0 {
   %str.addr = alloca i8*, align 4
   store i8* %str, i8** %str.addr, align 4
   br label %1
@@ -216,7 +220,7 @@ define void @_Z4putsPKc(i8* %str) #0 {
 ; <label>:4:                                      ; preds = %1
   %5 = load i8*, i8** %str.addr, align 4
   %6 = load i8, i8* %5, align 1
-  call void @_Z3outjh(i32 0, i8 zeroext %6)
+  call void @put(i8 signext %6)
   %7 = load i8*, i8** %str.addr, align 4
   %incdec.ptr = getelementptr inbounds i8, i8* %7, i32 1
   store i8* %incdec.ptr, i8** %str.addr, align 4
@@ -226,36 +230,59 @@ define void @_Z4putsPKc(i8* %str) #0 {
   ret void
 }
 
+; Function Attrs: noinline nounwind
+define i32 @rand() #0 {
+  %1 = load i32, i32* @_ZL4next, align 4
+  %mul = mul i32 %1, 1103515245
+  %add = add i32 %mul, 12345
+  store i32 %add, i32* @_ZL4next, align 4
+  %2 = load i32, i32* @_ZL4next, align 4
+  %div = udiv i32 %2, 65536
+  %rem = urem i32 %div, 32768
+  ret i32 %rem
+}
+
+; Function Attrs: noinline nounwind
+define void @srand(i32 %seed) #0 {
+  %seed.addr = alloca i32, align 4
+  store i32 %seed, i32* %seed.addr, align 4
+  %1 = load i32, i32* %seed.addr, align 4
+  store i32 %1, i32* @_ZL4next, align 4
+  ret void
+}
+
 ; Function Attrs: noinline norecurse nounwind
 define i32 @main() #1 {
   %retval = alloca i32, align 4
   %output = alloca [33 x i8], align 1
   %i = alloca i32, align 4
   store i32 0, i32* %retval, align 4
+  call void @puts(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0))
   store i32 1330, i32* %i, align 4
   br label %1
 
-; <label>:1:                                      ; preds = %5, %0
+; <label>:1:                                      ; preds = %4, %0
   %2 = load i32, i32* %i, align 4
   %cmp = icmp slt i32 %2, 1340
-  br i1 %cmp, label %3, label %7
+  br i1 %cmp, label %3, label %6
 
 ; <label>:3:                                      ; preds = %1
-  %4 = load i32, i32* %i, align 4
+  %call = call i32 @rand()
   %arraydecay = getelementptr inbounds [33 x i8], [33 x i8]* %output, i32 0, i32 0
-  %call = call i8* @_Z4itoaiPci(i32 %4, i8* %arraydecay, i32 10)
-  %arraydecay1 = getelementptr inbounds [33 x i8], [33 x i8]* %output, i32 0, i32 0
-  call void @_Z4putsPKc(i8* %arraydecay1)
-  call void @_Z3putc(i8 signext 10)
-  br label %5
+  %call1 = call i8* @itoa(i32 %call, i8* %arraydecay, i32 10)
+  %arraydecay2 = getelementptr inbounds [33 x i8], [33 x i8]* %output, i32 0, i32 0
+  call void @puts(i8* %arraydecay2)
+  call void @put(i8 signext 10)
+  br label %4
 
-; <label>:5:                                      ; preds = %3
-  %6 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %6, 1
+; <label>:4:                                      ; preds = %3
+  %5 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %5, 1
   store i32 %inc, i32* %i, align 4
   br label %1
 
-; <label>:7:                                      ; preds = %1
+; <label>:6:                                      ; preds = %1
+  call void @puts(i8* getelementptr inbounds ([22 x i8], [22 x i8]* @.str.1, i32 0, i32 0))
   ret i32 0
 }
 
@@ -266,5 +293,5 @@ attributes #2 = { nounwind }
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 4.0.0-1ubuntu1~16.04.2 (tags/RELEASE_400/rc1)"}
-!1 = !{i32 1333}
-!2 = !{i32 1472}
+!1 = !{i32 1340}
+!2 = !{i32 1511}

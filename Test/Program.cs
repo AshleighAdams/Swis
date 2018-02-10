@@ -49,7 +49,7 @@ namespace SwisTest
 			};
 
 			
-			double target_frequency = 100;
+			double target_frequency = 1000;
 			double tickrate = 10;
 
 			Console.Write($"Push enter to execute ({target_frequency/1000} kHz): ");
