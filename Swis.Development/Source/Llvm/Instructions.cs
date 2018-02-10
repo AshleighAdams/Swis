@@ -94,7 +94,8 @@ namespace Swis
 			
 			if (dynamic_offsets_operands.Count == 1)
 			{
-				output.Emit($"mov {destop}, {dynamic_offsets_operands[0]} ; getelementptr");
+				//output.Emit($"mov {destop}, {dynamic_offsets_operands[0]} ; getelementptr");
+				output.ConstantLocals[args.dst] = dynamic_offsets_operands[0];
 			}
 			else
 			{
