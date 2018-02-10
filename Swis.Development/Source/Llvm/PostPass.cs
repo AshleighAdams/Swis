@@ -163,7 +163,7 @@ namespace Swis
 			}
 
 			// also remove the indirection ptrptrs
-			//asm = Regex.Replace(asm, @"ptrptr\s*", "");
+			asm = Regex.Replace(asm, @"ptrptr\s*", "");
 
 			output.Assembly.Clear();
 			output.Assembly.Append(asm);

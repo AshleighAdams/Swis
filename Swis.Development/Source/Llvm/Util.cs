@@ -72,7 +72,7 @@ namespace Swis
 			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["register"]   = LlvmUtil.PatternCompile(@"[%][0-9]+", IrPatterns);
 			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
-			IrPatterns["operand"]    = LlvmUtil.PatternCompile(@"<const>|<local>", IrPatterns);
+			IrPatterns["operand"]    = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
 
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
@@ -273,6 +273,9 @@ namespace Swis
 			if (type[0] == '%')
 				type = NamedTypes[type];
 
+			if (type[0] == '@')
+				type = "u32";
+
 			if (type[0] == '{')
 			{
 				StructInfo info = GetStructInfo(type);
@@ -298,7 +301,7 @@ namespace Swis
 				return "64";
 			if (type == "fp128")
 				return "128";
-			if (type[0] == 'i' || type[0] == 'f')
+			if (type[0] == 'i' || type[0] == 'u' || type[0] == 'f')
 				return Regex.Match(type, "[0-9]+").Value;
 			throw new NotImplementedException(type);
 		}
@@ -332,7 +335,7 @@ namespace Swis
 
 			if (operand[0] == '@')
 				part = $"${operand}";
-			if (operand[0] != '%')
+			else if (operand[0] != '%')
 				part = $"{operand}"; // constants are always 32bits
 									 // is it a calculated const size?
 			else if (b.ConstantLocals.TryGetValue(operand, out var cl))

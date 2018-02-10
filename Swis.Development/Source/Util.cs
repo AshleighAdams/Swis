@@ -92,7 +92,8 @@ namespace Swis
 
 			dynamic ret = new ExpandoObject();
 			var ret_dict = (IDictionary<string, object>)ret;
-			
+
+			ret_dict["__full__"] = m.Value;
 			foreach (string name in r.GetGroupNames())
 				ret_dict[name] = m.Groups[name].Value;
 
@@ -111,6 +112,7 @@ namespace Swis
 				dynamic ret = new ExpandoObject();
 				var ret_dict = (IDictionary<string, object>)ret;
 
+				ret_dict["__full__"] = m.Value;
 				foreach (string name in r.GetGroupNames())
 					ret_dict[name] = m.Groups[name].Value;
 

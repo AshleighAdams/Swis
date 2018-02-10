@@ -300,6 +300,91 @@ namespace Swis
 			
 			return true;
 		}
+
+		[IrInstruction("call", @"(<operand:dst> = )?call (<type:ret_type>) (<operand:func>)\s*<parentheses:args>")]
+		private static bool Call(MethodBuilder output, dynamic match)
+		{
+			string callargs = match.args_inside;
+			string ret_type = match.ret_type;
+			string dst = match.dst;
+
+			dynamic[] args = callargs.PatternMatches("<type:type> <operand:src>", IrPatterns);
+
+			uint ret_size = SizeOfAsInt(ret_type) / 8;
+			uint[] arg_sizes = new uint[args.Length];
+			uint[] arg_sp = new uint[args.Length];
+			uint total_size = ret_size;
+
+			uint stack_offset = 0;
+			for (int i = args.Length; i --> 0;)
+			{
+				dynamic argmatch = args[i];
+				uint size = SizeOfAsInt(argmatch.type) / 8;
+				arg_sp[i] = stack_offset += size;
+				total_size += arg_sizes[i] = size;
+			}
+			uint ret_sp_offset = stack_offset + ret_size;
+
+			{
+				StringBuilder comment = new StringBuilder();
+				comment.Append($"; call {ret_type} {match.func}(");
+				string pre = "";
+				for (int i = 0; i < arg_sizes.Length; i++)
+				{
+					comment.Append($"{pre}{args[i].type}");
+					pre = ", ";
+				}
+				comment.Append($"; )");
+				output.Emit("");
+				output.Emit($"{comment}");
+			}
+
+			if (total_size > 0)
+				output.Emit($"add sp, sp, {total_size} ; allocate space for return and arguments");
+
+			for (int i = 0; i < arg_sizes.Length; i++)
+			{
+				uint argsz = arg_sizes[i];
+				
+				switch (argsz * 8)
+				{
+				case 8:
+				case 16:
+				case 32:
+					output.Emit($"mov ptr{argsz * 8} [sp - {arg_sp[i]}], {ToOperand(output, args[i].type, args[i].src)} ; copy arg #{i + 1}");
+					break;
+				default:
+					// it *must* be a pointer type
+					uint arg_sp_offset_at = arg_sp[i];
+					//while (argsz > 0)
+					//{
+					//	if (argsz > 32)
+					//	{
+					//		
+					//		//output.Emit
+					//	}
+					//}
+					throw new NotImplementedException();
+					//break;
+					// break it down bit by bit
+				}
+			}
+			
+			output.Emit($"call {ToOperand(output, "void*", match.func)}");
+
+			if (ret_size > 0)
+			{
+				if (ret_size > 32)
+					throw new NotImplementedException();
+				output.Emit($"mov {ToOperand(output, match.ret_type, match.dst)}, ptr{ret_size * 8} [sp - {ret_sp_offset}] ; copy return");
+			}
+
+			if(total_size > 0)
+				output.Emit($"sub sp, sp, {total_size} ; pop args and ret");
+			output.Emit("");
+
+			return true;
+		}
 		#endregion
 
 		#region Transformative
