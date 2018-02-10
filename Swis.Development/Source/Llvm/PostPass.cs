@@ -77,17 +77,37 @@ namespace Swis
 			{
 				string searchin = searchdown ? asm.Substring(m.Index) : asm.Substring(0, m.Index + m.Length);
 				string varname = m.Groups["reg"].Value;
-				MatchCollection simple = Regex.Matches(searchin, string.Format(simple_use, Regex.Escape(varname)));
-				MatchCollection total = Regex.Matches(searchin, Regex.Escape(varname));
+				MatchCollection simple = searchin.Matches(string.Format(simple_use, Regex.Escape(varname)));
+				MatchCollection total = asm.Matches(Regex.Escape(varname)); // this searches everything still
 				
 				if (simple.Count == 2 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
 				{
-					// woop woop, we can replace it
+					// we can probably replace it, but first let's check we haven't used that data chunk else where,
+					// ensuring that this being in a different order won't change the symantic meaning
+					
 					string data = m.Groups["data"].Value.Trim();
 
-					replacements.Add((varname, data));
-					have_simplified[varname] = true; // so we don't reduce this variable further accidentally
-					return m.Groups["startwhitespace"].Value + m.Groups["endwhitespace"].Value;
+					int times_found;
+					
+					if (searchdown)
+						searchin = searchin.Substring(0, simple[1].Index + simple[1].Length);
+					else
+						searchin = searchin.Substring(simple[0].Index);
+
+					
+					if (
+						// if we use it right after, it's safe
+						searchin.Matches("[\n]+").Count == 1 ||
+						// otherwise, if we access this more than once, the data might have changed.
+						// also make sure there was not a call or a jump between us, as they could have unknowable changes to that memory,
+						// unless it is this value that we're jumping to
+						(searchin.Matches(Regex.Escape(data)).Count == 1 && searchin.Matches($@"\n\s*(call|j[a-zA-Z]{{1,2}}) (?!{Regex.Escape(varname)})").Count == 0))
+					{
+						// woop woop, we can replace it
+						replacements.Add((varname, data));
+						have_simplified[varname] = true; // so we don't reduce this variable further accidentally
+						return m.Groups["startwhitespace"].Value + m.Groups["endwhitespace"].Value;
+					}
 				}
 
 				return m.Value;
@@ -113,7 +133,7 @@ namespace Swis
 			output.Assembly.Append(asm);
 		}
 
-		static void AllocateRegisters(MethodBuilder output, bool intel_syntax = false)
+		static void AllocateRegisters(MethodBuilder output, bool intel_syntax = true)
 		{
 			string asm = output.Assembly.ToString();
 
