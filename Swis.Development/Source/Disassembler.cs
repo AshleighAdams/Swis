@@ -12,7 +12,49 @@ namespace Swis
 			
 			string do_part(sbyte regid, byte size, uint @const, bool signed = false)
 			{
-				return "notimp";
+				if (regid > 0)
+				{
+					NamedRegister r = (NamedRegister)regid;
+
+					if (regid >= (int)NamedRegister.A)
+					{
+						switch (size)
+						{
+						case 8:
+							return $"{r.Disassemble()}l";
+						case 16:
+							return $"{r.Disassemble()}x";
+						case 32:
+							return $"e{r.Disassemble()}x";
+						case 64:
+							return $"r{r.Disassemble()}x";
+						default: return $"{r.Disassemble()}sz{size}";
+						}
+					}
+					else
+					{
+						switch (size)
+						{
+						case 8:
+							return $"{r.Disassemble()}l";
+						case 16:
+							return $"{r.Disassemble()}";
+						case 32:
+							return $"e{r.Disassemble()}";
+						case 64:
+							return $"r{r.Disassemble()}";
+						default: return $"{r.Disassemble()}sz{size}";
+						}
+					}
+				}
+				else
+				{
+					if (dbg != null)
+						foreach (var lbl in dbg?.Labels)
+							if (lbl.Value == @const)
+								return lbl.Key;
+					return $"{(int)@const}";
+				}
 			}
 
 			switch (self.AddressingMode)
@@ -85,23 +127,22 @@ namespace Swis
 			{ NamedRegister.InstructionPointer, "ip" },
 			{ NamedRegister.StackPointer, "sp" },
 			{ NamedRegister.BasePointer, "bp"},
-			{ NamedRegister.Flags, "flags"},
+			{ NamedRegister.Flags, "flag"},
 			{ NamedRegister.ProtectedMode, "pm" },
 			{ NamedRegister.ProtectedInterrupt, "pi" },
 
-			{ NamedRegister.A, "ga" },
-			{ NamedRegister.B, "gb" },
-			{ NamedRegister.C, "gc" },
-			{ NamedRegister.D, "gd" },
-			{ NamedRegister.E, "ge" },
-			{ NamedRegister.F, "gf" },
-
-			{ NamedRegister.G, "ta" },
-			{ NamedRegister.H, "tb" },
-			{ NamedRegister.I, "tc" },
-			{ NamedRegister.J, "td" },
-			{ NamedRegister.K, "te" },
-			{ NamedRegister.L, "tf" },
+			{ NamedRegister.A, "a" },
+			{ NamedRegister.B, "b" },
+			{ NamedRegister.C, "c" },
+			{ NamedRegister.D, "d" },
+			{ NamedRegister.E, "e" },
+			{ NamedRegister.F, "f" },
+			{ NamedRegister.G, "a" },
+			{ NamedRegister.H, "b" },
+			{ NamedRegister.I, "c" },
+			{ NamedRegister.J, "d" },
+			{ NamedRegister.K, "e" },
+			{ NamedRegister.L, "f" },
 		};
 
 		public static string Disassemble(this NamedRegister self)
@@ -134,14 +175,17 @@ namespace Swis
 			{ Opcode.Return, "ret" },
 			{ Opcode.JumpR, "jmp" },
 			{ Opcode.CompareRR, "cmp" },
-			{ Opcode.CompareFloatRR, "cmpf" },
+			{ Opcode.CompareFloatRRR, "cmpf" },
+			{ Opcode.CompareUnsignedRR, "cmpu" },
 			{ Opcode.JumpEqualR, "je" },
 			{ Opcode.JumpNotEqualR, "jne" },
 			{ Opcode.JumpLessR, "jl" },
 			{ Opcode.JumpGreaterR, "jg" },
 			{ Opcode.JumpLessEqualR, "jle" },
 			{ Opcode.JumpGreaterEqualR, "jge" },
-			{ Opcode.JumpUnderOverFlowR, "juo" },
+			{ Opcode.JumpUnderOverflowR, "juo" },
+			{ Opcode.JumpZeroRR, "jz" },
+			{ Opcode.JumpNotZeroRR, "jnz" },
 
 			{ Opcode.AddRRR, "add" },
 			{ Opcode.AddFloatRRR, "addf" },
@@ -206,14 +250,17 @@ namespace Swis
 			{ Opcode.Return, 0 },
 			{ Opcode.JumpR, 1 },
 			{ Opcode.CompareRR, 2 },
-			{ Opcode.CompareFloatRR, 2 },
+			{ Opcode.CompareFloatRRR, 3 },
+			{ Opcode.CompareUnsignedRR, 2 },
 			{ Opcode.JumpEqualR, 1 },
 			{ Opcode.JumpNotEqualR, 1 },
 			{ Opcode.JumpLessR, 1 },
 			{ Opcode.JumpGreaterR, 1 },
 			{ Opcode.JumpLessEqualR, 1 },
 			{ Opcode.JumpGreaterEqualR, 1 },
-			{ Opcode.JumpUnderOverFlowR, 1 },
+			{ Opcode.JumpUnderOverflowR, 1 },
+			{ Opcode.JumpZeroRR, 2 },
+			{ Opcode.JumpNotZeroRR, 2 },
 
 			{ Opcode.AddRRR, 3 },
 			{ Opcode.AddFloatRRR, 3 },

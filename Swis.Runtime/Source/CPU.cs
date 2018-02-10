@@ -237,13 +237,35 @@ namespace Swis
 						flags = (uint)iflags;
 						break;
 					}
-				case Opcode.CompareFloatRR:
+				case Opcode.CompareFloatRRR:
+					{
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand ordered = this.Memory.DecodeOperand(ref ip, this.Registers);
+
+						float l = left.Float;
+						float r = right.Float;
+
+						var iflags = (FlagsRegisterFlags)this.Flags;
+						iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
+
+						if (l > r)
+							iflags |= FlagsRegisterFlags.Greater;
+						if (l < r)
+							iflags |= FlagsRegisterFlags.Less;
+						if (l == r)
+							iflags |= FlagsRegisterFlags.Equal;
+
+						flags = (uint)iflags;
+						break;
+					}
+				case Opcode.CompareUnsignedRR:
 					{
 						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						float l = left.Float;
-						float r = right.Float;
+						UInt32 l = left.Value;
+						UInt32 r = right.Value;
 
 						var iflags = (FlagsRegisterFlags)this.Flags;
 						iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
@@ -299,6 +321,24 @@ namespace Swis
 						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						var flgs = (FlagsRegisterFlags)this.Flags;
 						if (flgs.HasFlag(FlagsRegisterFlags.Less) || flgs.HasFlag(FlagsRegisterFlags.Equal))
+							ip = loc.Value;
+						break;
+					}
+				case Opcode.JumpZeroRR:
+					{
+						Operand cond = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
+
+						if (cond.Value == 0)
+							ip = loc.Value;
+						break;
+					}
+				case Opcode.JumpNotZeroRR:
+					{
+						Operand cond = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
+
+						if (cond.Value != 0)
 							ip = loc.Value;
 						break;
 					}

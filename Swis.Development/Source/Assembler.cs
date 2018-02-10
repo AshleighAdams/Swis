@@ -101,14 +101,17 @@ namespace Swis
 			{ "ret", Opcode.Return },
 			{ "jmpR", Opcode.JumpR },
 			{ "cmpRR", Opcode.CompareRR },
-			{ "cmpfRR", Opcode.CompareFloatRR },
+			{ "cmpfRRR", Opcode.CompareFloatRRR },
+			{ "cmpuRR", Opcode.CompareUnsignedRR },
 			{ "jeR", Opcode.JumpEqualR },
 			{ "jneR", Opcode.JumpNotEqualR },
 			{ "jlR", Opcode.JumpLessR },
 			{ "jgR", Opcode.JumpGreaterR },
 			{ "jleR", Opcode.JumpLessEqualR },
 			{ "jgeR", Opcode.JumpGreaterEqualR },
-			{ "juoR", Opcode.JumpUnderOverFlowR },
+			{ "juoR", Opcode.JumpUnderOverflowR },
+			{ "jzRR", Opcode.JumpZeroRR },
+			{ "jnzRR", Opcode.JumpNotZeroRR},
 
 			{ "addRRR", Opcode.AddRRR },
 			{ "addfRRR", Opcode.AddFloatRRR },
@@ -380,7 +383,7 @@ namespace Swis
 						// convert - x into + -x
 
 						oa = Regex.Replace(oa, @"-(\s*)\-([0-9])", "+$1$2");
-						oa = Regex.Replace(oa, @"-(\s*)([0-9])", "+$1-$2");
+						oa = Regex.Replace(oa, @"(?<!^\s*)\-(\s*)([0-9])", "+$1-$2");
 						
 						dbg.PtrToAsm[bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
 

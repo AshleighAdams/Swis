@@ -21,6 +21,8 @@ namespace Swis
 		}
 
 		uint[] _LastValues;
+		bool ShowRegisters = false;
+
 		public override bool Clock(Cpu cpu, MemoryController memory)
 		{
 			StringBuilder sb = new StringBuilder();
@@ -31,7 +33,10 @@ namespace Swis
 
 				for (int i = 0; i < cpu.Registers.Length; i++)
 				{
-					if (this._LastValues[i] != cpu.Registers[i])
+					// this is the time stamp counter, so don't show it, it is implicit
+					if (i == 0 && this._LastValues[i] + 1 == cpu.Registers[i])
+						this._LastValues[i] = cpu.Registers[i];
+					else if (this._LastValues[i] != cpu.Registers[i])
 					{
 						this._LastValues[i] = cpu.Registers[i];
 						NamedRegister r = (NamedRegister)i;
@@ -58,7 +63,8 @@ namespace Swis
 						}
 					}
 				}
-				Console.WriteLine($"registers:{sb}");
+				if(ShowRegisters)
+					Console.WriteLine($"registers:{sb}");
 				sb.Clear();
 			}
 			{ // write the instruction
