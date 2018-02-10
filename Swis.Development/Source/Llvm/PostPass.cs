@@ -51,11 +51,74 @@ namespace Swis
 			public List<(int from, int to)> Used = new List<(int from, int to)>();
 		}
 
-		static void AllocateRegisters(MethodBuilder output)
+		// shaves off about 30% of the instructions
+		static void OptimizeMovs(MethodBuilder output)
+		{
+			// llvm instructions can't store/load and perform an operation together, so let's fix that
+			// mov %28:32, ptr32 [bp - 20]
+			// mov %29:32, ptr32 [bp - 12]
+			// div %div:32, %28:32, %29:32
+			// mov ptr32 [bp - 20], %div:32
+
+			// to
+
+			// div ptr32 [bp - 20], ptr32 [bp - 20], ptr32 [bp - 12]
+			string asm = output.Assembly.ToString();
+
+			string ssa = @"(?<![^\n][;])(?<varname>%[a-zA-Z._0-9]+):(?<size>ptr|1|8|16|32)";
+
+			List<(string what, string with)> replacements = new List<(string what, string with)>();
+
+			string simple_use = @"([a-z]|,)[ \t]{0}[ \t]*(,|;|\r|\n|$)";
+			Dictionary<string, bool> have_simplified = new Dictionary<string, bool>();
+
+			MatchEvaluator tester = delegate (Match m)
+			{
+				string varname = m.Groups["reg"].Value;
+				MatchCollection simple = Regex.Matches(asm, string.Format(simple_use, Regex.Escape(varname)));
+				MatchCollection total = Regex.Matches(asm, Regex.Escape(varname));
+				
+				if (simple.Count == 2 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
+				{
+					// woop woop, we can replace it
+					string data = m.Groups["data"].Value.Trim();
+
+					replacements.Add((varname, data));
+					have_simplified[varname] = true; // so we don't reduce this variable further accidentally
+					return m.Groups["startwhitespace"].Value + m.Groups["endwhitespace"].Value;
+				}
+
+				return m.Value;
+			};
+
+			// mov to op
+			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<reg>{ssa}), (?<data>[^,;]+)(?<endwhitespace>\s*;|\n)", tester);
+
+			// op to move
+			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<data>[^,;]+), (?<reg>{ssa})", tester);
+
+			//MatchCollection movs_to_op = "".Matches($@"mov (?<reg>{ssa}), (?<data>[^,;]+)\s*(;|\n)"); // the %28 and %29 above
+			//MatchCollection op_to_mov = "".Matches($@"mov (?<data>[^,;]+), (?<reg>{ssa})"); // the %div above
+
+			foreach ((string what, string with) in replacements)
+			{
+				asm = asm.Replace(what, with);
+			}
+
+			output.Assembly.Clear();
+			output.Assembly.Append(asm);
+		}
+
+		static void AllocateRegisters(MethodBuilder output, bool intel_syntax = false)
 		{
 			string asm = output.Assembly.ToString();
-			
-			string[] registers = new string[] { "ta", "tb", "tc", "td", "te", "tf" };
+
+			string[] registers;
+
+			if(!intel_syntax)
+				registers = new string[] { "ta", "tb", "tc", "td", "te", "tf" };
+			else
+				registers = new string[] { "a", "b", "c", "d", "e", "f" };
 
 			Dictionary<string, RegInfo> regs = new Dictionary<string, RegInfo>();
 			foreach (string r in registers) regs[r] = new RegInfo();
@@ -151,15 +214,36 @@ namespace Swis
 			{
 				var inf = kv.Value;
 
-				string strsz;
-				switch (inf.Size)
+				if (!intel_syntax)
 				{
-				case "ptr": strsz = ""; break;
-				case "1": strsz = "8"; break;
-				default: strsz = inf.Size; break;
-				}
+					string strsz;
+					switch (inf.Size)
+					{
+					case "ptr": strsz = ""; break;
+					case "1": strsz = "8"; break;
+					default: strsz = inf.Size; break;
+					}
 
-				asm = asm.Replace($"{kv.Key}", $"{inf.AllocatedRegister}{strsz}");
+					asm = asm.Replace(kv.Key, $"{inf.AllocatedRegister}{strsz}");
+				}
+				else
+				{
+					string reg;
+					string alc = inf.AllocatedRegister;
+					switch (inf.Size)
+					{
+					case "8": reg = $"{alc}l"; break;
+					case "16": reg = $"{alc}x"; break;
+					case "32": reg = $"e{alc}x"; break;
+					case "64": reg = $"r{alc}x"; break;
+
+					case "ptr": goto case "32";
+					case "1": goto case "8";
+					default: throw new NotImplementedException();
+					}
+
+					asm = asm.Replace(kv.Key, reg);
+				}
 			}
 
 			// also remove the indirection ptrptrs

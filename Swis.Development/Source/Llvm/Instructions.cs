@@ -335,7 +335,7 @@ namespace Swis
 					comment.Append($"{pre}{args[i].type}");
 					pre = ", ";
 				}
-				comment.Append($"; )");
+				comment.Append($")");
 				output.Emit("");
 				output.Emit($"{comment}");
 			}
