@@ -85,8 +85,8 @@ namespace Swis
 				if (type.EndsWith("*"))
 				{
 					string deref = TypeDeref(type);
-					uint size = SizeOfAsInt(deref);
-					return (deref, (int)size);
+					int offset = (int)(SizeOfAsInt(deref) / 8) * index;
+					return (deref, offset);
 				}
 
 				if (type.StartsWith("%"))
@@ -106,7 +106,7 @@ namespace Swis
 				{
 					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
 					string subtype = arry.subtype;
-					uint stride = SizeOfAsInt(arry.subtype);
+					uint stride = SizeOfAsInt(arry.subtype) / 8;
 
 					return (subtype, (int)stride * index);
 				}
