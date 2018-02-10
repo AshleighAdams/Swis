@@ -55,14 +55,14 @@ namespace Swis
 		static void OptimizeMovs(MethodBuilder output)
 		{
 			// llvm instructions can't store/load and perform an operation together, so let's fix that
-			// mov %28:32, ptr32 [bp - 20]
-			// mov %29:32, ptr32 [bp - 12]
+			// mov %28:32, ptr32 [ebp - 20]
+			// mov %29:32, ptr32 [ebp - 12]
 			// div %div:32, %28:32, %29:32
-			// mov ptr32 [bp - 20], %div:32
+			// mov ptr32 [ebp - 20], %div:32
 
 			// to
 
-			// div ptr32 [bp - 20], ptr32 [bp - 20], ptr32 [bp - 12]
+			// div ptr32 [ebp - 20], ptr32 [ebp - 20], ptr32 [ebp - 12]
 			string asm = output.Assembly.ToString();
 
 			string ssa = @"(?<![^\n][;])(?<varname>%[a-zA-Z._0-9]+):(?<size>ptr|1|8|16|32)";

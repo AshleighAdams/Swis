@@ -61,41 +61,51 @@ namespace Swis
 			}
 
 			// optimize out some add instructions by condensing them down into the operand form a + b + c * 1 if possible
-			(int adds, int muls) simpleop(int index)
+			if (output.Unit.OptimizationLevel >= 1)
 			{
-				string op = dynamic_offsets_operands[index];
-				return (op.PatternMatches(@"\+", IrPatterns).Length, op.PatternMatches(@"\*", IrPatterns).Length);
-			}
-			for (int i = 0; i < dynamic_offsets_operands.Count;)
-			{
-				var info = simpleop(i);
-				if (info.adds >= 2 || info.muls >= 1)
+				(int adds, int muls) simpleop(int index)
 				{
+					string op = dynamic_offsets_operands[index];
+					return (op.PatternMatches(@"\+", IrPatterns).Length, op.PatternMatches(@"\*", IrPatterns).Length);
+				}
+				for (int i = 0; i < dynamic_offsets_operands.Count;)
+				{
+					var info = simpleop(i);
+					if (info.adds >= 2 || info.muls >= 1)
+					{
+						i++;
+						continue;
+					}
+
+					string condensed = dynamic_offsets_operands[i];
+					while (i + 1 < dynamic_offsets_operands.Count)
+					{
+						var info2 = simpleop(i + 1);
+						if (info.adds + info2.adds + 1 > 2 || info.muls + info2.muls > 1)
+							break;
+
+						info.adds += info2.adds + 1;
+						info.muls += info2.muls;
+
+						condensed = $"{condensed} + {dynamic_offsets_operands[i + 1]}";
+						dynamic_offsets_operands.RemoveAt(i + 1);
+					}
+					dynamic_offsets_operands[i] = condensed;
 					i++;
-					continue;
 				}
-
-				string condensed = dynamic_offsets_operands[i];
-				while (i + 1 < dynamic_offsets_operands.Count)
-				{
-					var info2 = simpleop(i + 1);
-					if (info.adds + info2.adds + 1 > 2 || info.muls + info2.muls > 1)
-						break;
-
-					info.adds += info2.adds + 1;
-					info.muls += info2.muls;
-
-					condensed = $"{condensed} + {dynamic_offsets_operands[i+1]}";
-					dynamic_offsets_operands.RemoveAt(i + 1);
-				}
-				dynamic_offsets_operands[i] = condensed;
-				i++;
 			}
-			
+
 			if (dynamic_offsets_operands.Count == 1)
 			{
-				output.Emit($"; getelementptr: {args.dst} = {dynamic_offsets_operands[0]}");
-				output.ConstantLocals[args.dst] = dynamic_offsets_operands[0];
+				if (output.Unit.OptimizationLevel >= 1)
+				{
+					output.Emit($"; getelementptr: {args.dst} = {dynamic_offsets_operands[0]}");
+					output.ConstantLocals[args.dst] = dynamic_offsets_operands[0];
+				}
+				else
+				{
+					output.Emit($"add {destop}, {dynamic_offsets_operands[0]}, 0 ; getelementptr");
+				}
 			}
 			else
 			{
@@ -184,6 +194,13 @@ namespace Swis
 			if (string.IsNullOrWhiteSpace(type)) // is it a label?
 				return $"${output.Id}_label_{where}";
 			return output.ToOperand(type, where);
+		}
+		
+		[IrInstruction("ret", "ret void")]
+		private static bool RetVoid(MethodBuilder output, dynamic args)
+		{
+			output.Emit("ret");
+			return true;
 		}
 
 		[IrInstruction("ret", "ret <type:type> <operand:what>")]
@@ -291,6 +308,23 @@ namespace Swis
 			return true;
 		}
 
+		[IrInstruction("call", @"(<operand:dst> = )?call (<type:ret_type>) asm( sideeffect)? ""(?<asm>[^""]+)"", ""(?<flags>[^""]+)""\s*<parentheses:args>( #<numeric>)?, (?<rest>.+)$")]
+		private static bool CallAsm(MethodBuilder output, dynamic match)
+		{
+			string asm = match.asm;
+			string strargs = match.args_inside;
+
+			dynamic[] args = strargs.PatternMatches("<type:type> <operand:operand>", IrPatterns);
+
+			for (int i = 0; i < args.Length; i++)
+			{
+				asm = asm.Replace($"${i}", output.ToOperand(args[i].type, args[i].operand));
+			}
+
+			output.Emit(asm);
+			return true;
+		}
+
 		[IrInstruction("call", @"(<operand:dst> = )?call (<type:ret_type>) (<operand:func>)\s*<parentheses:args>")]
 		private static bool Call(MethodBuilder output, dynamic match)
 		{
@@ -298,7 +332,7 @@ namespace Swis
 			string ret_type = match.ret_type;
 			string dst = match.dst;
 
-			dynamic[] args = callargs.PatternMatches("<type:type> <operand:src>", IrPatterns);
+			dynamic[] args = callargs.PatternMatches("<type:type><paramattributes> <operand:src>", IrPatterns);
 
 			uint ret_size = output.Unit.SizeOfAsInt(ret_type) / 8;
 			uint[] arg_sizes = new uint[args.Length];

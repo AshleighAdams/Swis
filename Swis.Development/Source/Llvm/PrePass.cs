@@ -86,7 +86,8 @@ namespace Swis
 				});
 			}
 
-			output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
+			if(bp_offset > 0)
+				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
 
 		/* // this needs to be implemented

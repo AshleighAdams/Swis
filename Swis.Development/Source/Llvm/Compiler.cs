@@ -147,6 +147,7 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 			StringBuilder all = new StringBuilder();
 
 			TranslationUnit unit = new TranslationUnit();
+			unit.OptimizationLevel = 2;
 
 			foreach (dynamic func in funcs)
 			//var funcs = Regex.Matches(code, func_regex);
@@ -210,14 +211,30 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 						throw new Exception();
 				}
 
-				RemoveNopJumps(builder);
-				OptimizeMovs(builder);
+				if(unit.OptimizationLevel >= 1)
+					RemoveNopJumps(builder);
+				if (unit.OptimizationLevel >= 2)
+					OptimizeMovs(builder);
 				AllocateRegisters(builder);
 
 				all.AppendLine(builder.Assembly.ToString());
 			}
 
-			return all.ToString();
+			string bootloader =
+$@"mov {unit.StackPointer}, $stack
+mov {unit.BasePointer}, {unit.StackPointer}
+add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes
+call $@main
+sub {unit.StackPointer}, {unit.StackPointer}, 12
+halt
+
+.align 4
+$stack:
+	.data pad 1024
+
+";
+
+			return bootloader + all.ToString();
 		}
 	}
 }

@@ -1,4 +1,6 @@
-﻿
+﻿// compile with clang using `clang++ -cc1 -triple=i386 -masm=intel -S program.cpp -emit-llvm`
+// i386 is little endian and sizeof(void*) = 4
+
 void reverse(char str[], int length)
 {
 	int start = 0;
@@ -9,7 +11,7 @@ void reverse(char str[], int length)
 		char tmp = *(str + start);
 		*(str + start) = *(str + end);
 		*(str + end) = tmp;
-		
+
 		start++;
 		end--;
 	}
@@ -52,22 +54,29 @@ char* itoa(int num, char* str, int base)
 	return str;
 }
 
-// compile with clang using `clang++ -cc1 -triple=i386 -masm=intel -S program.cpp -emit-llvm`
-// i386 is little endian and sizeof(void*) = 4
 void out(unsigned int port, unsigned char val)
 {
 	// https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
 	// r = register, m = memory, o = offsetable memory, v = not-offsetable memory
 	// i = immediate, g = register, memory, or immediate
 	// X = any operand
-	asm ("out %0, %1" 
+	asm("out %0, %1"
 		:                      // outputs
-		: "X"(port), "X"(val)  // inputs
+	: "X"(port), "X"(val)  // inputs
 		: // valid registers
-	);
+		);
 }
 
-void print(char* str)
+void put(char c)
+{
+	asm("out 0, %0"
+		:        // outputs
+	: "X"(c) // inputs
+		:        // valid registers
+		);
+}
+
+void puts(const char* str)
 {
 	while (*str != 0)
 	{
@@ -76,11 +85,27 @@ void print(char* str)
 	}
 }
 
+/*
+static unsigned long int next = 1;
+int rand(void) // RAND_MAX assumed to be 32767
+{
+next = next * 1103515245 + 12345;
+return (unsigned int)(next/65536) % 32768;
+}
+void srand(unsigned int seed)
+{
+next = seed;
+}
+*/
+
 int main()
 {
 	char output[sizeof(int) * 8 + 1];
-	int leet = 1337;
-	itoa(leet, output, 10);
-	print(output);
+	for (int i = 1330; i < 1340; i++)
+	{
+		itoa(i, output, 10);
+		puts(output);
+		put('\n');
+	}
 	return 0;
 }

@@ -7,9 +7,9 @@ namespace SwisTest
 {
     class Program
     {
-		static string IrCompileTest()
+		static string IrCompileTest(string ir = null)
 		{
-			string ir = LlvmIrCompiler.TestIR;
+			ir = ir ?? System.IO.File.ReadAllText("TestProgram/program.ll");
 			string asm = LlvmIrCompiler.Compile(ir);
 			Console.WriteLine(asm);
 			return asm;
@@ -48,19 +48,23 @@ namespace SwisTest
 				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
 
-			DateTime start = DateTime.UtcNow;
+			
+			double target_frequency = 100;
+			double tickrate = 10;
 
-			double tickrate = 66.666;
+			Console.Write($"Push enter to execute ({target_frequency/1000} kHz): ");
+			Console.ReadLine();
+
+			DateTime start = DateTime.UtcNow;
 			DateTime next = DateTime.UtcNow;
 			while (true)
 			{
-				//double target_frequency = 10000;
-				double clocks = 100; // target_frequency / tickrate;
+				double clocks = target_frequency / tickrate;
 				cpu.Clock((int)clocks);
-
+				
 				if (cpu.Halted)
 					break;
-
+				
 				next = next.AddSeconds(1.0 / tickrate);
 				int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
 				if (ms > 0)
@@ -69,8 +73,8 @@ namespace SwisTest
 
 			DateTime end = DateTime.UtcNow;
 
-			//Console.WriteLine(end - start);
-			Console.WriteLine(cpu.TimeStampCounter);
+			Console.WriteLine();
+			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalSeconds:0.00} seconds");
 		}
 
 		static void Main(string[] args)

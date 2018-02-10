@@ -192,7 +192,16 @@ define void @_Z3outjh(i32 %port, i8 zeroext %val) #0 {
 }
 
 ; Function Attrs: noinline nounwind
-define void @_Z5printPc(i8* %str) #0 {
+define void @_Z3putc(i8 signext %c) #0 {
+  %c.addr = alloca i8, align 1
+  store i8 %c, i8* %c.addr, align 1
+  %1 = load i8, i8* %c.addr, align 1
+  call void asm sideeffect "out 0, $0", "X,~{dirflag},~{fpsr},~{flags}"(i8 %1) #2, !srcloc !2
+  ret void
+}
+
+; Function Attrs: noinline nounwind
+define void @_Z4putsPKc(i8* %str) #0 {
   %str.addr = alloca i8*, align 4
   store i8* %str, i8** %str.addr, align 4
   br label %1
@@ -221,14 +230,32 @@ define void @_Z5printPc(i8* %str) #0 {
 define i32 @main() #1 {
   %retval = alloca i32, align 4
   %output = alloca [33 x i8], align 1
-  %leet = alloca i32, align 4
+  %i = alloca i32, align 4
   store i32 0, i32* %retval, align 4
-  store i32 1337, i32* %leet, align 4
-  %1 = load i32, i32* %leet, align 4
+  store i32 1330, i32* %i, align 4
+  br label %1
+
+; <label>:1:                                      ; preds = %5, %0
+  %2 = load i32, i32* %i, align 4
+  %cmp = icmp slt i32 %2, 1340
+  br i1 %cmp, label %3, label %7
+
+; <label>:3:                                      ; preds = %1
+  %4 = load i32, i32* %i, align 4
   %arraydecay = getelementptr inbounds [33 x i8], [33 x i8]* %output, i32 0, i32 0
-  %call = call i8* @_Z4itoaiPci(i32 %1, i8* %arraydecay, i32 10)
+  %call = call i8* @_Z4itoaiPci(i32 %4, i8* %arraydecay, i32 10)
   %arraydecay1 = getelementptr inbounds [33 x i8], [33 x i8]* %output, i32 0, i32 0
-  call void @_Z5printPc(i8* %arraydecay1)
+  call void @_Z4putsPKc(i8* %arraydecay1)
+  call void @_Z3putc(i8 signext 10)
+  br label %5
+
+; <label>:5:                                      ; preds = %3
+  %6 = load i32, i32* %i, align 4
+  %inc = add nsw i32 %6, 1
+  store i32 %inc, i32* %i, align 4
+  br label %1
+
+; <label>:7:                                      ; preds = %1
   ret i32 0
 }
 
@@ -239,4 +266,5 @@ attributes #2 = { nounwind }
 !llvm.ident = !{!0}
 
 !0 = !{!"clang version 4.0.0-1ubuntu1~16.04.2 (tags/RELEASE_400/rc1)"}
-!1 = !{i32 1332}
+!1 = !{i32 1333}
+!2 = !{i32 1472}

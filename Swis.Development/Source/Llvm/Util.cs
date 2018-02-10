@@ -24,12 +24,13 @@ namespace Swis
 
 		private class TranslationUnit
 		{
+			public int OptimizationLevel = 0;
 			public bool IntelSyntax = true;
 			string[] _Registers = new string[] { "a", "b", "c", "d", "e", "f" };
 
-			public string StackPointer { get { return this.IntelSyntax ? "esp" : "sp"; } }
-			public string BasePointer { get { return this.IntelSyntax ? "ebp" : "bp"; } }
-			public string InstructionPointer { get { return this.IntelSyntax ? "eip" : "ip"; } }
+			public string StackPointer { get { return "esp"; } }
+			public string BasePointer { get { return "ebp"; } }
+			public string InstructionPointer { get { return "eip"; } }
 			public string[] Registers { get { return _Registers; } }
 
 			public class StructInfo
@@ -305,7 +306,14 @@ namespace Swis
 			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["register"]   = LlvmUtil.PatternCompile(@"[%][0-9]+", IrPatterns);
 			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
-			IrPatterns["operand"]    = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
+			IrPatterns["operand"] = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
+
+			IrPatterns["paramattributes"] = LlvmUtil.PatternCompile("( (" +
+				"zeroext|signext|inreg|byval|inalloca|sret|" +
+				"align [0-9]+|noalias|nocapture|nest|nonnull|" +
+				@"dereferenceable\((0|1)\)|" +
+				@"dereferenceable_or_null\((0|1)\)|" +
+				"swiftself|swifterror" + "))*", IrPatterns);
 
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
