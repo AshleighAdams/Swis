@@ -34,15 +34,9 @@ namespace Swis
 		FSegment = 12,
 		GSegment = 13,
 		XtraSegment = 14,
-
-		// 0bnnnnnn_ss
-		// sss = 2 bits, of the 2^(s+3) size, up to 128 bits
-		// b, s, i, l: gai
-
-		GeneralA = 16, GeneralB = 17, GeneralC = 18, GeneralD = 19, GeneralE = 20, GeneralF = 21,
-		//GeneralG = 38, GeneralH = 39, GeneralI = 40, GeneralJ = 41, GeneralK = 42, GeneralL = 43,
-
-		TempA = 24, TempB = 25, TempC = 26, TempD = 27, TempE = 28, TempF = 29,
-		//TempG = 54, TempH = 55, TempI = 56, TempJ = 57, TempK = 58, TempL = 59
+		
+		// general
+		A = 20, B = 21, C = 22, D = 23, E = 24, F = 25,
+		G = 26, H = 27, I = 28, J = 29, K = 30, L = 31,
 	}
 }

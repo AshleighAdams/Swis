@@ -121,7 +121,7 @@ namespace Swis
 						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						//Console.Write((char)lttr.Value);
+						Console.Write((char)lttr.Value);
 						break;
 					}
 #endregion

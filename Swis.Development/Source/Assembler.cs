@@ -13,7 +13,7 @@ namespace Swis
 			{ "ip", NamedRegister.InstructionPointer },
 			{ "sp", NamedRegister.StackPointer },
 			{ "bp", NamedRegister.BasePointer },
-			{ "flags", NamedRegister.Flags },
+			{ "flag", NamedRegister.Flags },
 			{ "pm", NamedRegister.ProtectedMode },
 			{ "pi", NamedRegister.ProtectedInterrupt },
 
@@ -25,20 +25,58 @@ namespace Swis
 			{ "gs", NamedRegister.GSegment },
 			{ "xs", NamedRegister.XtraSegment },
 
-			{ "ga", NamedRegister.GeneralA },
-			{ "gb", NamedRegister.GeneralB },
-			{ "gc", NamedRegister.GeneralC },
-			{ "gd", NamedRegister.GeneralD },
-			{ "ge", NamedRegister.GeneralE },
-			{ "gf", NamedRegister.GeneralF },
-
-			{ "ta", NamedRegister.TempA },
-			{ "tb", NamedRegister.TempB },
-			{ "tc", NamedRegister.TempC },
-			{ "td", NamedRegister.TempD },
-			{ "te", NamedRegister.TempE },
-			{ "tf", NamedRegister.TempF },
+			{ "a", NamedRegister.A },
+			{ "b", NamedRegister.B },
+			{ "c", NamedRegister.C },
+			{ "d", NamedRegister.D },
+			{ "e", NamedRegister.E },
+			{ "f", NamedRegister.F },
+			{ "g", NamedRegister.G },
+			{ "h", NamedRegister.H },
+			{ "i", NamedRegister.I },
+			{ "j", NamedRegister.J },
+			{ "k", NamedRegister.K },
+			{ "l", NamedRegister.L },
 		};
+
+		static (NamedRegister reg, uint size) ParseRegister(string reg)
+		{
+			uint size;
+
+			if (reg.EndsWith("s") && reg.Length == 2)
+			{ // segment
+				size = 32;
+			}
+			else if (reg.StartsWith("r"))
+			{
+				size = 64;
+				if (reg.EndsWith("x"))
+					reg = reg.Substring(1, reg.Length - 2);
+				else
+					reg = reg.Substring(1);
+			}
+			else if (reg.StartsWith("e"))
+			{
+				size = 32;
+				if (reg.EndsWith("x"))
+					reg = reg.Substring(1, reg.Length - 2);
+				else
+					reg = reg.Substring(1);
+			}
+			else if (reg.EndsWith("x"))
+			{
+				size = 16;
+				reg = reg.Substring(0, reg.Length - 1);
+			}
+			else if (reg.EndsWith("l"))
+			{
+				size = 8;
+				reg = reg.Substring(0, reg.Length - 1);
+			}
+			else throw new Exception(reg);
+
+			return (RegisterMap[reg], size);
+		}
 
 		static Dictionary<string, Opcode> OpcodeMap = new Dictionary<string, Opcode>()
 		{
@@ -117,7 +155,7 @@ namespace Swis
 				return named_patterns_cache[x] = LlvmUtil.PatternCompile(x.Replace(" ", @"\s*"), named_patterns);
 			}
 
-			named_patterns["register"] = pattern_compile_optional_whitespace(@"(?<name>[a-zA-Z]+)(?<sz>[0-9]*)");
+			named_patterns["register"] = pattern_compile_optional_whitespace(@"(?<name>[a-zA-Z]+)");
 			named_patterns["constant"] = pattern_compile_optional_whitespace(@"0x[a-fA-F0-9]+|\-?[0-9\.]+f|\-?[0-9]+|\$[a-zA-Z0-9._@]+");
 			named_patterns["rc"]       = pattern_compile_optional_whitespace(@"<register>|<constant>");
 
@@ -434,6 +472,11 @@ namespace Swis
 									else
 									{
 										// must be a register
+
+										var reginf = ParseRegister(input);
+										regsz = reginf.size;
+										regid = (uint)reginf.reg;
+										/*
 										string reg_only = Regex.Replace(input, @"\d+", "");
 										string size_only = Regex.Match(input, @"\d+").Value;
 
@@ -445,6 +488,7 @@ namespace Swis
 											regsz = (uint)Cpu.NativeSizeBits;
 										else
 											regsz = uint.Parse(size_only);
+										*/
 									}
 								}
 
@@ -489,73 +533,6 @@ namespace Swis
 									read_operand(match.form_d2_c, out regid_c, out regsz_c, out const_c, out constsz_c, out const_placeholder_c);
 									read_operand(match.form_d2_d, out regid_d, out regsz_d, out const_d, out constsz_d, out const_placeholder_d);
 								}
-								#region OLD
-								/*
-								Match oa_rx = oa.Match(@"^ \s* (?<ptr> (ptr(?<ptr_sz>8|16|32|64))? \s* \[)? \s* (?<base> (?!ptr) [a-zA-Z]+(?<base_sz>8|16|32|64)? | (?<constant> (?<uint>\d+) | (?<int>\-\d+) | (?<float>[-+]?\d+.\d+) ) | (?<label>\$[^\s\]]+) ) \s* ((?<sign>[+-]) \s* (?<offset>[0-9]+|(?<offset_label>\$[^\s\]]+)) )? \s* \]? \s* $");
-								string oa_ptr = oa_rx.Groups["ptr"].Value;
-								string oa_ptr_sz = oa_rx.Groups["ptr_sz"].Value;
-								string oa_base = oa_rx.Groups["base"].Value;
-								string oa_base_sz = oa_rx.Groups["base_sz"].Value;
-								string oa_constant = oa_rx.Groups["constant"].Value;
-								string oa_label = oa_rx.Groups["label"].Value;
-								string oa_sign = oa_rx.Groups["sign"].Value;
-								string oa_offset = oa_rx.Groups["offset"].Value;
-								string oa_offset_label = oa_rx.Groups["offset_label"].Value;
-
-								if (oa_ptr != "")
-									indirection_size = oa_ptr_sz == "" ? Register.NativeSize * 8 : uint.Parse(oa_ptr_sz);
-
-								if (oa_constant != "")
-								{
-									string struint = oa_rx.Groups["uint"].Value;
-									string strint = oa_rx.Groups["int"].Value;
-									string strfloat = oa_rx.Groups["float"].Value;
-
-									Caster c; c.U32 = 0;
-									if (struint != "")
-										constant = uint.Parse(struint);
-									else if (strint != "")
-									{
-										c.I32 = int.Parse(strint);
-										constant = c.U32;
-									}
-									else if (strfloat != "")
-									{
-										c.F32 = float.Parse(strfloat);
-										constant = c.U32;
-									}
-									else
-										constant = uint.Parse(oa_constant);
-									size = Register.NativeSize * 8;
-								}
-								else if (oa_label != "")
-								{
-									constant = 1;
-									size = Register.NativeSize * 8;
-									const_placeholder = oa_label;
-								}
-								else
-								{
-									string reg_only = Regex.Replace(oa_base, @"\d+", "");
-									if (!RegisterMap.TryGetValue(reg_only.ToLowerInvariant(), out var reg))
-										throw new Exception($"{linenum}: unknown register {oa_base}");
-									regid = (uint)reg;
-
-									if (oa_base_sz == "")
-										size = Register.NativeSize * 8;
-									else
-										size = uint.Parse(oa_base_sz);
-								}
-
-								if (oa_offset_label != "")
-								{
-									offset = 1;
-									offset_placeholder = oa_offset_label;
-								}
-								if (oa_offset != "")
-									offset = int.Parse($"{oa_sign}{oa_offset}");
-								*/
-								#endregion
 							}
 							#endregion
 

@@ -89,19 +89,19 @@ namespace Swis
 			{ NamedRegister.ProtectedMode, "pm" },
 			{ NamedRegister.ProtectedInterrupt, "pi" },
 
-			{ NamedRegister.GeneralA, "ga" },
-			{ NamedRegister.GeneralB, "gb" },
-			{ NamedRegister.GeneralC, "gc" },
-			{ NamedRegister.GeneralD, "gd" },
-			{ NamedRegister.GeneralE, "ge" },
-			{ NamedRegister.GeneralF, "gf" },
+			{ NamedRegister.A, "ga" },
+			{ NamedRegister.B, "gb" },
+			{ NamedRegister.C, "gc" },
+			{ NamedRegister.D, "gd" },
+			{ NamedRegister.E, "ge" },
+			{ NamedRegister.F, "gf" },
 
-			{ NamedRegister.TempA, "ta" },
-			{ NamedRegister.TempB, "tb" },
-			{ NamedRegister.TempC, "tc" },
-			{ NamedRegister.TempD, "td" },
-			{ NamedRegister.TempE, "te" },
-			{ NamedRegister.TempF, "tf" },
+			{ NamedRegister.G, "ta" },
+			{ NamedRegister.H, "tb" },
+			{ NamedRegister.I, "tc" },
+			{ NamedRegister.J, "td" },
+			{ NamedRegister.K, "te" },
+			{ NamedRegister.L, "tf" },
 		};
 
 		public static string Disassemble(this NamedRegister self)

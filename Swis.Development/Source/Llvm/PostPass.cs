@@ -133,16 +133,11 @@ namespace Swis
 			output.Assembly.Append(asm);
 		}
 
-		static void AllocateRegisters(MethodBuilder output, bool intel_syntax = true)
+		static void AllocateRegisters(MethodBuilder output)
 		{
 			string asm = output.Assembly.ToString();
 
-			string[] registers;
-
-			if(!intel_syntax)
-				registers = new string[] { "ta", "tb", "tc", "td", "te", "tf" };
-			else
-				registers = new string[] { "a", "b", "c", "d", "e", "f" };
+			string[] registers = output.Unit.Registers;
 
 			Dictionary<string, RegInfo> regs = new Dictionary<string, RegInfo>();
 			foreach (string r in registers) regs[r] = new RegInfo();
@@ -238,7 +233,7 @@ namespace Swis
 			{
 				var inf = kv.Value;
 
-				if (!intel_syntax)
+				if (!output.Unit.IntelSyntax)
 				{
 					string strsz;
 					switch (inf.Size)
@@ -248,7 +243,7 @@ namespace Swis
 					default: strsz = inf.Size; break;
 					}
 
-					asm = asm.Replace(kv.Key, $"{inf.AllocatedRegister}{strsz}");
+					asm = asm.Replace(kv.Key, $"t{inf.AllocatedRegister}{strsz}");
 				}
 				else
 				{

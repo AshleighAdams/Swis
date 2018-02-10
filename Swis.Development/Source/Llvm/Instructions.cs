@@ -37,26 +37,26 @@ namespace Swis
 
 				if (!char.IsDigit(operand[0]))
 				{
-					(string subtype, string genop) = DynamicTypeIndex(output, type, operand_type, operand);
+					(string subtype, string genop) = output.Unit.DynamicTypeIndex(output, type, operand_type, operand);
 					dynamic_offsets_operands.Add(genop);
 					type = subtype;
 				}
 				else
 				{
 					int index = int.Parse(operand);
-					(string subtype, int suboffset) = StaticTypeIndex(type, index);
+					(string subtype, int suboffset) = output.Unit.StaticTypeIndex(type, index);
 					static_offset += suboffset;
 					type = subtype;
 				}
 			}
 
-			string destop = ToOperand(output, "void*", args.dst);
+			string destop = output.ToOperand("void*", args.dst);
 			{
 				string baseop;
 				if (static_offset == 0)
-					baseop = $"{ToOperand(output, base_type, base_operand)}";
+					baseop = $"{output.ToOperand(base_type, base_operand)}";
 				else
-					baseop = $"{ToOperand(output, base_type, base_operand)} + {static_offset}";
+					baseop = $"{output.ToOperand(base_type, base_operand)} + {static_offset}";
 				dynamic_offsets_operands.Insert(0, baseop);
 			}
 
@@ -94,7 +94,7 @@ namespace Swis
 			
 			if (dynamic_offsets_operands.Count == 1)
 			{
-				//output.Emit($"mov {destop}, {dynamic_offsets_operands[0]} ; getelementptr");
+				output.Emit($"; getelementptr: {args.dst} = {dynamic_offsets_operands[0]}");
 				output.ConstantLocals[args.dst] = dynamic_offsets_operands[0];
 			}
 			else
@@ -119,15 +119,15 @@ namespace Swis
 			{
 				output.Emit(
 					$"and " +
-						$"{ToOperand(output, args.dst_type, args.dst)}, " +
-						$"{ToOperand(output, args.src_type, args.src)}, " +
+						$"{output.ToOperand(args.dst_type, args.dst)}, " +
+						$"{output.ToOperand(args.src_type, args.src)}, " +
 						$"{(1 << tosz) - 1} ; trunc to i{tosz}");
 				return true;
 			}
 			output.Emit(
 				$"mov " +
-				$"{ToOperand(output, args.dst_type, args.dst)}, " +
-				$"{ToOperand(output, args.src_type, args.src)} ; trunc {args.src_type} -> {args.dst_type}");
+				$"{output.ToOperand(args.dst_type, args.dst)}, " +
+				$"{output.ToOperand(args.src_type, args.src)} ; trunc {args.src_type} -> {args.dst_type}");
 			return true;
 		}
 
@@ -136,8 +136,8 @@ namespace Swis
 		{
 			output.Emit(
 				$"sext " +
-				$"{ToOperand(output, args.dst_type, args.dst)}, " +
-				$"{ToOperand(output, args.src_type, args.src)}, " +
+				$"{output.ToOperand(args.dst_type, args.dst)}, " +
+				$"{output.ToOperand(args.src_type, args.src)}, " +
 				$"{args.src_type_size}");
 			return true;
 		}
@@ -147,8 +147,8 @@ namespace Swis
 		{
 			output.Emit(
 				$"zext " +
-				$"{ToOperand(output, args.dst_type, args.dst)}, " +
-				$"{ToOperand(output, args.src_type, args.src)}, " +
+				$"{output.ToOperand(args.dst_type, args.dst)}, " +
+				$"{output.ToOperand(args.src_type, args.src)}, " +
 				$"{args.src_type_size}");
 			return true;
 		}
@@ -161,8 +161,8 @@ namespace Swis
 		{
 			output.Emit(
 				$"mov " +
-				$"{ToOperand(output, args.dst_type, args.dst, indirection: true)}, " +
-				$"{ToOperand(output, args.src_type, args.src)}");
+				$"{output.ToOperand(args.dst_type, args.dst, indirection: true)}, " +
+				$"{output.ToOperand(args.src_type, args.src)}");
 			return true;
 		}
 
@@ -171,8 +171,8 @@ namespace Swis
 		{
 			output.Emit(
 				$"mov " +
-				$"{ToOperand(output, args.dst_type, args.dst)}, " +
-				$"{ToOperand(output, args.src_type, args.src, indirection: true)}");
+				$"{output.ToOperand(args.dst_type, args.dst)}, " +
+				$"{output.ToOperand(args.src_type, args.src, indirection: true)}");
 			return true;
 		}
 		#endregion
@@ -183,7 +183,7 @@ namespace Swis
 		{
 			if (string.IsNullOrWhiteSpace(type)) // is it a label?
 				return $"${output.Id}_label_{where}";
-			return ToOperand(output, type, where);
+			return output.ToOperand(type, where);
 		}
 
 		[IrInstruction("ret", "ret <type:type> <operand:what>")]
@@ -192,7 +192,7 @@ namespace Swis
 			output.Emit(
 				$"mov " +
 				$"{output.ConstantLocals["ret"]}, " +
-				$"{ToOperand(output, args.type, args.what)}");
+				$"{output.ToOperand(args.type, args.what)}");
 			output.Emit("ret");
 			return true;
 		}
@@ -200,17 +200,6 @@ namespace Swis
 		[IrInstruction("cmpbr", @"cmpbr (?<cmptype>[a-z]) <keyword:method> <type:type> <operand:left>, <operand:right>, (label|<type:ontrue_type>) %<numeric:ontrue>, (label|<type:onfalse_type>) %<numeric:onfalse>\s*$")]
 		private static bool Cmpbr(MethodBuilder output, dynamic args)
 		{
-			string ircmp_to_cmp(string m)
-			{
-				switch (m)
-				{
-				case "i": return "";
-				case "f": return "f";
-				case "u": return "u";
-				default: throw new NotImplementedException(m);
-				}
-			}
-
 			(string postfix, string method, string thirdop) irfcmp_to_asm_inverted(string m)
 			{
 				switch (m)
@@ -262,14 +251,14 @@ namespace Swis
 			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u"))
 			{
 				method = method == "ne" ? "nz" : "z";
-				string asm2 = $"j{method} {ToOperand(output, args.type, args.left)}, {Targetify(output, args.onfalse_type, args.onfalse)}";
+				string asm2 = $"j{method} {output.ToOperand(args.type, args.left)}, {Targetify(output, args.onfalse_type, args.onfalse)}";
 				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
 				output.Emit(asm2);
 				output.Emit(asm3);
 			}
 			else
 			{
-				string asm1 = $"cmp{postfix} {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}{third}";
+				string asm1 = $"cmp{postfix} {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}{third}";
 				string asm2 = $"j{method} {Targetify(output, args.onfalse_type, args.onfalse)}";
 				string asm3 = $"jmp {Targetify(output, args.ontrue_type, args.ontrue)}";
 
@@ -292,11 +281,11 @@ namespace Swis
 			if (args.cond_type_size != "1")
 				throw new Exception();
 
-			//output.Emit($"jnz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.ontrue_type, args.ontrue)}");
+			//output.Emit($"jnz {output.ToOperand(args.cond_type, args.cond)}, {Targetify(output, args.ontrue_type, args.ontrue)}");
 			//output.Emit($"jmp {Targetify(output, args.onfalse_type, args.onfalse)}");
 
 			// inverting it generally allows us to optimize a jump out later
-			output.Emit($"jz {ToOperand(output, args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
+			output.Emit($"jz {output.ToOperand(args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
 			output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
 			
 			return true;
@@ -311,7 +300,7 @@ namespace Swis
 
 			dynamic[] args = callargs.PatternMatches("<type:type> <operand:src>", IrPatterns);
 
-			uint ret_size = SizeOfAsInt(ret_type) / 8;
+			uint ret_size = output.Unit.SizeOfAsInt(ret_type) / 8;
 			uint[] arg_sizes = new uint[args.Length];
 			uint[] arg_sp = new uint[args.Length];
 			uint total_size = ret_size;
@@ -320,7 +309,7 @@ namespace Swis
 			for (int i = args.Length; i --> 0;)
 			{
 				dynamic argmatch = args[i];
-				uint size = SizeOfAsInt(argmatch.type) / 8;
+				uint size = output.Unit.SizeOfAsInt(argmatch.type) / 8;
 				arg_sp[i] = stack_offset += size;
 				total_size += arg_sizes[i] = size;
 			}
@@ -341,7 +330,7 @@ namespace Swis
 			}
 
 			if (total_size > 0)
-				output.Emit($"add sp, sp, {total_size} ; allocate space for return and arguments");
+				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {total_size} ; allocate space for return and arguments");
 
 			for (int i = 0; i < arg_sizes.Length; i++)
 			{
@@ -352,7 +341,7 @@ namespace Swis
 				case 8:
 				case 16:
 				case 32:
-					output.Emit($"mov ptr{argsz * 8} [sp - {arg_sp[i]}], {ToOperand(output, args[i].type, args[i].src)} ; copy arg #{i + 1}");
+					output.Emit($"mov ptr{argsz * 8} [{output.Unit.StackPointer} - {arg_sp[i]}], {output.ToOperand(args[i].type, args[i].src)} ; copy arg #{i + 1}");
 					break;
 				default:
 					// it *must* be a pointer type
@@ -371,17 +360,17 @@ namespace Swis
 				}
 			}
 			
-			output.Emit($"call {ToOperand(output, "void*", match.func)}");
+			output.Emit($"call {output.ToOperand("void*", match.func)}");
 
 			if (ret_size > 0)
 			{
 				if (ret_size > 32)
 					throw new NotImplementedException();
-				output.Emit($"mov {ToOperand(output, match.ret_type, match.dst)}, ptr{ret_size * 8} [sp - {ret_sp_offset}] ; copy return");
+				output.Emit($"mov {output.ToOperand(match.ret_type, match.dst)}, ptr{ret_size * 8} [{output.Unit.StackPointer} - {ret_sp_offset}] ; copy return");
 			}
 
 			if(total_size > 0)
-				output.Emit($"sub sp, sp, {total_size} ; pop args and ret");
+				output.Emit($"sub {output.Unit.StackPointer}, {output.Unit.StackPointer}, {total_size} ; pop args and ret");
 			output.Emit("");
 
 			return true;
@@ -392,109 +381,109 @@ namespace Swis
 		[IrInstruction("add", "<operand:dst> = add(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Add(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"add {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"add {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("fadd", "<operand:dst> = fadd(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Fadd(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"addf {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"addf {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("sub", "<operand:dst> = sub(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Sub(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"sub {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"sub {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("fsub", "<operand:dst> = fsub(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Fsub(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"subf {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"subf {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("mul", "<operand:dst> = mul(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Mul(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"mul {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"mul {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("fmul", "<operand:dst> = fmul(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Fmul(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"mulf {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"mulf {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("udiv", "<operand:dst> = udiv(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Udiv(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"divu {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"divu {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("sdiv", "<operand:dst> = sdiv(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Sdiv(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"div {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"div {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("fdiv", "<operand:dst> = fdiv(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Fdiv(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"divf {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"divf {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("urem", "<operand:dst> = urem(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Urem(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"modu {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"modu {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("srem", "<operand:dst> = srem(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Srem(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"mod {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"mod {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("frem", "<operand:dst> = frem(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Frem(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"modf {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"modf {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("shl", "<operand:dst> = shl(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Shl(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"shl {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"shl {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("lshr", "<operand:dst> = lshr(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Lshr(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"shr {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"shr {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("ashr", "<operand:dst> = ashr(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Ashr(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"ashr {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"ashr {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("and", "<operand:dst> = and(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool And(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"and {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"and {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("or", "<operand:dst> = or(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Or(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"or {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"or {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 		[IrInstruction("xor", "<operand:dst> = xor(?<mods>( <keyword>)*) <type:type> <operand:left>, <operand:right>")]
 		private static bool Xor(MethodBuilder output, dynamic args)
 		{
-			output.Emit($"xor {ToOperand(output, args.type, args.dst)}, {ToOperand(output, args.type, args.left)}, {ToOperand(output, args.type, args.right)}");
+			output.Emit($"xor {output.ToOperand(args.type, args.dst)}, {output.ToOperand(args.type, args.left)}, {output.ToOperand(args.type, args.right)}");
 			return true;
 		}
 

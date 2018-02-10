@@ -21,10 +21,10 @@ namespace Swis
 					dynamic arg = args[i];
 					output.Arguments[i] = (arg.name, arg.type);
 
-					bp_offset -= (int)SizeOfAsInt(arg.type) / 8;
+					bp_offset -= (int)output.Unit.SizeOfAsInt(arg.type) / 8;
 
-					output.ConstantLocals[arg.name] = ToOperand(output, arg.type + "*", $"bp - {-bp_offset}", indirection: true);
-					output.Emit($"; params: {arg.name} = bp - {-bp_offset}");
+					output.ConstantLocals[arg.name] = output.ToOperand(arg.type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
+					output.Emit($"; params: {arg.name} = {output.Unit.BasePointer} - {-bp_offset}");
 					
 					// optimize a copy out:
 					if (optimize_args)
@@ -45,19 +45,19 @@ namespace Swis
 						output.Code = output.Code.Remove(store, storeend - store);
 						output.Code = output.Code.Remove(alloc, allocend - alloc);
 
-						output.ConstantLocals[arg.name + ".addr"] = ToOperand(output, arg.type, $"bp - {-bp_offset}");
+						output.ConstantLocals[arg.name + ".addr"] = output.ToOperand(arg.type, $"{output.Unit.BasePointer} - {-bp_offset}");
 					}
 				}
 			}
 
 			{ // ret
-				uint ret_bytes = SizeOfAsInt(return_type) / 8;
+				uint ret_bytes = output.Unit.SizeOfAsInt(return_type) / 8;
 
 				if (ret_bytes > 0)
 				{
-					bp_offset -= (int)SizeOfAsInt(return_type) / 8;
-					output.ConstantLocals["ret"] = ToOperand(output, return_type + "*", $"bp - {-bp_offset}", indirection: true);
-					output.Emit($"; return: ret = bp - {-bp_offset}");
+					bp_offset -= (int)output.Unit.SizeOfAsInt(return_type) / 8;
+					output.ConstantLocals["ret"] = output.ToOperand(return_type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
+					output.Emit($"; return: ret = {output.Unit.BasePointer} - {-bp_offset}");
 				}
 			}
 
@@ -76,17 +76,17 @@ namespace Swis
 						bp_offset += align - (bp_offset % align);
 
 					// assign it a constant offset
-					output.ConstantLocals[name] = $"bp + {bp_offset}";
-					output.Emit($"; locals: {name} = bp + {bp_offset}");
+					output.ConstantLocals[name] = $"{output.Unit.BasePointer} + {bp_offset}";
+					output.Emit($"; locals: {name} = {output.Unit.BasePointer} + {bp_offset}");
 
 					// increase the bp offset by the size
-					bp_offset += (int)SizeOfAsInt(alloca.Groups["type"].Value) / 8;
+					bp_offset += (int)output.Unit.SizeOfAsInt(alloca.Groups["type"].Value) / 8;
 
 					return "";
 				});
 			}
 
-			output.Emit($"add sp, sp, {bp_offset} ; alloca");
+			output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
 
 		/* // this needs to be implemented

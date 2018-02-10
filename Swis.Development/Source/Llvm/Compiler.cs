@@ -146,11 +146,13 @@ define i8* @_Z4itoaiPci(i32 %num, i8* %str, i32 %base) #0 {
 			
 			StringBuilder all = new StringBuilder();
 
+			TranslationUnit unit = new TranslationUnit();
+
 			foreach (dynamic func in funcs)
 			//var funcs = Regex.Matches(code, func_regex);
 			//foreach (Match func in funcs)
 			{
-				MethodBuilder builder = new MethodBuilder()
+				MethodBuilder builder = new MethodBuilder(unit)
 				{
 					Code = func.body_inside,
 					Id = func.id,

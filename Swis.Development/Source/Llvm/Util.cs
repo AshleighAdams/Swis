@@ -21,8 +21,209 @@ namespace Swis
 				this.Static = is_static;
 			}
 		}
+
+		private class TranslationUnit
+		{
+			public bool IntelSyntax = true;
+			string[] _Registers = new string[] { "a", "b", "c", "d", "e", "f" };
+
+			public string StackPointer { get { return this.IntelSyntax ? "esp" : "sp"; } }
+			public string BasePointer { get { return this.IntelSyntax ? "ebp" : "bp"; } }
+			public string InstructionPointer { get { return this.IntelSyntax ? "eip" : "ip"; } }
+			public string[] Registers { get { return _Registers; } }
+
+			public class StructInfo
+			{
+				public uint Size;
+				public (string type, uint offset)[] Fields;
+			}
+
+			static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
+			static Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
+
+			public StructInfo GetStructInfo(string type)
+			{
+				if (StructInfoCache.TryGetValue(type, out var ret))
+					return ret;
+
+				bool aligned = type.StartsWith("<");
+				if (aligned)
+					type.Substring(1, type.Length - 2); // chop the <> off
+
+				if (!type.StartsWith("{"))
+					throw new ArgumentException();
+
+				string stype = type.Substring(1, type.Length - 2); // trim the {}
+
+				uint cur_size = 0;
+				dynamic[] fields = stype.PatternMatches("<type:type>", IrPatterns);
+
+				List<(string type, uint offset)> compfields = new List<(string type, uint offset)>();
+				foreach (dynamic field in fields)
+				{
+					compfields.Add((field.type, cur_size));
+
+					uint sz = SizeOfAsInt(field.type);
+
+					if (sz % 8 != 0)
+						sz += 8 - (sz % 8);
+
+					cur_size += sz / 8;
+				}
+
+				return StructInfoCache[type] = new StructInfo
+				{
+					Size = cur_size,
+					Fields = compfields.ToArray(),
+				};
+			}
+			
+
+			// gets the offset of a type, and returns the type it has gotten
+			public (string type, int offset) StaticTypeIndex(string type, int index)
+			{
+				if (type.EndsWith("*"))
+				{
+					string deref = TypeDeref(type);
+					uint size = SizeOfAsInt(deref);
+					return (deref, (int)size);
+				}
+
+				if (type.StartsWith("%"))
+					type = NamedTypes[type];
+
+				bool aligned = type.StartsWith("<");
+				if (aligned)
+					type.Substring(1, type.Length - 2); // chop the <> off
+
+				if (type.StartsWith("{"))
+				{
+					StructInfo si = GetStructInfo(type);
+					(string a, uint b) = si.Fields[index];
+					return (a, (int)b);
+				}
+				else if (type.StartsWith("[")) // an array
+				{
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					string subtype = arry.subtype;
+					uint stride = SizeOfAsInt(arry.subtype);
+
+					return (subtype, (int)stride * index);
+				}
+				else
+					throw new Exception($"Can't index type {type}");
+			}
+
+			public (string type, string operand) DynamicTypeIndex(MethodBuilder output, string type, string operand_type, string operand)
+			{
+				if (type.EndsWith("*"))
+				{
+					string deref = TypeDeref(type);
+					uint size = SizeOfAsInt(deref);
+					if (size == 8)
+						return (deref, $"{output.ToOperand(operand_type, operand)}");
+					else
+						return (deref, $"{output.ToOperand(operand_type, operand)} * {size / 8}");
+				}
+
+				if (type.StartsWith("%"))
+					type = NamedTypes[type];
+
+				bool aligned = type.StartsWith("<");
+				if (aligned)
+					type.Substring(1, type.Length - 2); // chop the <> off
+
+				if (type.StartsWith("{"))
+				{
+					throw new ArgumentException(); // the offset *can* be found if we make a type-table, but, the type returned is unknowable.
+				}
+				else if (type.StartsWith("[")) // an array
+				{
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					string subtype = arry.subtype;
+					uint stride = SizeOfAsInt(arry.subtype);
+
+					if (stride == 8)
+						return (subtype, $"{output.ToOperand(operand_type, operand)}"); // stride * index
+					else
+						return (subtype, $"{output.ToOperand(operand_type, operand)} * {stride / 8}"); // stride * index
+				}
+				else
+					throw new Exception($"Can't index type {type}");
+			}
+
+
+
+
+			/// <summary>
+			/// returns 
+			/// </summary>
+			/// <param name="type"></param>
+			/// <returns>"ptr" or /[0-9]+/</returns>
+			public string SizeOf(string type)
+			{
+				if (type == "void")
+					return "0";
+				if (type[type.Length - 1] == '*')
+					return "ptr";
+
+				if (type[0] == '%')
+					type = NamedTypes[type];
+
+				if (type[0] == '@')
+					type = "u32";
+
+				if (type[0] == '{')
+				{
+					StructInfo info = GetStructInfo(type);
+					return $"{info.Size * 8}";
+				}
+
+				if (type[0] == '[')
+				{
+					dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns);
+					dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>", IrPatterns);
+
+					uint bits = SizeOfAsInt(arry.type);
+					foreach (dynamic size in sizes)
+						bits *= uint.Parse(size.sz);
+					return bits.ToString();
+				}
+
+				if (type == "half")
+					return "16";
+				if (type == "float")
+					return "32";
+				if (type == "double")
+					return "64";
+				if (type == "fp128")
+					return "128";
+				if (type[0] == 'i' || type[0] == 'u' || type[0] == 'f')
+					return Regex.Match(type, "[0-9]+").Value;
+				throw new NotImplementedException(type);
+			}
+
+			/// ptr info is lost during this
+			public uint SizeOfAsInt(string type)
+			{
+				string sz = SizeOf(type);
+				if (sz == "ptr")
+					return Cpu.NativeSizeBits;
+				return uint.Parse(sz);
+			}
+
+			public string TypeDeref(string type)
+			{
+				if (type[type.Length - 1] == '*')
+					return type.Substring(0, type.Length - 1);
+				throw new Exception("deref non ptr");
+			}
+		}
+
 		private class MethodBuilder
 		{
+			public TranslationUnit Unit;
+
 			public StringBuilder Assembly;
 			public string Id;
 			public (string type, int bits) Return;
@@ -31,8 +232,9 @@ namespace Swis
 			public string Code;
 
 			public Dictionary<string, string> ConstantLocals;
-			public MethodBuilder()
+			public MethodBuilder(TranslationUnit unit)
 			{
+				this.Unit = unit;
 				this.Assembly = new StringBuilder();
 				this.Return = (null, -1);
 				this.Arguments = null;
@@ -46,6 +248,37 @@ namespace Swis
 			{
 				this.Assembly.Append(this.EmitPrefix);
 				this.Assembly.AppendLine(asm);
+			}
+
+
+			// i16*, %value.addr, true = ptr16 [%value.addr:ptr]
+			// i16**, %value.addr, true = ptr [%value.addr:ptr]
+			// i16**, %5, true = ptr [%5:ptr]
+			// i16*, %5, false = %5:ptr
+			// i16, %5, false = %5:16
+			public string ToOperand(string type, string operand, bool indirection = false)
+			{
+				string part = "";
+
+				string size = this.Unit.SizeOf(type);
+
+				if (operand[0] == '@')
+					part = $"${operand}";
+				else if (operand[0] != '%')
+					part = $"{operand}"; // constants are always 32bits
+										 // is it a calculated const size?
+				else if (this.ConstantLocals.TryGetValue(operand, out var cl))
+					part = cl;
+				else // use a register
+					part = $"{operand}:{size}";
+
+				if (indirection)
+				{
+					string size_to = this.Unit.SizeOf(this.Unit.TypeDeref(type));
+					part = $"ptr{size_to} [{part}]";
+				}
+
+				return part;
 			}
 		}
 
@@ -89,267 +322,6 @@ namespace Swis
 			}
 
 		}
-
-		// { int x
 		
-
-		/*
-		struct RT
-		{
-			char A;
-			int B[10][20];
-			char C;
-		};
-		struct ST
-		{
-			int X;
-			double Y;
-			struct RT Z;
-		};
-
-		int* foo(struct ST *s)
-		{
-			return &s[1].Z.B[5][13];
-		}
-		*/
-		// ------------------
-		/*
-		%struct.RT = type { i8, [10 x [20 x i32]], i8 }
-		%struct.ST = type { i32, double, %struct.RT }
-
-		define i32* @foo(%struct.ST* %s) nounwind uwtable readnone optsize ssp {
-		entry:
-		  %arrayidx = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1, i32 2, i32 1, i64 5, i64 13
-		  ret i32* %arrayidx
-		}
-		*/
-
-		class StructInfo
-		{
-			public uint Size;
-			public (string type, uint offset)[] Fields;
-		}
-
-		static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
-		static Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
-
-		static StructInfo GetStructInfo(string type)
-		{
-			if (StructInfoCache.TryGetValue(type, out var ret))
-				return ret;
-			
-			bool aligned = type.StartsWith("<");
-			if (aligned)
-				type.Substring(1, type.Length - 2); // chop the <> off
-
-			if (!type.StartsWith("{"))
-				throw new ArgumentException();
-
-			string stype = type.Substring(1, type.Length - 2); // trim the {}
-
-			uint cur_size = 0;
-			dynamic[] fields = stype.PatternMatches("<type:type>", IrPatterns);
-
-			List<(string type, uint offset)> compfields = new List<(string type, uint offset)>();
-			foreach (dynamic field in fields)
-			{
-				compfields.Add((field.type, cur_size));
-
-				uint sz = SizeOfAsInt(field.type);
-
-				if(sz % 8 != 0)
-					sz += 8 - (sz % 8);
-
-				cur_size += sz / 8;
-			}
-
-			return StructInfoCache[type] = new StructInfo
-			{
-				Size = cur_size,
-				Fields = compfields.ToArray(),
-			};
-		}
-
-		public static void _teststrutinfo()
-		{
-			Setup();
-			/*%struct.RT = type { i8, [10 x [20 x i32]], i8 }
-			%struct.ST = type { i32, double, %struct.RT }*/
-
-			NamedTypes["%struct.RT"] = "{ i8, [10 x [20 x i32]], i8 }";
-			NamedTypes["%struct.ST"] = "{ i32, double, %struct.RT }";
-
-			StructInfo inf = GetStructInfo(NamedTypes["%struct.ST"]);
-		}
-
-		// gets the offset of a type, and returns the type it has gotten
-		static (string type, int offset) StaticTypeIndex(string type, int index)
-		{
-			if (type.EndsWith("*"))
-			{
-				string deref = TypeDeref(type);
-				uint size = SizeOfAsInt(deref);
-				return (deref, (int)size);
-			}
-
-			if (type.StartsWith("%"))
-				type = NamedTypes[type];
-
-			bool aligned = type.StartsWith("<");
-			if (aligned)
-				type.Substring(1, type.Length - 2); // chop the <> off
-
-			if (type.StartsWith("{"))
-			{
-				StructInfo si = GetStructInfo(type);
-				(string a, uint b) = si.Fields[index];
-				return (a, (int)b);
-			}
-			else if (type.StartsWith("[")) // an array
-			{
-				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
-				string subtype = arry.subtype;
-				uint stride = SizeOfAsInt(arry.subtype);
-
-				return (subtype, (int)stride * index);
-			}
-			else
-				throw new Exception($"Can't index type {type}");
-		}
-
-		static (string type, string operand) DynamicTypeIndex(MethodBuilder output, string type, string operand_type, string operand)
-		{
-			if (type.EndsWith("*"))
-			{
-				string deref = TypeDeref(type);
-				uint size = SizeOfAsInt(deref);
-				if (size == 8)
-					return (deref, $"{ToOperand(output, operand_type, operand)}");
-				else
-					return (deref, $"{ToOperand(output, operand_type, operand)} * {size / 8}");
-			}
-
-			if (type.StartsWith("%"))
-				type = NamedTypes[type];
-
-			bool aligned = type.StartsWith("<");
-			if (aligned)
-				type.Substring(1, type.Length - 2); // chop the <> off
-
-			if (type.StartsWith("{"))
-			{
-				throw new ArgumentException(); // the offset *can* be found if we make a type-table, but, the type returned is unknowable.
-			}
-			else if (type.StartsWith("[")) // an array
-			{
-				dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
-				string subtype = arry.subtype;
-				uint stride = SizeOfAsInt(arry.subtype);
-
-				if (stride == 8)
-					return (subtype, $"{ToOperand(output, operand_type, operand)}"); // stride * index
-				else
-					return (subtype, $"{ToOperand(output, operand_type, operand)} * {stride / 8}"); // stride * index
-			}
-			else
-				throw new Exception($"Can't index type {type}");
-		}
-
-
-
-
-		/// <summary>
-		/// returns 
-		/// </summary>
-		/// <param name="type"></param>
-		/// <returns>"ptr" or /[0-9]+/</returns>
-		static string SizeOf(string type)
-		{
-			if (type == "void")
-				return "0";
-			if (type[type.Length - 1] == '*')
-				return "ptr";
-
-			if (type[0] == '%')
-				type = NamedTypes[type];
-
-			if (type[0] == '@')
-				type = "u32";
-
-			if (type[0] == '{')
-			{
-				StructInfo info = GetStructInfo(type);
-				return $"{info.Size * 8}";
-			}
-
-			if (type[0] == '[')
-			{
-				dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns);
-				dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>", IrPatterns);
-
-				uint bits = SizeOfAsInt(arry.type);
-				foreach (dynamic size in sizes)
-					bits *= uint.Parse(size.sz);
-				return bits.ToString();
-			}
-
-			if (type == "half")
-				return "16";
-			if (type == "float")
-				return "32";
-			if (type == "double")
-				return "64";
-			if (type == "fp128")
-				return "128";
-			if (type[0] == 'i' || type[0] == 'u' || type[0] == 'f')
-				return Regex.Match(type, "[0-9]+").Value;
-			throw new NotImplementedException(type);
-		}
-
-		/// ptr info is lost during this
-		static uint SizeOfAsInt(string type)
-		{
-			string sz = SizeOf(type);
-			if (sz == "ptr")
-				return Cpu.NativeSizeBits;
-			return uint.Parse(sz);
-		}
-
-		static string TypeDeref(string type)
-		{
-			if (type[type.Length - 1] == '*')
-				return type.Substring(0, type.Length - 1);
-			throw new Exception("deref non ptr");
-		}
-
-		// i16*, %value.addr, true = ptr16 [%value.addr:ptr]
-		// i16**, %value.addr, true = ptr [%value.addr:ptr]
-		// i16**, %5, true = ptr [%5:ptr]
-		// i16*, %5, false = %5:ptr
-		// i16, %5, false = %5:16
-		static string ToOperand(MethodBuilder b, string type, string operand, bool indirection = false)
-		{
-			string part = "";
-
-			string size = SizeOf(type);
-
-			if (operand[0] == '@')
-				part = $"${operand}";
-			else if (operand[0] != '%')
-				part = $"{operand}"; // constants are always 32bits
-									 // is it a calculated const size?
-			else if (b.ConstantLocals.TryGetValue(operand, out var cl))
-				part = cl;
-			else // use a register
-				part = $"{operand}:{size}";
-
-			if (indirection)
-			{
-				string size_to = SizeOf(TypeDeref(type));
-				part = $"ptr{size_to} [{part}]";
-			}
-
-			return part;
-		}
 	}
 }

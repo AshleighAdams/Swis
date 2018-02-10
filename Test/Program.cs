@@ -9,7 +9,6 @@ namespace SwisTest
     {
 		static string IrCompileTest()
 		{
-			LlvmIrCompiler._teststrutinfo();
 			string ir = LlvmIrCompiler.TestIR;
 			string asm = LlvmIrCompiler.Compile(ir);
 			Console.WriteLine(asm);
@@ -62,15 +61,15 @@ namespace SwisTest
 				if (cpu.Halted)
 					break;
 
-				//next = next.AddSeconds(1.0 / tickrate);
-				//int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
-				//if (ms > 0)
-				//	System.Threading.Thread.Sleep(ms);
+				next = next.AddSeconds(1.0 / tickrate);
+				int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+				if (ms > 0)
+					System.Threading.Thread.Sleep(ms);
 			}
 
 			DateTime end = DateTime.UtcNow;
 
-			Console.WriteLine(end - start);
+			//Console.WriteLine(end - start);
 			Console.WriteLine(cpu.TimeStampCounter);
 		}
 
@@ -82,7 +81,7 @@ namespace SwisTest
 			string asm = null;
 			
 			asm = IrCompileTest();
-			//ExecuteTest(asm);
+			ExecuteTest(asm);
 
 			Console.ReadLine();
 		}
