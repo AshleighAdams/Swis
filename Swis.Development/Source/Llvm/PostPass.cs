@@ -71,12 +71,14 @@ namespace Swis
 
 			string simple_use = @"([a-z]|,)[ \t]{0}[ \t]*(,|;|\r|\n|$)";
 			Dictionary<string, bool> have_simplified = new Dictionary<string, bool>();
+			bool searchdown = true;
 
 			MatchEvaluator tester = delegate (Match m)
 			{
+				string searchin = searchdown ? asm.Substring(m.Index) : asm.Substring(0, m.Index + m.Length);
 				string varname = m.Groups["reg"].Value;
-				MatchCollection simple = Regex.Matches(asm, string.Format(simple_use, Regex.Escape(varname)));
-				MatchCollection total = Regex.Matches(asm, Regex.Escape(varname));
+				MatchCollection simple = Regex.Matches(searchin, string.Format(simple_use, Regex.Escape(varname)));
+				MatchCollection total = Regex.Matches(searchin, Regex.Escape(varname));
 				
 				if (simple.Count == 2 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
 				{
@@ -92,9 +94,11 @@ namespace Swis
 			};
 
 			// mov to op
+			searchdown = true;
 			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<reg>{ssa}), (?<data>[^,;]+)(?<endwhitespace>\s*;|\n)", tester);
 
 			// op to move
+			searchdown = false;
 			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<data>[^,;]+), (?<reg>{ssa})", tester);
 
 			//MatchCollection movs_to_op = "".Matches($@"mov (?<reg>{ssa}), (?<data>[^,;]+)\s*(;|\n)"); // the %28 and %29 above
