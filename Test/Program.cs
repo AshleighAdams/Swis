@@ -9,7 +9,8 @@ namespace SwisTest
     {
 		static string IrCompileTest(string ir = null)
 		{
-			ir = ir ?? System.IO.File.ReadAllText("TestProgram/program.ll");
+			//ir = ir ?? System.IO.File.ReadAllText("TestProgram/program.ll");
+			ir = ir ?? LlvmIrCompiler.CompileCpp(System.IO.File.ReadAllText("TestProgram/program.cpp"));
 			string asm = LlvmIrCompiler.Compile(ir);
 			Console.WriteLine(asm);
 			return asm;

@@ -1,5 +1,10 @@
-﻿// compile with clang using `clang++ -cc1 -triple=i386 -masm=intel -S program.cpp -emit-llvm`
+﻿// compile with clang using `clang++ -cc1 -triple=i386 -S program.cpp -emit-llvm`
 // i386 is little endian and sizeof(void*) = 4
+
+/*-nobuiltininc           Disable builtin #include directories
+  -nostdinc++             Disable standard #include directories for the C++ standard library
+  -nostdsysteminc
+  -fnew-alignment=<align>*/
 
 void reverse(char str[], int length)
 {
@@ -16,6 +21,7 @@ void reverse(char str[], int length)
 		end--;
 	}
 }
+
 extern "C" char* itoa(int num, char* str, int base)
 {
 	int i = 0;
@@ -83,17 +89,18 @@ extern "C" void puts(const char* str)
 		str++;
 	}
 }
-static unsigned long int next = 229729204;
+static unsigned int next = 1;
 extern "C" int rand(void) // RAND_MAX assumed to be 32767
 {
-	next = next * 1103515245 + 12345;
-	return (unsigned int)(next / 65536) % 32768;
+	//next = 1103515245 * next + 12345;
+	return next % 32768;
+	//next = next * 1103515245 + 12345;
+	//return (unsigned int)(next / 65536) % 32768;
 }
 extern "C" void srand(unsigned int seed)
 {
 	next = seed;
 }
-
 
 int main()
 {

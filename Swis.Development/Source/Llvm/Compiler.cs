@@ -1,13 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace Swis
 {
 	public static partial class LlvmIrCompiler
 	{
+		public static string CompileCpp(string code)
+		{
+			string tmp1 = Path.GetTempFileName();
+			File.WriteAllText(tmp1, code);
+
+			string tmp2 = Path.GetTempFileName();
+
+			string pathv = Environment.GetEnvironmentVariable("PATH");
+			ProcessStartInfo info
+				= new ProcessStartInfo("clang++", $"-cc1 -x c++ -triple=i386 -S \"{tmp1}\" -emit-llvm -o \"{tmp2}\"");
+			//info.UseShellExecute = true;
+			
+			Process p = Process.Start(info);
+			p.WaitForExit();
+			
+			if (p.ExitCode != 0)
+				throw new Exception("clang failed");
+
+			return File.ReadAllText(tmp2);
+		}
+
 		public static string Compile(string code)
 		{
 			LlvmIrCompiler.Setup();
