@@ -297,7 +297,7 @@ namespace Swis
 			{ Opcode.PowFloatRRR, 3 },
 		};
 
-		public static (Opcode, Operand[]) DisassembleInstruction(this MemoryController mem, ref uint ip)
+		public static (Opcode, Operand[]) DisassembleInstruction(this MemoryController mem, ref uint ip, uint[] registers = null)
 		{
 			Opcode op = mem.DecodeOpcode(ref ip);
 			if (!OpcodeLengths.TryGetValue(op, out int args))
@@ -305,7 +305,7 @@ namespace Swis
 
 			Operand[] operands = new Operand[args];
 			for (int i = 0; i < operands.Length; i++)
-				operands[i] = mem.DecodeOperand(ref ip, null);
+				operands[i] = mem.DecodeOperand(ref ip, registers);
 
 			return (op, operands);
 		}

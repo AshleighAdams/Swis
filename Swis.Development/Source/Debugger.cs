@@ -21,11 +21,21 @@ namespace Swis
 		}
 
 		uint[] _LastValues;
-		bool ShowRegisters = false;
+		bool ShowRegisters = true;
+
+		uint? RunUntil = null;
 
 		public override bool Clock(Cpu cpu, MemoryController memory)
 		{
+			if (this.RunUntil != null)
+			{
+				if (this.RunUntil.Value != cpu.InstructionPointer)
+					return true;
+				else
+					this.RunUntil = null;
+			}
 			StringBuilder sb = new StringBuilder();
+			uint ip;
 
 			{ // write the registers
 				if (this._LastValues == null)
@@ -69,10 +79,9 @@ namespace Swis
 			}
 			{ // write the instruction
 				uint original_ip = cpu.InstructionPointer;
-				uint ip = original_ip;
-				(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip);
-
-
+				ip = original_ip;
+				(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip, cpu.Registers);
+				
 				sb.Append(op.Disassemble());
 
 				if (args == null)
@@ -84,31 +93,25 @@ namespace Swis
 					{
 						sb.Append(argprefix);
 						sb.Append(arg.Disassemble(this.Dbg));
+						sb.Append($" /*{arg.Signed}*/");
 						argprefix = ", ";
 					}
-				}
-
-				string const_len(string input, int length, bool truncate)
-				{
-					if (input.Length > length)
+					/*
+					argprefix = " ; ";
+					foreach (var arg in args)
 					{
-						if (!truncate)
-							length = input.Length;
-						else
-							input = input.Substring(length - 3) + "...";
-					}
-					char[] final = new char[length];
-					int free_chars = length - input.Length;
-					int i;
-					for (i = 0; i < free_chars; i++)
-						final[i] = ' ';
-					for (; i < length; i++)
-						final[i] = input[i - free_chars];
-					return new string(final);
+						sb.Append(argprefix);
+						sb.Append($"{arg.Signed}");
+						argprefix = ", ";
+					}*/
 				}
-
+				
 				Console.WriteLine($"op: {sb}");
 			}
+
+			string rl = Console.ReadLine();
+			if (rl == "o")
+				this.RunUntil = ip;
 			return true;
 		}
 	}
