@@ -305,7 +305,41 @@ namespace Swis
 
 			IrPatterns["keyword"]    = LlvmUtil.PatternCompile(@"[a-z]+", IrPatterns);
 			IrPatterns["array"]      = LlvmUtil.PatternCompile(@"\[[0-9]+ x", IrPatterns);
-			IrPatterns["type"]       = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
+			/*
+			// recursive version, unwrapped manually 16 times, as .net does not support it
+			string rec_type = Regex.Replace(@"(
+	(
+		(
+			 void
+			|[iuf][0-9]+
+			|half
+			|float
+			|double
+			|fp128
+			|x86_fp80
+			|\{(\s*(?-4)\s*,?\s*)*\}
+			|\<\s*(?-4)\s*\>
+			|\[\s*[0-9]+\s+x\s+\s*(?-4)\s*\]
+			|(?-4)\((\s*(?-5)\s*,?\s*)*\)
+		)
+	)\**
+)", @"\s", @"");
+
+			string unwrapped = rec_type;
+			for (int u = 0; u < 1; u++)
+			{
+				unwrapped = unwrapped.Replace("(?-4)", rec_type);
+				unwrapped = unwrapped.Replace("(?-5)", rec_type);
+			}
+			unwrapped = unwrapped.Replace(@"\{(\s*(?-4)\s*,?\s*)*\}", @"\{.*\}");
+			unwrapped = unwrapped.Replace(@"\<\s*(?-4)\s*\>", @"\<.*\>");
+			unwrapped = unwrapped.Replace(@"\[\s*[0-9]+\s+x\s+\s*(?-4)\s*\]", @"\[.*\]");
+			unwrapped = unwrapped.Replace(@"|(?-4)\((\s*(?-5)\s*,?\s*)*\)", @"");
+			unwrapped = unwrapped.Replace("(?-4)", ".*");
+			unwrapped = unwrapped.Replace("(?-5)", ".*");
+			*/
+			IrPatterns["type"] = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
+
 			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?", IrPatterns);
 			IrPatterns["ident"]      = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["namedlocal"] = LlvmUtil.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);

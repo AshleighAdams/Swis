@@ -87,8 +87,6 @@ namespace Swis
 					
 					string data = m.Groups["data"].Value.Trim();
 
-					int times_found;
-					
 					if (searchdown)
 						searchin = searchin.Substring(0, simple[1].Index + simple[1].Length);
 					else
@@ -96,13 +94,27 @@ namespace Swis
 
 					
 					if (
-						// if we use it right after, it's safe
-						searchin.Matches("[\n]+").Count == 1 ||
 						// otherwise, if we access this more than once, the data might have changed.
 						// also make sure there was not a call or a jump between us, as they could have unknowable changes to that memory,
 						// unless it is this value that we're jumping to
 						(searchin.Matches(Regex.Escape(data)).Count == 1 && searchin.Matches($@"\n\s*(call|j[a-zA-Z]{{1,2}}) (?!{Regex.Escape(varname)})").Count == 0))
 					{
+						int distance_instructions = searchin.Matches(@"[\r\n]+([\s]*(;[^\n]+))*").Count - 1; // -1 for ourselves
+						dynamic[] registers_using = data.PatternMatches("(?<![$%0-9][a-z]*)(?<reg>[a-z]+)", IrPatterns);
+
+						// only the base pointer register is garunteed to not be clobbered
+						// so if the instruction isn't right after, make sure that it only
+						// whitelisted registers (bp) that aren't garunteed to clobber.
+						if(distance_instructions > 1)
+							foreach (dynamic regfound in registers_using)
+							{
+								string reg = regfound.reg.ToLowerInvariant();
+								if (reg == "ptr" || reg == "ptrptr" || reg == "bp" || reg == "ebp" || reg == "ebpx" || reg == "bpx" || reg == "bpl")
+									continue;
+								
+								return m.Value;
+							}
+						
 						// woop woop, we can replace it
 						replacements.Add((varname, data));
 						have_simplified[varname] = true; // so we don't reduce this variable further accidentally
