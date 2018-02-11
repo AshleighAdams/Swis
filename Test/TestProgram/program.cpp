@@ -89,13 +89,13 @@ extern "C" void puts(const char* str)
 		str++;
 	}
 }
+
+#define RAND_MAX 32767
 static unsigned int next = 1;
 extern "C" int rand(void) // RAND_MAX assumed to be 32767
 {
-	//next = 1103515245 * next + 12345;
-	return next % 32768;
-	//next = next * 1103515245 + 12345;
-	//return (unsigned int)(next / 65536) % 32768;
+	next = 1103515245 * next + 12345;
+	return (unsigned int)(next / ((RAND_MAX + 1) * 2)) % (RAND_MAX + 1);
 }
 extern "C" void srand(unsigned int seed)
 {
@@ -106,7 +106,8 @@ int main()
 {
 	char output[sizeof(int) * 8 + 1];
 	puts("Hello world.\n");
-	for (int i = 1330; i < 1340; i++)
+	srand(1337);
+	for (int i = 0; i < 10; i++)
 	{
 		itoa(rand(), output, 10);
 		puts(output);

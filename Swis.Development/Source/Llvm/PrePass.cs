@@ -89,55 +89,47 @@ namespace Swis
 			if(bp_offset > 0)
 				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
-
-		/* // this needs to be implemented
-		else if ((m = Regex.Match(line, $@"(?<dst>{operand_regex}) = (?<cmp_type>(i|u|f))cmp (?<cmp_method>(sgt|sge|sne|seq|slt|sle)) (?<tp>{type_regex}) (?<left>{operand_regex}), (?<right>{operand_regex})")).Success &&
-			(m2 = Regex.Match(next, $@"br i1 {m.Groups["dst"].Value}, label %(?<true>[0-9]+), label %(?<false>[0-9]+)")).Success)
+		
+		static int CurrentconstId;
+		static void ExpandConstants(MethodBuilder output)
 		{
-			line_number++;
+			// https://llvm.org/docs/LangRef.html#constant-expressions
 
-			string type = m.Groups["tp"].Value;
-			string cmp_type = m.Groups["cmp_type"].Value;
-			string cmp_method = m.Groups["cmp_method"].Value;
-			string left = m.Groups["left"].Value;
-			string right = m.Groups["right"].Value;
+			//convert things like:
+			// call void @puts(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0))
+			//into
+			// %__argconst1__ = i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0)
+			// call void @puts(i8* %__argconst1__)
 
-			string comparer = "";
-			switch (cmp_type)
+			//(?<=[\(\,])\s*
+			string rx = LlvmUtil.PatternCompile(@"(?<=[\(\,])\s*<constexp:exp>", IrPatterns);
+
+			while (true)
 			{
-			default: throw new NotImplementedException("unknown compare method " + cmp_method);
-			case "i": comparer = "cmp"; break;
-			case "f": comparer = "cmp"; break;
-			case "u": comparer = "cmpf"; break;
+				Match m = output.Code.Match(rx);
+				if (!m.Success)
+					break;
+
+				string type = m.Groups["exp_type"].Value;
+				string op = m.Groups["exp_op"].Value;
+				string args = m.Groups["exp_args_inside"].Value;
+				string reg = output.CreateSSARegister("constexp");
+
+				//exp = exp.Substring(1, exp.Length - 2); // remove the ()s
+
+				string new_arg = $"{type} {reg}";
+				output.Code = output.Code.Remove(m.Index, m.Length);
+				output.Code = output.Code.Insert(m.Index, new_arg);
+
+				int i;
+				for (i = m.Index; i --> 0;)
+					if (output.Code[i] == '\n')
+						break;
+
+				output.Code = output.Code.Insert(i + 1, $"  {reg} = {op} {args}\n");
 			}
-
-			// compare part
-			emit_asm($"\t{comparer} {to_operand(type, left)}, {to_operand(type, right)}");
-
-			string jmper = "";
-			switch (cmp_method)
-			{
-			default: throw new NotImplementedException("unknown compare type " + cmp_method);
-			case "sgt": jmper = "jg"; break;
-			case "sge": jmper = "jge"; break;
-			case "slt": jmper = "jl"; break;
-			case "sle": jmper = "jle"; break;
-			case "seq": jmper = "je"; break;
-			case "sne": jmper = "jne"; break;
-			}
-
-			string on_true = $"${func_name}_label_{m2.Groups["true"].Value}";
-			string on_false = $"${func_name}_label_{m2.Groups["false"].Value}";
-
-			emit_asm($"\t{jmper} {on_true}");
-			emit_asm($"\tjmp {on_false}");
+			
 		}
-		else if ((m = Regex.Match(line, @"br label %(?<id>[0-9]+)")).Success)
-		{
-			string id = m.Groups["id"].Value;
-			emit_asm($"\tjmp ${func_name}_label_{id}");
-		}
-		*/
 
 		static void SimplifyCompareBranches(MethodBuilder output)
 		{

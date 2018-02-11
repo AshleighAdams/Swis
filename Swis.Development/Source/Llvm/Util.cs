@@ -232,6 +232,12 @@ namespace Swis
 
 			public string Code;
 
+			uint ssa = 0;
+			public string CreateSSARegister(string hint = "tmp")
+			{
+				return $"%{hint}.{ssa++}";
+			}
+
 			public Dictionary<string, string> ConstantLocals;
 			public MethodBuilder(TranslationUnit unit)
 			{
@@ -320,6 +326,9 @@ namespace Swis
 			IrPatterns["visibility"] = LlvmUtil.PatternCompile("default|hidden|protected", IrPatterns);
 			IrPatterns["dllstorageclass"] = LlvmUtil.PatternCompile("dllimport|dllexport", IrPatterns);
 			IrPatterns["threadlocal"] = LlvmUtil.PatternCompile(@"thread_local\((localdynamic|initialexec|localexec)\)", IrPatterns);
+
+
+			IrPatterns["constexp"] = LlvmUtil.PatternCompile(@"<type:type>\s*(?<op><keyword>(\s+<keyword>)*)\s*<parentheses:args>", IrPatterns);
 
 			var funcs = typeof(LlvmIrCompiler).GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
 			foreach (MethodInfo func in funcs)
