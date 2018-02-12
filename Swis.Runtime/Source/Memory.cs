@@ -5,6 +5,7 @@ namespace Swis
 {
 	public abstract class MemoryController
 	{
+		public abstract uint Length { get; }
 		public abstract byte this[uint x] { get; set; }
 
 		// bits MUST be either 8, 16, 32 (, or 64 if 64bit, which is it's not yet)
@@ -17,7 +18,10 @@ namespace Swis
 	{
 		public byte* Ptr;
 		public byte[] Memory;
-		int Length;
+		int _Length;
+		
+		public override uint Length { get { return (uint)this._Length; } }
+
 		GCHandle MemoryHandle; // to pin it; call .Free() to unpin it
 		public PointerMemoryController(byte[] memory) // TODO: use Span<>
 		{
@@ -25,7 +29,7 @@ namespace Swis
 			for (uint i = 0; i < memory.Length; i++)
 				this.Memory[i] = memory[i];
 			//this.Ptr = &this.Memory;
-			this.Length = memory.Length;
+			this._Length = memory.Length;
 			this.MemoryHandle = GCHandle.Alloc(this.Memory, GCHandleType.Pinned);
 			this.Ptr = (byte*)this.MemoryHandle.AddrOfPinnedObject().ToPointer();
 			//Marshal.UnsafeAddrOfPinnedArrayElement(this.Memory, 0);
@@ -35,12 +39,12 @@ namespace Swis
 		{
 			get
 			{
-				if (x > this.Length) throw new IndexOutOfRangeException();
+				if (x > this._Length) throw new IndexOutOfRangeException();
 				return *(this.Ptr + x);
 			}
 			set
 			{
-				if (x > this.Length) throw new IndexOutOfRangeException();
+				if (x > this._Length) throw new IndexOutOfRangeException();
 				*(this.Ptr + x) = value;
 			}
 		}
@@ -49,7 +53,7 @@ namespace Swis
 		{
 			get
 			{
-				if (x > this.Length) throw new IndexOutOfRangeException();
+				if (x > this._Length) throw new IndexOutOfRangeException();
 				switch (bits)
 				{
 				case 8: return *(Byte*)(this.Ptr + x);
@@ -60,7 +64,7 @@ namespace Swis
 			}
 			set
 			{
-				if (x > Length) throw new IndexOutOfRangeException();
+				if (x > _Length) throw new IndexOutOfRangeException();
 				switch (bits)
 				{
 				case 8: *(Byte*)(this.Ptr + x) = (byte)value; break;
@@ -79,6 +83,8 @@ namespace Swis
 		{
 			this.Memory = (byte[])memory.Clone();
 		}
+
+		public override uint Length { get { return (uint)this.Memory.Length; } }
 
 		public override byte this[uint x]
 		{

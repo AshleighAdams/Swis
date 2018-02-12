@@ -50,7 +50,7 @@ namespace SwisTest
 			};
 
 			
-			double target_frequency = 1000;
+			double target_frequency = 10000;
 			double tickrate = 10;
 
 			Console.Write($"Push enter to execute ({target_frequency/1000} kHz): ");
@@ -65,9 +65,10 @@ namespace SwisTest
 				
 				if (cpu.Halted)
 					break;
-				
-				next = next.AddSeconds(1.0 / tickrate);
-				int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+
+				//next = next.AddSeconds(1.0 / tickrate);
+				//int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+				int ms = (int)(1000 / tickrate);
 				if (ms > 0)
 					System.Threading.Thread.Sleep(ms);
 			}
@@ -78,15 +79,41 @@ namespace SwisTest
 			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalSeconds:0.00} seconds");
 		}
 
+		static void TestJit()
+		{
+			(byte[] assembled, var dbg) = Assembler.Assemble(
+@"
+$start:
+	mov ax, -1
+	sext ebx, eax, 16
+	out 0, 72  ; H
+	out 0, 101 ; e
+	out 0, 108 ; l
+	out 0, 108 ; l
+	out 0, 111 ; o
+	jmp $start
+");
+
+			JitCpu cpu = new JitCpu()
+			{
+				Memory = new PointerMemoryController(assembled),
+			};
+
+			while(true)
+				cpu.Clock(10);
+		}
+
 		static void Main(string[] args)
         {
 			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 			System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
 			string asm = null;
-			
-			asm = IrCompileTest();
-			ExecuteTest(asm);
+
+			//asm = IrCompileTest();
+			//ExecuteTest(asm);
+
+			TestJit();
 
 			Console.ReadLine();
 		}
