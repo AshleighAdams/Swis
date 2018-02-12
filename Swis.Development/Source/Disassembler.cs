@@ -127,7 +127,7 @@ namespace Swis
 			{ NamedRegister.InstructionPointer, "ip" },
 			{ NamedRegister.StackPointer, "sp" },
 			{ NamedRegister.BasePointer, "bp"},
-			{ NamedRegister.Flags, "flag"},
+			{ NamedRegister.Flag, "flag"},
 			{ NamedRegister.ProtectedMode, "pm" },
 			{ NamedRegister.ProtectedInterrupt, "pi" },
 

@@ -21,7 +21,7 @@ namespace Swis
 		InstructionPointer = 1,
 		StackPointer = 2,
 		BasePointer = 4,
-		Flags = 5,
+		Flag = 5,
 
 		// these can only be touched in ring0
 		ProtectedMode = 6, // mode flags: int1 realmode, int2 ring

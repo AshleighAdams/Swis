@@ -26,7 +26,7 @@
 
 		public ref uint Flags
 		{
-			get { return ref this.Registers[(int)NamedRegister.Flags]; }
+			get { return ref this.Registers[(int)NamedRegister.Flag]; }
 		}
 
 		public bool Halted
