@@ -101,7 +101,7 @@ namespace Swis
 
 						uint valbits = (1u << (int)frombits) - 1;
 
-						src.Value = dst.Value & valbits;
+						dst.Value = src.Value & valbits;
 						break;
 					}
 				case Opcode.Halt:
@@ -113,7 +113,7 @@ namespace Swis
 						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						lttr.Value = (uint)Console.Read();
+						lttr.Value = (uint)Console.ReadKey().KeyChar;
 						break;
 					}
 				case Opcode.OutRR:
