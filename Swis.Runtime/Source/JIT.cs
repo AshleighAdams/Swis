@@ -53,7 +53,8 @@ namespace Swis
 		public void Clock(int cycles = 1)
 		{
 			// i is there to make sure we don't end up in a loop forever from a bugged instruction
-			for (int i = 0; cycles > 0 && i < 1000; i++)
+			//for (int i = 0; cycles > 0 && i < 1000; i++)
+			while(cycles > 0)
 			{
 				if (!this.JitCache.TryGetValue(this.Reg1, out (Action λ, uint cycles) instr))
 				{
@@ -61,7 +62,7 @@ namespace Swis
 					List<Expression> block_instructions = new List<Expression>();
 
 					uint simulated_ip = this.Reg1;
-					for (uint n = 0; n < 16; i++)
+					for (uint n = 0; n < 16; n++)
 					{
 						if (simulated_ip >= this.Memory.Length)
 							break;
