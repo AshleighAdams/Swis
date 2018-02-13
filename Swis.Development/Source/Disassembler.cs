@@ -77,39 +77,6 @@ namespace Swis
 				break;
 			}
 
-			#region OLD
-			/*
-			if (self.RegisterID == 0)
-			{
-				uint @const = self.Constant;
-				@base = $"0x{@const:X}";
-
-				if (dbg != null)
-					foreach (var lbl in dbg?.Labels)
-					{
-						if (lbl.Value == @const)
-						{
-							@base = lbl.Key;
-							break;
-						}
-					}
-			}
-			else
-			{
-				NamedRegister r = (NamedRegister)self.RegisterID;
-				@base = $"{r.Disassemble()}{(self.Size != Register.NativeSize * 8 ? self.Size.ToString() : "")}";
-			}
-
-			if (self.Offset != 0)
-			{
-				if (self.Offset > 0)
-					@base = $"{@base} + {self.Offset}";
-				else
-					@base = $"{@base} - {-self.Offset}";
-			}
-			*/
-			#endregion
-
 			if (self.Indirect)
 			{
 				if (self.IndirectionSize == Cpu.NativeSizeBits)

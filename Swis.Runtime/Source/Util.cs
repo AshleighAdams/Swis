@@ -33,5 +33,15 @@ namespace Swis
 
 			return srcval | (extbits * sign);
 		}
+
+
+		public static string GetDebugView(this System.Linq.Expressions.Expression exp)
+		{
+			if (exp == null)
+				return null;
+
+			var propertyInfo = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			return propertyInfo.GetValue(exp) as string;
+		}
 	}
 }

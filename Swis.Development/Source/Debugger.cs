@@ -25,8 +25,10 @@ namespace Swis
 
 		uint? RunUntil = null;
 
-		public override bool Clock(Cpu cpu, MemoryController memory)
+		public override bool Clock(Cpu cpu)
 		{
+			MemoryController memory = cpu.Memory;
+
 			if (this.RunUntil != null)
 			{
 				if (this.RunUntil.Value != cpu.InstructionPointer)
@@ -37,27 +39,29 @@ namespace Swis
 			StringBuilder sb = new StringBuilder();
 			uint ip;
 
+			var registers = cpu.Registers;
+
 			{ // write the registers
 				if (this._LastValues == null)
-					this._LastValues = new uint[cpu.Registers.Length];
+					this._LastValues = new uint[registers.Length];
 
-				for (int i = 0; i < cpu.Registers.Length; i++)
+				for (int i = 0; i < registers.Length; i++)
 				{
 					// this is the time stamp counter, so don't show it, it is implicit
-					if (i == 0 && this._LastValues[i] + 1 == cpu.Registers[i])
+					if (i == 0 && this._LastValues[i] + 1 == registers[i])
 						this._LastValues[i] = cpu.Registers[i];
-					else if (this._LastValues[i] != cpu.Registers[i])
+					else if (this._LastValues[i] != registers[i])
 					{
-						this._LastValues[i] = cpu.Registers[i];
+						this._LastValues[i] = registers[i];
 						NamedRegister r = (NamedRegister)i;
 
-						if (this.ReverseLabels.TryGetValue((int)cpu.Registers[i], out string lbl))
+						if (this.ReverseLabels.TryGetValue((int)registers[i], out string lbl))
 							sb.Append($" {r.Disassemble()} = {lbl}");
 						else
 						{
 							string lblnear = null;
 							int lblnearloc = 0;
-							for (int n = (int)cpu.Registers[i]; n-- > 0;)
+							for (int n = (int)registers[i]; n-- > 0;)
 							{
 								if (this.ReverseLabels.TryGetValue(n, out lblnear))
 								{
@@ -67,20 +71,20 @@ namespace Swis
 							}
 
 							if(lblnear == null)
-								sb.Append($" {r.Disassemble()} = 0x{cpu.Registers[i]:X}");
+								sb.Append($" {r.Disassemble()} = 0x{registers[i]:X}");
 							else
-								sb.Append($" {r.Disassemble()} = {lblnear} + 0x{cpu.Registers[i] - lblnearloc:X}");
+								sb.Append($" {r.Disassemble()} = {lblnear} + 0x{registers[i] - lblnearloc:X}");
 						}
 					}
 				}
-				if(ShowRegisters)
+				if(this.ShowRegisters)
 					Console.WriteLine($"registers:{sb}");
 				sb.Clear();
 			}
 			{ // write the instruction
 				uint original_ip = cpu.InstructionPointer;
 				ip = original_ip;
-				(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip, cpu.Registers);
+				(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip, registers);
 				
 				sb.Append(op.Disassemble());
 

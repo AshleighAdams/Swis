@@ -142,5 +142,6 @@ namespace Swis
 				sb.Append(self);
 			return sb.ToString();
 		}
+
 	}
 }

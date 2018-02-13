@@ -22,7 +22,7 @@ void reverse(char str[], int length)
 	}
 }
 
-extern "C" char* itoa(int num, char* str, int base)
+char* itoa(int num, char* str, int base)
 {
 	int i = 0;
 	bool negative = false;
@@ -72,16 +72,28 @@ void out(unsigned int port, unsigned char val)
 		);
 }
 
-extern "C" void put(char c)
+
+
+int get()
+{
+	int ret;
+	asm("in ptr32 [%0], 0"
+		: "=X"(ret) // outputs
+		:         // inputs
+		:         // valid registers
+		);
+	return ret;
+}
+
+void put(char c)
 {
 	asm("out 0, %0"
 		:        // outputs
-	    : "X"(c) // inputs
+		: "X"(c) // inputs
 		:        // valid registers
 		);
 }
-
-extern "C" void puts(const char* str)
+void puts(const char* str)
 {
 	while (*str != 0)
 	{
@@ -89,30 +101,44 @@ extern "C" void puts(const char* str)
 		str++;
 	}
 }
-
 #define RAND_MAX 32767
 static unsigned int next = 1;
-extern "C" int rand(void) // RAND_MAX assumed to be 32767
+int rand(void) // RAND_MAX assumed to be 32767
 {
 	next = 1103515245 * next + 12345;
 	return (unsigned int)(next / ((RAND_MAX + 1) * 2)) % (RAND_MAX + 1);
 }
-extern "C" void srand(unsigned int seed)
+void srand(unsigned int seed)
 {
 	next = seed;
+}
+
+int factorial(int n)
+{
+	if (n <= 1)
+		return 1;
+	else
+		return n * factorial(n - 1);
 }
 
 int main()
 {
 	char output[sizeof(int) * 8 + 1];
-	puts("Hello world.\n");
+	puts("Hello world.\nHere are some random numbers:\n");
 	srand(1337);
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 1000; i++)
 	{
 		itoa(rand(), output, 10);
 		puts(output);
-		put('\n');
+		put('\t');
 	}
-	puts("Execution: finished!\n");
-	return 0;
+	put('\n');
+
+	puts("Push y to print some lorem ipsum: ");
+
+	if (get() == 'y')
+	{
+		puts("\n");
+		puts("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n");
+	}
 }

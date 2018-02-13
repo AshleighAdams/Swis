@@ -81,6 +81,84 @@ namespace Swis
 			}
 		}
 
+		public override string ToString()
+		{
+			string @base;
+
+			string do_part(sbyte regid, byte size, uint @const, bool signed = false)
+			{
+				if (regid > 0)
+				{
+					NamedRegister r = (NamedRegister)regid;
+
+					if (regid >= (int)NamedRegister.A)
+					{
+						switch (size)
+						{
+						case 8:
+							return $"{r}l";
+						case 16:
+							return $"{r}x";
+						case 32:
+							return $"e{r}x";
+						case 64:
+							return $"r{r}x";
+						default: return $"{r}sz{size}";
+						}
+					}
+					else
+					{
+						switch (size)
+						{
+						case 8:
+							return $"{r}l";
+						case 16:
+							return $"{r}";
+						case 32:
+							return $"e{r}";
+						case 64:
+							return $"r{r}";
+						default: return $"{r}sz{size}";
+						}
+					}
+				}
+				else
+				{
+					return $"{(int)@const}";
+				}
+			}
+
+			switch (this.AddressingMode)
+			{
+			case 0:
+				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)}";
+				break;
+			case 1:
+				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}";
+				break;
+			case 2:
+				@base = $"{do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD, this.ConstDSigned)}";
+				break;
+			case 3:
+				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}" +
+					$" + {do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD, this.ConstDSigned)}";
+				break;
+			default:
+				@base = "???";
+				break;
+			}
+
+			if (this.Indirect)
+			{
+				if (this.IndirectionSize == Cpu.NativeSizeBits)
+					@base = $"[{@base}]";
+				else
+					@base = $"ptr{this.IndirectionSize} [{@base}]";
+			}
+
+			return @base;
+		}
+
 		public UInt32 Value
 		{
 			get

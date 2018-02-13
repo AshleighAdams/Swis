@@ -42,7 +42,7 @@ namespace SwisTest
 			//string x = DebugData.Serialize(dbg);
 			
 
-			Cpu cpu = new Cpu
+			JitCpu cpu = new JitCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
@@ -83,24 +83,99 @@ namespace SwisTest
 		{
 			(byte[] assembled, var dbg) = Assembler.Assemble(
 @"
-$start:
-	mov ax, -1
-	sext ebx, eax, 16
-	out 0, 72  ; H
-	out 0, 101 ; e
-	out 0, 108 ; l
-	out 0, 108 ; l
-	out 0, 111 ; o
-	jmp $start
+; code
+mov esp, $stack
+mov ebp, esp
+call $main
+halt
+$main:
+	mov efx, 0
+	$loop:
+		add esp, esp, 8
+			mov ptr32 [esp - 4], 5
+			call $factorial
+		sub esp, esp, 8
+		add efx, efx, 1
+		cmp efx, 100
+		jl $loop
+	ret
+
+$factorial:
+	; params: %n = ebp - 12
+	; return: ret = ebp - 16
+	; locals: %retval = ebp + 0
+	add esp, esp, 4 ; alloca
+	cmpu ptr32 [ebp - 12], 1
+	jg $@_Z9factoriali_label_3
+
+	$@_Z9factoriali_label_2:
+	mov ptr32 [ebp + 0], 1
+	jmp $@_Z9factoriali_label_6
+
+	$@_Z9factoriali_label_3:
+	mov eax, ptr32 [ebp - 12]
+	sub ebx, ptr32 [ebp - 12], 1
+
+	; call i32 @_Z9factoriali(i32)
+	push eax
+	add esp, esp, 8 ; allocate space for return and arguments
+	mov ptr32 [esp - 4], ebx ; copy arg #1
+	call $factorial
+	mov ebx, ptr32 [esp - 8] ; copy return
+	sub esp, esp, 8 ; pop args and ret
+	pop eax
+	mulu ptr32 [ebp + 0], eax, ebx
+
+	$@_Z9factoriali_label_6:
+	mov ptr32 [ebp - 16], ptr32 [ebp + 0]
+	ret
+
+; globals
+.align 4
+$stack:
+	.data pad 1024
 ");
 
 			JitCpu cpu = new JitCpu()
 			{
 				Memory = new PointerMemoryController(assembled),
+				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
 
-			while(true)
-				cpu.Clock(10);
+			InterpretedCpu old = new InterpretedCpu()
+			{
+				Memory = new PointerMemoryController(assembled),
+				//Debugger = new StreamDebugger(Console.Out, dbg),
+			};
+			
+			TimeSpan jitfirst, jit, notjit;
+			DateTime start, end;
+
+			{
+				start = DateTime.UtcNow;
+				//while (!old.Halted)
+					old.Clock(1000);
+				end = DateTime.UtcNow;
+				notjit = end - start;
+			}
+
+			{
+				start = DateTime.UtcNow;
+				//while (!cpu.Halted)
+					cpu.Clock(1000);
+				end = DateTime.UtcNow;
+				jitfirst = end - start;
+
+				cpu.Reset();
+
+				start = DateTime.UtcNow;
+				//while(!cpu.Halted)
+					cpu.Clock(1000);
+				end = DateTime.UtcNow;
+				jit = end - start;
+			}
+			
+			Console.WriteLine($"JIT(1): {jitfirst.TotalMilliseconds:0.00}ms; JIT: {jit.TotalMilliseconds:0.00}ms; Interpreted: {notjit.TotalMilliseconds:0.00}ms");
 		}
 
 		static void Main(string[] args)
