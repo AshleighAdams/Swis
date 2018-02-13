@@ -175,8 +175,8 @@ namespace Swis
 				$"{output.ToOperand(args.src_type, args.src)}");
 			return true;
 		}
-
-		[IrInstruction("load", "<register:dst> = load <type:dst_type>, <type:src_type> <operand:src>(, align <numeric:align>)?")]
+		
+		[IrInstruction("load", "<operand:dst> = load <type:dst_type>, <type:src_type> <operand:src>(, align <numeric:align>)?")]
 		private static bool Load(MethodBuilder output, dynamic args)
 		{
 			output.Emit(
@@ -325,6 +325,7 @@ namespace Swis
 			return true;
 		}
 
+		// TODO: add all of these <result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [operand bundles]
 		[IrInstruction("call", @"(<operand:dst> = )?call (<type:ret_type>) (<operand:func>)\s*<parentheses:args>")]
 		private static bool Call(MethodBuilder output, dynamic match)
 		{

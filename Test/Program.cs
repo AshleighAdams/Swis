@@ -185,10 +185,10 @@ $stack:
 
 			string asm = null;
 
-			//asm = IrCompileTest();
-			//ExecuteTest(asm);
+			asm = IrCompileTest();
+			ExecuteTest(asm);
 
-			TestJit();
+			//TestJit();
 
 			Console.ReadLine();
 		}

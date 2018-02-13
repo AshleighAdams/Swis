@@ -40,6 +40,13 @@ namespace Swis
 			TranslationUnit unit = new TranslationUnit();
 			unit.OptimizationLevel = 2;
 
+			//%struct.test = type { i32, i32 }
+			dynamic[] namedtypes = code.PatternMatches("(?<name>%[a-zA-Z_.0-9]+) = type <type:type>", IrPatterns);
+			foreach (dynamic nt in namedtypes)
+				unit.NamedTypes[nt.name] = nt.type;
+
+			/*
+			NamedTypes*/
 
 			// https://llvm.org/docs/LangRef.html#global-variables
 			dynamic[] globals = code.PatternMatches("<global:id> =" +
@@ -97,8 +104,14 @@ namespace Swis
 			all.AppendLine();
 
 			string test = all.ToString();
-
-			dynamic[] funcs = code.PatternMatches($@"define <type:ret_type> <ident:id>( )*<parentheses:args> #<numeric:attrib> <braces:body>", IrPatterns);
+			
+			dynamic[] funcs = code.PatternMatches(
+				@"define( <linkage>)?( <preemptionspecifier>)?( <visibility>)?( <DLLStorageClass>)?" +
+				@"( <callingconvention>)?( <retattributes>)*" +
+				@" <type:ret_type> <ident:id>\s*<parentheses:args>" +
+				@"( unnamed_addr| local_unnamed_addr)?( <functionattributes>| #<numeric:attrib>)*( section <string>)?" +
+				@"( comdat( (\([^\)]\)))?)?( align <numeric>)?( gc)?( prefix <type> <const>)?" +
+				@"( prologue <type> <const>)?( personality <type> <const>)? (!<alphanumeric> !<numeric>)*\s*<braces:body>", IrPatterns);
 			foreach (dynamic func in funcs)
 			//var funcs = Regex.Matches(code, func_regex);
 			//foreach (Match func in funcs)

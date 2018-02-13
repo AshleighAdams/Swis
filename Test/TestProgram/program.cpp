@@ -72,8 +72,6 @@ void out(unsigned int port, unsigned char val)
 		);
 }
 
-
-
 int get()
 {
 	int ret;
@@ -121,11 +119,29 @@ int factorial(int n)
 		return n * factorial(n - 1);
 }
 
+class test
+{
+	unsigned int seed;
+public:
+	test(unsigned int _seed)
+	{
+		this->seed = _seed;
+	}
+	
+	unsigned int get_seed()
+	{
+		return this->seed;
+	}
+};
+
 int main()
 {
+	test t(1337);
+
 	char output[sizeof(int) * 8 + 1];
 	puts("Hello world.\nHere are some random numbers:\n");
-	srand(1337);
+	
+	srand(t.get_seed());
 	for (int i = 0; i < 1000; i++)
 	{
 		itoa(rand(), output, 10);

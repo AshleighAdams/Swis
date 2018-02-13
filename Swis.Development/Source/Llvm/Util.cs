@@ -39,8 +39,8 @@ namespace Swis
 				public (string type, uint offset)[] Fields;
 			}
 
-			static Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
-			static Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
+			public Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
+			Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
 
 			public StructInfo GetStructInfo(string type)
 			{
@@ -169,7 +169,7 @@ namespace Swis
 					return "ptr";
 
 				if (type[0] == '%')
-					type = NamedTypes[type];
+					type = this.NamedTypes[type];
 
 				if (type[0] == '@')
 					type = "u32";
@@ -348,7 +348,7 @@ namespace Swis
 			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
 			IrPatterns["operand"] = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
 
-			IrPatterns["paramattributes"] = LlvmUtil.PatternCompile("( (" +
+			IrPatterns["retattributes"] = IrPatterns["paramattributes"] = LlvmUtil.PatternCompile("( (" +
 				"zeroext|signext|inreg|byval|inalloca|sret|" +
 				"align [0-9]+|noalias|nocapture|nest|nonnull|" +
 				@"dereferenceable\((0|1)\)|" +
@@ -360,7 +360,16 @@ namespace Swis
 			IrPatterns["visibility"] = LlvmUtil.PatternCompile("default|hidden|protected", IrPatterns);
 			IrPatterns["dllstorageclass"] = LlvmUtil.PatternCompile("dllimport|dllexport", IrPatterns);
 			IrPatterns["threadlocal"] = LlvmUtil.PatternCompile(@"thread_local\((localdynamic|initialexec|localexec)\)", IrPatterns);
-
+			IrPatterns["callingconvention"] = LlvmUtil.PatternCompile(@"ccc|fastcc|coldcc|webkit_jscc|anyregcc|preserve_mostcc|preserve_allcc|cxx_fast_tlscc|swiftcc|cc <numeric>", IrPatterns);
+			
+			IrPatterns["functionattributes"] = LlvmUtil.PatternCompile(
+				@"alignstack\(<numeric:align>\)|" +
+				@"allocsize\([^\)]+\)|" +
+				@"alwaysinline|builtin|cold|convergent|inaccessiblememonly|inaccessiblemem_or_argmemonly|inlinehint|jumptable|minsize|naked|no-jump-tables|nobuiltin|" +
+				@"noduplicate|noimplicitfloat|noinline|nonlazybind|noredzone|noreturn|norecurse|nounwind|optnone|optsize|patchable-function|probe-stack|readnone|" +
+				@"readonly|stack-probe-size|writeonly|argmemonly|returns_twice|safestack|sanitize_address|sanitize_memory|sanitize_thread|sanitize_hwaddress|speculatable|" +
+				@"ssp|sspreq|sspstrong|strictfp|thunk|uwtable"
+			, IrPatterns);
 
 			IrPatterns["constexp"] = LlvmUtil.PatternCompile(@"<type:type>\s*(?<op><keyword>(\s+<keyword>)*)\s*<parentheses:args>", IrPatterns);
 
