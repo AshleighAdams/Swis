@@ -430,8 +430,8 @@ namespace Swis
 							
 							#region Parse operand
 							{
+								string operanducmp = @"^ ((<alphanumeric:segment> :)? <forms:form> |(?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[) <forms:form> \]) $";
 
-								string operanducmp = @"^ (?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[)? <forms:form> \]? $";
 								string operandpttn = pattern_compile_optional_whitespace(operanducmp);
 								dynamic match = oa.PatternMatch(operandpttn, named_patterns);
 								if (match == null)
