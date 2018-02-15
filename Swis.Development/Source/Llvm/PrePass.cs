@@ -21,7 +21,7 @@ namespace Swis
 					dynamic arg = args[i];
 					output.Arguments[i] = (arg.name, arg.type);
 
-					bp_offset -= (int)output.Unit.SizeOfAsInt(arg.type) / 8;
+					bp_offset -= (int)output.Unit.SizeOfAsIntBytes(arg.type);
 
 					output.ConstantLocals[arg.name] = output.ToOperand(arg.type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
 					output.Emit($"; params: {arg.name} = {output.Unit.BasePointer} - {-bp_offset}");
@@ -51,11 +51,11 @@ namespace Swis
 			}
 
 			{ // ret
-				uint ret_bytes = output.Unit.SizeOfAsInt(return_type) / 8;
+				uint ret_bytes = output.Unit.SizeOfAsIntBytes(return_type);
 
 				if (ret_bytes > 0)
 				{
-					bp_offset -= (int)output.Unit.SizeOfAsInt(return_type) / 8;
+					bp_offset -= (int)ret_bytes;
 					output.ConstantLocals["ret"] = output.ToOperand(return_type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
 					output.Emit($"; return: ret = {output.Unit.BasePointer} - {-bp_offset}");
 				}
@@ -80,7 +80,7 @@ namespace Swis
 					output.Emit($"; locals: {name} = {output.Unit.BasePointer} + {bp_offset}");
 
 					// increase the bp offset by the size
-					bp_offset += (int)output.Unit.SizeOfAsInt(alloca.Groups["type"].Value) / 8;
+					bp_offset += (int)output.Unit.SizeOfAsIntBytes(alloca.Groups["type"].Value);
 
 					return "";
 				});

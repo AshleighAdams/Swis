@@ -40,9 +40,9 @@ namespace SwisTest
 			*/
 
 			//string x = DebugData.Serialize(dbg);
-			
 
-			JitCpu cpu = new JitCpu
+
+			var cpu = new JitCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
@@ -52,22 +52,20 @@ namespace SwisTest
 			
 			double target_frequency = 10000;
 			double tickrate = 10;
-
+			
 			Console.Write($"Push enter to execute ({target_frequency/1000} kHz): ");
 			Console.ReadLine();
-
+			
 			DateTime start = DateTime.UtcNow;
 			DateTime next = DateTime.UtcNow;
 			while (true)
 			{
 				double clocks = target_frequency / tickrate;
 				cpu.Clock((int)clocks);
-				
+
 				if (cpu.Halted)
 					break;
-
-				//next = next.AddSeconds(1.0 / tickrate);
-				//int ms = (int)(next - DateTime.UtcNow).TotalMilliseconds;
+				
 				int ms = (int)(1000 / tickrate);
 				if (ms > 0)
 					System.Threading.Thread.Sleep(ms);

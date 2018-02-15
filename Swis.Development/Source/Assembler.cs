@@ -442,7 +442,16 @@ namespace Swis
 									if (match.indirection_size == "")
 										indirection_size = (uint)Cpu.NativeSizeBits;
 									else
-										indirection_size = uint.Parse(match.indirection_size);
+									{
+										switch (match.indirection_size)
+										{
+										case "8": indirection_size = 8; break;
+										case "16": indirection_size = 16; break;
+										case "32": indirection_size = 32; break;
+										//case "64": indirection_size = 64; break;
+										default: throw new Exception($"invalid indirection size {match.indirection_size}");
+										}
+									}
 
 									uint first = (uint)NamedRegister.StackSegment - 1;
 									switch (((string)match.segment).ToLowerInvariant())

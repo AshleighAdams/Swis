@@ -21,7 +21,7 @@ namespace Swis
 		}
 
 		uint[] _LastValues;
-		bool ShowRegisters = true;
+		bool ShowRegisters = false;
 
 		uint? RunUntil = null;
 
@@ -97,25 +97,25 @@ namespace Swis
 					{
 						sb.Append(argprefix);
 						sb.Append(arg.Disassemble(this.Dbg));
-						sb.Append($" /*{arg.Signed}*/");
+						//sb.Append($" /*{arg.Signed}*/");
 						argprefix = ", ";
 					}
-					/*
-					argprefix = " ; ";
+					
+					argprefix = " ; operand values: ";
 					foreach (var arg in args)
 					{
 						sb.Append(argprefix);
 						sb.Append($"{arg.Signed}");
 						argprefix = ", ";
-					}*/
+					}
 				}
 				
-				Console.WriteLine($"op: {sb}");
+				Console.WriteLine($"{Convert.ToString(original_ip, 16).ToLowerInvariant()}:\t{sb}");
 			}
 
-			string rl = Console.ReadLine();
-			if (rl == "o")
-				this.RunUntil = ip;
+			//string rl = Console.ReadLine();
+			//if (rl == "o")
+			//	this.RunUntil = ip;
 			return true;
 		}
 	}

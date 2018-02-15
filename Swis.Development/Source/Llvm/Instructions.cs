@@ -326,16 +326,16 @@ namespace Swis
 		}
 
 		// TODO: add all of these <result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] <ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [operand bundles]
-		[IrInstruction("call", @"(<operand:dst> = )?call (<type:ret_type>) (<operand:func>)\s*<parentheses:args>")]
+		[IrInstruction("call", @"(<operand:dst> = )?call( <retattributes>)* (<type:ret_type>) (<operand:func>)\s*<parentheses:args>")]
 		private static bool Call(MethodBuilder output, dynamic match)
 		{
 			string callargs = match.args_inside;
 			string ret_type = match.ret_type;
 			string dst = match.dst;
 
-			dynamic[] args = callargs.PatternMatches("<type:type><paramattributes> <operand:src>", IrPatterns);
+			dynamic[] args = callargs.PatternMatches("<type:type>( <paramattributes>)* <operand:src>", IrPatterns);
 
-			uint ret_size = output.Unit.SizeOfAsInt(ret_type) / 8;
+			uint ret_size = output.Unit.SizeOfAsIntBytes(ret_type);
 			uint[] arg_sizes = new uint[args.Length];
 			uint[] arg_sp = new uint[args.Length];
 			uint total_size = ret_size;
@@ -344,7 +344,7 @@ namespace Swis
 			for (int i = args.Length; i --> 0;)
 			{
 				dynamic argmatch = args[i];
-				uint size = output.Unit.SizeOfAsInt(argmatch.type) / 8;
+				uint size = output.Unit.SizeOfAsIntBytes(argmatch.type);
 				arg_sp[i] = stack_offset += size;
 				total_size += arg_sizes[i] = size;
 			}

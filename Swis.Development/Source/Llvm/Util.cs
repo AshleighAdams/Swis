@@ -44,7 +44,7 @@ namespace Swis
 
 			public StructInfo GetStructInfo(string type)
 			{
-				if (StructInfoCache.TryGetValue(type, out var ret))
+				if (this.StructInfoCache.TryGetValue(type, out var ret))
 					return ret;
 
 				bool aligned = type.StartsWith("<");
@@ -64,12 +64,11 @@ namespace Swis
 				{
 					compfields.Add((field.type, cur_size));
 
-					uint sz = SizeOfAsInt(field.type);
+					uint sz = SizeOfAsIntBytes(field.type);
 
-					if (sz % 8 != 0)
-						sz += 8 - (sz % 8);
-
-					cur_size += sz / 8;
+					//if (sz % 8 != 0)
+					//	sz += 8 - (sz % 8);
+					cur_size += sz;// / 8;
 				}
 
 				return StructInfoCache[type] = new StructInfo
@@ -86,7 +85,7 @@ namespace Swis
 				if (type.EndsWith("*"))
 				{
 					string deref = TypeDeref(type);
-					int offset = (int)(SizeOfAsInt(deref) / 8) * index;
+					int offset = (int)(SizeOfAsIntBytes(deref)) * index;
 					return (deref, offset);
 				}
 
@@ -107,7 +106,7 @@ namespace Swis
 				{
 					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
 					string subtype = arry.subtype;
-					uint stride = SizeOfAsInt(arry.subtype) / 8;
+					uint stride = SizeOfAsIntBytes(arry.subtype);
 
 					return (subtype, (int)stride * index);
 				}
@@ -120,11 +119,11 @@ namespace Swis
 				if (type.EndsWith("*"))
 				{
 					string deref = TypeDeref(type);
-					uint size = SizeOfAsInt(deref);
-					if (size == 8)
+					uint size = SizeOfAsIntBytes(deref);
+					if (size == 1)
 						return (deref, $"{output.ToOperand(operand_type, operand)}");
 					else
-						return (deref, $"{output.ToOperand(operand_type, operand)} * {size / 8}");
+						return (deref, $"{output.ToOperand(operand_type, operand)} * {size}");
 				}
 
 				if (type.StartsWith("%"))
@@ -142,12 +141,12 @@ namespace Swis
 				{
 					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
 					string subtype = arry.subtype;
-					uint stride = SizeOfAsInt(arry.subtype);
+					uint stride = SizeOfAsIntBytes(arry.subtype);
 
-					if (stride == 8)
+					if (stride == 1)
 						return (subtype, $"{output.ToOperand(operand_type, operand)}"); // stride * index
 					else
-						return (subtype, $"{output.ToOperand(operand_type, operand)} * {stride / 8}"); // stride * index
+						return (subtype, $"{output.ToOperand(operand_type, operand)} * {stride}"); // stride * index
 				}
 				else
 					throw new Exception($"Can't index type {type}");
@@ -213,6 +212,12 @@ namespace Swis
 				return uint.Parse(sz);
 			}
 
+			public uint SizeOfAsIntBytes(string type)
+			{
+				uint bits = SizeOfAsInt(type);
+				return (bits + 7) / 8;
+			}
+
 			public string TypeDeref(string type)
 			{
 				if (type[type.Length - 1] == '*')
@@ -272,8 +277,12 @@ namespace Swis
 				if (operand[0] == '@')
 					part = $"${operand}";
 				else if (operand[0] != '%')
-					part = $"{operand}"; // constants are always 32bits
-										 // is it a calculated const size?
+				{
+					if (type == "i1")
+						part = operand == "true" ? "1" : "0";
+					else
+						part = $"{operand}";
+				}
 				else if (this.ConstantLocals.TryGetValue(operand, out var cl))
 					part = cl;
 				else // use a register
@@ -281,8 +290,8 @@ namespace Swis
 
 				if (indirection)
 				{
-					string size_to = this.Unit.SizeOf(this.Unit.TypeDeref(type));
-					part = $"ptr{size_to} [{part}]";
+					uint bytes = this.Unit.SizeOfAsIntBytes(this.Unit.TypeDeref(type));
+					part = $"ptr{bytes * 8} [{part}]";
 				}
 
 				return part;
@@ -340,7 +349,7 @@ namespace Swis
 			*/
 			IrPatterns["type"] = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
 
-			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?", IrPatterns);
+			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?|true|false", IrPatterns);
 			IrPatterns["ident"]      = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["namedlocal"] = LlvmUtil.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
@@ -348,12 +357,12 @@ namespace Swis
 			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
 			IrPatterns["operand"] = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
 
-			IrPatterns["retattributes"] = IrPatterns["paramattributes"] = LlvmUtil.PatternCompile("( (" +
+			IrPatterns["retattributes"] = IrPatterns["paramattributes"] = LlvmUtil.PatternCompile(
 				"zeroext|signext|inreg|byval|inalloca|sret|" +
 				"align [0-9]+|noalias|nocapture|nest|nonnull|" +
 				@"dereferenceable\((0|1)\)|" +
 				@"dereferenceable_or_null\((0|1)\)|" +
-				"swiftself|swifterror" + "))*", IrPatterns);
+				"swiftself|swifterror", IrPatterns);
 			
 			IrPatterns["linkage"] = LlvmUtil.PatternCompile("private|internal|available_externally|linkonce|weak|common|appending|extern_weak|linkonce_odr|weak_odr|external", IrPatterns);
 			IrPatterns["preemptionspecifier"] = LlvmUtil.PatternCompile("dso_preemptable|dso_local", IrPatterns);

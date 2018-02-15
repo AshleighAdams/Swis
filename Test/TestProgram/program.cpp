@@ -2,9 +2,9 @@
 // i386 is little endian and sizeof(void*) = 4
 
 /*-nobuiltininc           Disable builtin #include directories
-  -nostdinc++             Disable standard #include directories for the C++ standard library
-  -nostdsysteminc
-  -fnew-alignment=<align>*/
+-nostdinc++             Disable standard #include directories for the C++ standard library
+-nostdsysteminc
+-fnew-alignment=<align>*/
 
 void reverse(char str[], int length)
 {
@@ -67,7 +67,7 @@ void out(unsigned int port, unsigned char val)
 	// X = any operand
 	asm("out %0, %1"
 		:                     // outputs
-	    : "X"(port), "X"(val) // inputs
+	: "X"(port), "X"(val) // inputs
 		:                     // valid registers
 		);
 }
@@ -79,7 +79,7 @@ int get()
 		: "=X"(ret) // outputs
 		:         // inputs
 		:         // valid registers
-		);
+	);
 	return ret;
 }
 
@@ -87,7 +87,7 @@ void put(char c)
 {
 	asm("out 0, %0"
 		:        // outputs
-		: "X"(c) // inputs
+	: "X"(c) // inputs
 		:        // valid registers
 		);
 }
@@ -111,50 +111,31 @@ void srand(unsigned int seed)
 	next = seed;
 }
 
-int factorial(int n)
+bool is_prime(int x)
 {
-	if (n <= 1)
+	if (x == 1)
+		return 0;
+	if (x == 2)
 		return 1;
-	else
-		return n * factorial(n - 1);
+	for (int i = 2; i * i <= x; i++)
+		if (x % i == 0)
+			return 0;
+	return 1;
 }
-
-class test
-{
-	unsigned int seed;
-public:
-	test(unsigned int _seed)
-	{
-		this->seed = _seed;
-	}
-	
-	unsigned int get_seed()
-	{
-		return this->seed;
-	}
-};
 
 int main()
 {
-	test t(1337);
+	puts("primes, 1-100000: \n");
 
 	char output[sizeof(int) * 8 + 1];
-	puts("Hello world.\nHere are some random numbers:\n");
-	
-	srand(t.get_seed());
-	for (int i = 0; i < 1000; i++)
-	{
-		itoa(rand(), output, 10);
-		puts(output);
-		put('\t');
-	}
+	for (int i = 1; i <= 10000; i++)
+		if (is_prime(i))
+		{
+			itoa(i, output, 10);
+			puts(output);
+			put(' ');
+		}
+
 	put('\n');
-
-	puts("Push y to print some lorem ipsum: ");
-
-	if (get() == 'y')
-	{
-		puts("\n");
-		puts("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n");
-	}
+	return 0;
 }
