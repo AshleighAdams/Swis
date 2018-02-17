@@ -49,7 +49,7 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type.Substring(1, type.Length - 2); // chop the <> off
+					type = type.Substring(1, type.Length - 2); // chop the <> off
 
 				if (!type.StartsWith("{"))
 					throw new ArgumentException();
@@ -94,7 +94,7 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type.Substring(1, type.Length - 2); // chop the <> off
+					type = type.Substring(1, type.Length - 2); // chop the <> off
 
 				if (type.StartsWith("{"))
 				{
@@ -131,7 +131,7 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type.Substring(1, type.Length - 2); // chop the <> off
+					type = type.Substring(1, type.Length - 2); // chop the <> off
 
 				if (type.StartsWith("{"))
 				{

@@ -54,7 +54,7 @@ namespace Swis
 					if (regid == -1)
 						return @const;
 					else
-						return (uint)(regs[regid] & (((ulong)1u << size) - 1));
+						return (uint)(regs[regid] & (((ulong)1u << size) - 1)); //-V3106
 				}
 
 				uint total = 0;

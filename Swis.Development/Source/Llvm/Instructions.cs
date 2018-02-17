@@ -132,12 +132,14 @@ namespace Swis
 						$"{output.ToOperand(args.dst_type, args.dst)}, " +
 						$"{output.ToOperand(args.src_type, args.src)}, " +
 						$"{(1 << tosz) - 1} ; trunc to i{tosz}");
-				return true;
 			}
-			output.Emit(
-				$"mov " +
-				$"{output.ToOperand(args.dst_type, args.dst)}, " +
-				$"{output.ToOperand(args.src_type, args.src)} ; trunc {args.src_type} -> {args.dst_type}");
+			else
+			{
+				output.Emit(
+					$"mov " +
+					$"{output.ToOperand(args.dst_type, args.dst)}, " +
+					$"{output.ToOperand(args.src_type, args.src)} ; trunc {args.src_type} -> {args.dst_type}");
+			}
 			return true;
 		}
 
@@ -265,7 +267,7 @@ namespace Swis
 				return false;
 
 			// can we optimize it into a jz/jnz call?
-			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u"))
+			if (args.right == "0" && (method == "ne" || method == "e") && (postfix == "" || postfix == "u")) //-V3063
 			{
 				method = method == "ne" ? "nz" : "z";
 				string asm2 = $"j{method} {output.ToOperand(args.type, args.left)}, {Targetify(output, args.onfalse_type, args.onfalse)}";

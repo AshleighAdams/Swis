@@ -50,7 +50,7 @@ namespace Swis
 				else
 				{
 					if (dbg != null)
-						foreach (var lbl in dbg?.Labels)
+						foreach (var lbl in dbg.Labels)
 							if (lbl.Value == @const)
 								return lbl.Key;
 					return $"{(int)@const}";

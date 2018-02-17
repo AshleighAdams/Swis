@@ -468,11 +468,11 @@ namespace Swis
 						var iflags = (FlagsRegisterFlags)this.Reg5;
 						iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
 
-						if (ileft > iright)
+						if (ileft > iright) //-V3022
 							iflags |= FlagsRegisterFlags.Greater;
-						if (ileft < iright)
+						if (ileft < iright) //-V3022
 							iflags |= FlagsRegisterFlags.Less;
-						if (ileft == iright)
+						if (ileft == iright) //-V3022
 							iflags |= FlagsRegisterFlags.Equal;
 
 						this.Reg5 = (uint)iflags;
@@ -509,7 +509,7 @@ namespace Swis
 							iflags |= FlagsRegisterFlags.Greater;
 						if (fleft < fright)
 							iflags |= FlagsRegisterFlags.Less;
-						if (fleft == fright)
+						if (fleft == fright) //-V3024
 							iflags |= FlagsRegisterFlags.Equal;
 
 						this.Reg5 = (uint)iflags;

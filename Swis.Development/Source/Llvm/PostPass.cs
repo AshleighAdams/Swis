@@ -130,7 +130,7 @@ namespace Swis
 			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<reg>{ssa}), (?<data>[^,;]+)(?<endwhitespace>\s*;|\n)", tester);
 
 			// op to move
-			searchdown = false;
+			searchdown = false; //-V3008
 			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<data>[^,;]+), (?<reg>{ssa})", tester);
 
 			//MatchCollection movs_to_op = "".Matches($@"mov (?<reg>{ssa}), (?<data>[^,;]+)\s*(;|\n)"); // the %28 and %29 above

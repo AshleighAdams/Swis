@@ -270,7 +270,7 @@ namespace Swis
 							iflags |= FlagsRegisterFlags.Greater;
 						if (l < r)
 							iflags |= FlagsRegisterFlags.Less;
-						if (l == r)
+						if (l == r) //-V3024
 							iflags |= FlagsRegisterFlags.Equal;
 
 						flags = (uint)iflags;
