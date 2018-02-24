@@ -31,7 +31,7 @@ namespace Swis
 			public string StackPointer { get { return "esp"; } }
 			public string BasePointer { get { return "ebp"; } }
 			public string InstructionPointer { get { return "eip"; } }
-			public string[] Registers { get { return _Registers; } }
+			public string[] Registers { get { return this._Registers; } }
 
 			public class StructInfo
 			{
@@ -71,7 +71,7 @@ namespace Swis
 					cur_size += sz;// / 8;
 				}
 
-				return StructInfoCache[type] = new StructInfo
+				return this.StructInfoCache[type] = new StructInfo
 				{
 					Size = cur_size,
 					Fields = compfields.ToArray(),
@@ -90,7 +90,7 @@ namespace Swis
 				}
 
 				if (type.StartsWith("%"))
-					type = NamedTypes[type];
+					type = this.NamedTypes[type];
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
@@ -127,7 +127,7 @@ namespace Swis
 				}
 
 				if (type.StartsWith("%"))
-					type = NamedTypes[type];
+					type = this.NamedTypes[type];
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
@@ -240,7 +240,7 @@ namespace Swis
 			uint ssa = 0;
 			public string CreateSSARegister(string hint = "tmp")
 			{
-				return $"%{hint}.{ssa++}";
+				return $"%{hint}.{this.ssa++}";
 			}
 
 			public Dictionary<string, string> ConstantLocals;
@@ -299,7 +299,7 @@ namespace Swis
 		}
 
 		static bool _IsSetup = false;
-		static Dictionary<string, List<(string regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(string regex, MethodInfo func)>>();
+		static Dictionary<string, List<(Regex regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(Regex regex, MethodInfo func)>>();
 		static Dictionary<string, string> IrPatterns = new Dictionary<string, string>();
 
 		
@@ -390,9 +390,9 @@ namespace Swis
 					continue;
 
 				if (!IrInstructions.TryGetValue(attrib.Instruction, out var list))
-					list = IrInstructions[attrib.Instruction] = new List<(string regex, MethodInfo func)>();
+					list = IrInstructions[attrib.Instruction] = new List<(Regex regex, MethodInfo func)>();
 
-				list.Add((attrib.Pattern, func));
+				list.Add((new Regex(LlvmUtil.PatternCompile(attrib.Pattern, IrPatterns), RegexOptions.Compiled), func));
 			}
 
 		}

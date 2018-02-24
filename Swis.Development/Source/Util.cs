@@ -87,7 +87,12 @@ namespace Swis
 			if (!_RegexCache.TryGetValue(pattern, out Regex r))
 				_RegexCache[pattern] = r = new Regex(PatternCompile(pattern, named));
 
-			Match m = r.Match(self);
+			return self.PatternMatch(r, named);
+		}
+
+		public static dynamic PatternMatch(this string self, Regex regex, Dictionary<string, string> named)
+		{
+			Match m = regex.Match(self);
 
 			if (!m.Success)
 				return null;
@@ -96,11 +101,12 @@ namespace Swis
 			var ret_dict = (IDictionary<string, object>)ret;
 
 			ret_dict["__full__"] = m.Value;
-			foreach (string name in r.GetGroupNames())
+			foreach (string name in regex.GetGroupNames())
 				ret_dict[name] = m.Groups[name].Value;
 
 			return ret;
 		}
+
 		public static dynamic[] PatternMatches(this string self, string pattern, Dictionary<string, string> named)
 		{
 			if (!_RegexCache.TryGetValue(pattern, out Regex r))

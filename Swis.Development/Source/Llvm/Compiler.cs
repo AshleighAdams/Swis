@@ -141,7 +141,7 @@ namespace Swis
 
 					if ((match = line.PatternMatch(@"^\s*(<operand> = )?<keyword:op>", IrPatterns)) != null)
 					{
-						if (IrInstructions.TryGetValue(match.op, out List<(string pattern, MethodInfo func)> list))
+						if (IrInstructions.TryGetValue(match.op, out List<(Regex pattern, MethodInfo func)> list))
 						{
 							bool good = false;
 							foreach (var var in list)
@@ -161,8 +161,7 @@ namespace Swis
 						}
 						else
 						{
-							//builder.Emit($"; unknown instrunction \"{match.op}\"");
-							builder.Emit($";{line.Trim()}");
+							throw new Exception($"; unknown instrunction \"{match.op}\"");
 						}
 						continue;
 					}
@@ -184,19 +183,16 @@ namespace Swis
 				all.AppendLine(builder.Assembly.ToString());
 			}
 
-			string bootloader =
-$@"mov {unit.StackPointer}, $stack
-mov {unit.BasePointer}, {unit.StackPointer}
-add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes
-call $@main
-sub {unit.StackPointer}, {unit.StackPointer}, 12
-halt
-
-.align 4
-$stack:
-	.data pad 1024
-
-";
+			string bootloader = $"mov {unit.StackPointer}, $stack\n" +
+			                    $"mov {unit.BasePointer}, {unit.StackPointer}\n" +
+			                    $"add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes\n" +
+			                    $"call $@main\n" +
+			                    $"sub {unit.StackPointer}, {unit.StackPointer}, 12\n" +
+			                    $"halt\n" +
+			                    $".align 4\n" +
+			                    $"$stack:\n" +
+			                    $"	.data pad 1024\n" +
+			                    $"\n";
 
 			return bootloader + all.ToString();
 		}
