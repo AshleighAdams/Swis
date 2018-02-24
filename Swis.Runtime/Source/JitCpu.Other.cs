@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 namespace Swis
 {
 
-	public partial class JitCpu : Cpu
+	public sealed partial class JitCpu : Cpu
 	{
 		class JitCacheInvalidator : MemoryController
 		{
@@ -47,7 +47,32 @@ namespace Swis
 			}
 		}
 
-		public override bool Halted { get { return (this.Reg5 & (uint)FlagsRegisterFlags.Halted) != 0; } }
+		#region NamedRegisterAccessors
+		public override ref uint TimeStampCounter
+		{
+			get { return ref this.Reg0; }
+		}
+
+		public override ref uint InstructionPointer
+		{
+			get { return ref this.Reg1; }
+		}
+
+		public override ref uint StackPointer
+		{
+			get { return ref this.Reg2; }
+		}
+
+		public override ref uint BasePointer
+		{
+			get { return ref this.Reg4; }
+		}
+
+		public override ref uint Flags
+		{
+			get { return ref this.Reg5; }
+		}
+		#endregion
 
 		public override void Reset()
 		{

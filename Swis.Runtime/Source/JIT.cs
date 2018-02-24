@@ -7,8 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Swis
 {
-
-	public partial class JitCpu : Cpu
+	public sealed partial class JitCpu : Cpu
 	{
 		volatile uint Reg0;
 		#region Other Registers
@@ -57,7 +56,7 @@ namespace Swis
 			}
 		}
 		#endregion
-
+		
 		MemoryController _Memory;
 		public override MemoryController Memory
 		{
@@ -306,11 +305,8 @@ namespace Swis
 				}
 			case Opcode.Halt:
 				{
-					FieldInfo flagsfield = typeof(JitCpu).GetField($"Reg{(int)NamedRegister.Flag}", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-					exp = Expression.OrAssign(
-						Expression.Field(Expression.Constant(this), flagsfield),
-						Expression.Constant((uint)FlagsRegisterFlags.Halted)
-					);
+					var flagregister = this.RegisterExpression(NamedRegister.Flag, 32, false);
+					exp = Expression.OrAssign(flagregister, Expression.Constant((uint)FlagsRegisterFlags.Halted));
 					sequential_not_gauranteed = true;
 					break;
 				}

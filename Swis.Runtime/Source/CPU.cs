@@ -58,17 +58,19 @@ namespace Swis
 		public virtual ref uint StackPointer { get { return ref this.Registers[(int)NamedRegister.StackPointer]; } }
 		public virtual ref uint BasePointer { get { return ref this.Registers[(int)NamedRegister.BasePointer]; } }
 		public virtual ref uint Flags { get { return ref this.Registers[(int)NamedRegister.Flag]; } }
+
 		public virtual bool Halted { get { return ((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Halted); } }
 	}
 
-	public partial class InterpretedCpu : Cpu
+	public sealed partial class InterpretedCpu : Cpu
     {
-		public uint[] _Registers = new uint[32];
-		public override uint[] Registers { get { return this._Registers; } }
+		//public uint[] Registers = new uint[32];
+		public override uint[] Registers { get; }
 
 		public InterpretedCpu()
 		{
 			this.Memory = null;
+			this.Registers = new uint[32];
 		}
 
 		public override int Clock(int count = 1)
@@ -99,18 +101,18 @@ namespace Swis
 
 				case Opcode.SignExtendRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand src = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand bit = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand bit = this.Memory.DecodeOperand(ref ip, this.Registers);
 						
 						dst.Value = Util.SignExtend(src.Value, bit.Value);
 						break;
 					}
 				case Opcode.ZeroExtendRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand src = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand bit = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand bit = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						uint frombits = bit.Value;
 						if (frombits < 1 || frombits >= 32)
@@ -127,16 +129,16 @@ namespace Swis
 					break;
 				case Opcode.InRR:
 					{
-						Operand lttr = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand line = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						lttr.Value = (uint)Console.ReadKey().KeyChar;
 						break;
 					}
 				case Opcode.OutRR:
 					{
-						Operand line = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand lttr = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						Console.Write((char)lttr.Value);
 						break;
@@ -145,14 +147,14 @@ namespace Swis
 				#region Memory
 				case Opcode.MoveRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand src = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
 						dst.Value = src.Value;
 						break;
 					}
 				case Opcode.PushR:
 					{
-						Operand src = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						Operand ptr = this.CreatePointer(sp, src.ValueSize);
 						sp += src.ValueSize / 8;
@@ -162,7 +164,7 @@ namespace Swis
 					}
 				case Opcode.PopR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						sp -= dst.ValueSize / 8;
 						Operand ptr = this.CreatePointer(sp, dst.ValueSize);
@@ -174,7 +176,7 @@ namespace Swis
 				#region Flow
 				case Opcode.CallR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						
 						// push ip ; the retaddr
 						{
@@ -229,14 +231,14 @@ namespace Swis
 					}
 				case Opcode.JumpR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						ip = loc.Value;
 						break;
 					}
 				case Opcode.CompareRR:
 					{
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						Int32 l = left.Signed;
 						Int32 r = right.Signed;
@@ -256,9 +258,9 @@ namespace Swis
 					}
 				case Opcode.CompareFloatRRR:
 					{
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand ordered = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand ordered = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						float l = left.Float;
 						float r = right.Float;
@@ -278,8 +280,8 @@ namespace Swis
 					}
 				case Opcode.CompareUnsignedRR:
 					{
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						UInt32 l = left.Value;
 						UInt32 r = right.Value;
@@ -299,28 +301,28 @@ namespace Swis
 					}
 				case Opcode.JumpEqualR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Equal))
 							ip = loc.Value;
 						break;
 					}
 				case Opcode.JumpNotEqualR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						if (!((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Equal))
 							ip = loc.Value;
 						break;
 					}
 				case Opcode.JumpGreaterR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Greater))
 							ip = loc.Value;
 						break;
 					}
 				case Opcode.JumpGreaterEqualR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						var flgs = (FlagsRegisterFlags)this.Flags;
 						if (flgs.HasFlag(FlagsRegisterFlags.Greater) || flgs.HasFlag(FlagsRegisterFlags.Equal))
 							ip = loc.Value;
@@ -328,14 +330,14 @@ namespace Swis
 					}
 				case Opcode.JumpLessR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						if (((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Less))
 							ip = loc.Value;
 						break;
 					}
 				case Opcode.JumpLessEqualR:
 					{
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 						var flgs = (FlagsRegisterFlags)this.Flags;
 						if (flgs.HasFlag(FlagsRegisterFlags.Less) || flgs.HasFlag(FlagsRegisterFlags.Equal))
 							ip = loc.Value;
@@ -343,8 +345,8 @@ namespace Swis
 					}
 				case Opcode.JumpZeroRR:
 					{
-						Operand cond = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand cond = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						if (cond.Value == 0)
 							ip = loc.Value;
@@ -352,8 +354,8 @@ namespace Swis
 					}
 				case Opcode.JumpNotZeroRR:
 					{
-						Operand cond = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand loc = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand cond = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						if (cond.Value != 0)
 							ip = loc.Value;
@@ -363,9 +365,9 @@ namespace Swis
 				#region Transformative
 				case Opcode.AddRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						// with two's compliment, adding does not need to be sign-aware
 						dst.Value = left.Value + right.Value;
@@ -373,270 +375,270 @@ namespace Swis
 					}
 				case Opcode.AddFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = left.Float + right.Float;
 						break;
 					}
 				case Opcode.SubtractRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value - right.Value;
 						break;
 					}
 				case Opcode.SubtractFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = left.Float - right.Float;
 						break;
 					}
 				case Opcode.MultiplyRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Signed = left.Signed * right.Signed;
 						break;
 					}
 				case Opcode.MultiplyUnsignedRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value * right.Value;
 						break;
 					}
 				case Opcode.MultiplyFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = left.Float * right.Float;
 						break;
 					}
 				case Opcode.DivideRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Signed = left.Signed / right.Signed;
 						break;
 					}
 				case Opcode.DivideUnsignedRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value / right.Value;
 						break;
 					}
 				case Opcode.DivideFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = left.Float / right.Float;
 						break;
 					}
 				case Opcode.ModulusRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value % right.Value;
 						break;
 					}
 				case Opcode.ModulusUnsignedRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value % right.Value;
 						break;
 					}
 				case Opcode.ModulusFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = left.Float % right.Float;
 						break;
 					}
 				case Opcode.ShiftLeftRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value << (int)right.Value;
 						break;
 					}
 				case Opcode.ShiftRightRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value >> (int)right.Value;
 						break;
 					}
 				case Opcode.ArithmaticShiftRightRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						throw new NotImplementedException();
 					}
 				case Opcode.OrRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value | right.Value;
 						break;
 					}
 				case Opcode.ExclusiveOrRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value ^ right.Value;
 						break;
 					}
 				case Opcode.NotOrRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value | (~right.Value);
 						break;
 					}
 				case Opcode.AndRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value & right.Value;
 						break;
 					}
 				case Opcode.NotAndRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = left.Value & (~right.Value);
 						break;
 					}
 				case Opcode.NotRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Value = ~left.Value;
 						break;
 					}
 				case Opcode.SqrtFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Sqrt(left.Float);
 						break;
 					}
 				case Opcode.LogFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Log(left.Float, right.Float);
 						break;
 					}
 				case Opcode.SinFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Sin(left.Float);
 						break;
 					}
 				case Opcode.CosFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Cos(left.Float);
 						break;
 					}
 				case Opcode.TanFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Tan(left.Float);
 						break;
 					}
 				case Opcode.AsinFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Asin(left.Float);
 						break;
 					}
 				case Opcode.AcosFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Acos(left.Float);
 						break;
 					}
 				case Opcode.AtanFloatRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Atan(left.Float);
 						break;
 					}
 				case Opcode.Atan2FloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Atan2(left.Float, right.Float);
 						break;
 					}
 				case Opcode.PowFloatRRR:
 					{
-						Operand dst = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand left = this.Memory.DecodeOperand(ref ip, this._Registers);
-						Operand right = this.Memory.DecodeOperand(ref ip, this._Registers);
+						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
+						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
 						dst.Float = (float)Math.Pow(left.Float, right.Float);
 						break;
@@ -654,8 +656,8 @@ namespace Swis
 
 		public override void Reset()
 		{
-			for (int i = 0; i < this._Registers.Length; i++)
-				this._Registers[i] = 0;
+			for (int i = 0; i < this.Registers.Length; i++)
+				this.Registers[i] = 0;
 		}
 
 		public override void Interrupt(int code)

@@ -1,38 +1,32 @@
 ﻿namespace Swis
 {
-	public partial class InterpretedCpu
+	public sealed partial class InterpretedCpu
 	{
 
 		//ref Register StackRegister = null;
-		public ref uint TimeStampCounter
+		public override ref uint TimeStampCounter
 		{
-			get { return ref this._Registers[(int)NamedRegister.TimeStampCounter]; }
+			get { return ref this.Registers[(int)NamedRegister.TimeStampCounter]; }
 		}
 
-		public ref uint InstructionPointer
+		public override ref uint InstructionPointer
 		{
-			get { return ref this._Registers[(int)NamedRegister.InstructionPointer]; }
+			get { return ref this.Registers[(int)NamedRegister.InstructionPointer]; }
 		}
 
-		public ref uint StackPointer
+		public override ref uint StackPointer
 		{
-			get { return ref this._Registers[(int)NamedRegister.StackPointer]; }
+			get { return ref this.Registers[(int)NamedRegister.StackPointer]; }
 		}
 
-		public ref uint BasePointer
+		public override ref uint BasePointer
 		{
-			get { return ref this._Registers[(int)NamedRegister.BasePointer]; }
+			get { return ref this.Registers[(int)NamedRegister.BasePointer]; }
 		}
 
-		public ref uint Flags
+		public override ref uint Flags
 		{
-			get { return ref this._Registers[(int)NamedRegister.Flag]; }
-		}
-
-		public bool Halted
-		{
-			get
-			{ return ((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Halted); }
+			get { return ref this.Registers[(int)NamedRegister.Flag]; }
 		}
 		
 		protected Operand CreatePointer(uint address, uint size)
