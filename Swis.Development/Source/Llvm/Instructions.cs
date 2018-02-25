@@ -10,6 +10,30 @@ namespace Swis
 	{
 		#region Misc
 
+		[IrInstruction("ptrtoint", "<operand:dst> = ptrtoint <type:srctype> <operand:src> to <type:dsttype>")]
+		private static bool Ptrtoint(MethodBuilder output, dynamic args)
+		{
+			string dst = args.dst;
+			string dsttype = args.dsttype;
+			string src = args.src;
+			string srctype = args.srctype;
+
+			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}");
+			return true;
+		}
+
+		[IrInstruction("inttoptr", "<operand:dst> = inttoptr <type:srctype> <operand:src> to <type:dsttype>")]
+		private static bool Inttoptr(MethodBuilder output, dynamic args)
+		{
+			string dst = args.dst;
+			string dsttype = args.dsttype;
+			string src = args.src;
+			string srctype = args.srctype;
+			
+			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}");
+			return true;
+		}
+
 		// getelementptr is malformed: %arrayidx = getelementptr inbounds i8, i8* %3, i32 %4
 		[IrInstruction("getelementptr", "<operand:dst> = getelementptr(?<inbounds> inbounds)? <type:basis>(?<indexers>(,( inrange)? <type> <operand>)+)")]
 		private static bool Getelementptr(MethodBuilder output, dynamic args)
