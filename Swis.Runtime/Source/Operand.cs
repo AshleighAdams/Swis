@@ -396,7 +396,7 @@ namespace Swis
 				ConstA = cona,
 				ConstB = conb,
 				ConstC = conc,
-				ConstD = conc,
+				ConstD = cond,
 				ConstDSigned = dsign,
 				SizeA = sza,
 				SizeB = szb,
