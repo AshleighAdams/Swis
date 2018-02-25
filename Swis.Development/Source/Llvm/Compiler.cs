@@ -161,7 +161,7 @@ namespace Swis
 						}
 						else
 						{
-							throw new Exception($"; unknown instrunction \"{match.op}\"");
+							throw new Exception($"Unknown instruction \"{match.op}\"");
 						}
 						continue;
 					}
@@ -188,13 +188,13 @@ namespace Swis
 			                    $"add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes\n" +
 			                    $"call $@main\n" +
 			                    $"sub {unit.StackPointer}, {unit.StackPointer}, 12\n" +
-			                    $"halt\n" +
-			                    $".align 4\n" +
+			                    $"halt\n\n";
+			string postcode =   $"\n.align 4\n" +
 			                    $"$stack:\n" +
-			                    $"	.data pad 1024\n" +
-			                    $"\n";
+			                    $"	.data pad 1024\n";
+			
 
-			return bootloader + all.ToString();
+			return bootloader + all.ToString() + postcode;
 		}
 	}
 }
