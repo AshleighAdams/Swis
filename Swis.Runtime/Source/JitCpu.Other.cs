@@ -45,6 +45,11 @@ namespace Swis
 					this.Parent[x, bits] = value;
 				}
 			}
+
+			public override Span<byte> Span(uint x, uint length)
+			{
+				return this.Parent.Span(x, length);
+			}
 		}
 
 		#region NamedRegisterAccessors

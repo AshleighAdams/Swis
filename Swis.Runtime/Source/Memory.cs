@@ -11,6 +11,8 @@ namespace Swis
 		// bits MUST be either 8, 16, 32 (, or 64 if 64bit, which is it's not yet)
 		// try to override this method, as doing so can get alignment speedup gains
 		public abstract uint this[uint x, uint bits] { get; set; }
+
+		public abstract Span<byte> Span(uint x, uint length);
 	}
 
 	// very slightly quicker, but memory is pinned and thus can't be moved.
@@ -64,7 +66,7 @@ namespace Swis
 			}
 			set
 			{
-				if (x > _Length) throw new IndexOutOfRangeException();
+				if (x > this._Length) throw new IndexOutOfRangeException();
 				switch (bits)
 				{
 				case 8: *(Byte*)(this.Ptr + x) = (byte)value; break;
@@ -73,6 +75,11 @@ namespace Swis
 				default: throw new Exception();
 				}
 			}
+		}
+
+		public override Span<byte> Span(uint x, uint length)
+		{
+			return new Span<byte>(this.Memory, (int)x, (int)length);
 		}
 	}
 
@@ -146,6 +153,11 @@ namespace Swis
 					throw new Exception();
 				}
 			}
+		}
+
+		public override Span<byte> Span(uint x, uint length)
+		{
+			return new Span<byte>(this.Memory, (int)x, (int)length);
 		}
 	}
 }

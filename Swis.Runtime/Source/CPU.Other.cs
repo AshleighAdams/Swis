@@ -29,7 +29,7 @@
 			get { return ref this.Registers[(int)NamedRegister.Flag]; }
 		}
 		
-		protected Operand CreatePointer(uint address, uint size)
+		Operand CreatePointer(uint address, uint size)
 		{
 			return new Operand
 			{
