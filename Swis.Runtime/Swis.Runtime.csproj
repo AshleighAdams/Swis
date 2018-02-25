@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Ashleigh Adams</Authors>
-    <Version>0.0.2</Version>
+    <Version>0.0.2.1</Version>
     <Company />
     <Product>Swis Runtime</Product>
 	<Title>Swis Runtime</Title>
