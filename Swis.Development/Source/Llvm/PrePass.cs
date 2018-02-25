@@ -90,7 +90,6 @@ namespace Swis
 				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
 		
-		static int CurrentconstId;
 		static void ExpandConstants(MethodBuilder output)
 		{
 			// https://llvm.org/docs/LangRef.html#constant-expressions
@@ -101,8 +100,9 @@ namespace Swis
 			// %__argconst1__ = i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str, i32 0, i32 0)
 			// call void @puts(i8* %__argconst1__)
 
-			//(?<=[\(\,])\s*
-			string rx = LlvmUtil.PatternCompile(@"(?<=[\(\,])\s*<constexp:exp>", IrPatterns);
+			//string startswith = @"(?<=[\(\,]|(^|\n)\s*<keyword>)\s*"; // within keyword
+			string startswith = @"(?<=[\(\,a-z])\s+"; // within keyword
+			string rx = LlvmUtil.PatternCompile($@"{startswith}<constexp:exp>", IrPatterns);
 
 			while (true)
 			{
@@ -117,7 +117,7 @@ namespace Swis
 
 				//exp = exp.Substring(1, exp.Length - 2); // remove the ()s
 
-				string new_arg = $"{type} {reg}";
+				string new_arg = $" {type} {reg}";
 				output.Code = output.Code.Remove(m.Index, m.Length);
 				output.Code = output.Code.Insert(m.Index, new_arg);
 
