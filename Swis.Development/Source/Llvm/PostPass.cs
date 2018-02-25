@@ -72,15 +72,19 @@ namespace Swis
 			string simple_use = @"([a-z]|,)[ \t]{0}[ \t]*(,|;|\r|\n|$)";
 			Dictionary<string, bool> have_simplified = new Dictionary<string, bool>();
 			bool searchdown = true;
+			bool replaced = false;
 
 			MatchEvaluator tester = delegate (Match m)
 			{
-				string searchin = searchdown ? asm.Substring(m.Index) : asm.Substring(0, m.Index + m.Length);
+				if (replaced)
+					return m.Value;
+
+				string searchin = searchdown ? asm.Substring(m.Index + m.Length) : asm.Substring(0, m.Index);
 				string varname = m.Groups["reg"].Value;
 				MatchCollection simple = searchin.Matches(string.Format(simple_use, Regex.Escape(varname)));
 				MatchCollection total = asm.Matches(Regex.Escape(varname)); // this searches everything still
 				
-				if (simple.Count == 2 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
+				if (simple.Count == 1 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
 				{
 					// we can probably replace it, but first let's check we haven't used that data chunk else where,
 					// ensuring that this being in a different order won't change the symantic meaning
@@ -88,16 +92,17 @@ namespace Swis
 					string data = m.Groups["data"].Value.Trim();
 
 					if (searchdown)
-						searchin = searchin.Substring(0, simple[1].Index + simple[1].Length);
+						searchin = searchin.Substring(0, simple[0].Index + simple[0].Length);
 					else
 						searchin = searchin.Substring(simple[0].Index);
 
+					int shouldbefoundtimes = searchdown ? 0 : 1; // when searching up, we will contain the source
 					
 					if (
 						// otherwise, if we access this more than once, the data might have changed.
 						// also make sure there was not a call or a jump between us, as they could have unknowable changes to that memory,
 						// unless it is this value that we're jumping to
-						(searchin.Matches(Regex.Escape(data)).Count == 1 && searchin.Matches($@"\n\s*(call|j[a-zA-Z]{{1,2}}) (?!{Regex.Escape(varname)})").Count == 0))
+						(searchin.Matches(Regex.Escape(data)).Count == shouldbefoundtimes && searchin.Matches($@"\n\s*(call|j[a-zA-Z]{{1,2}}) (?!{Regex.Escape(varname)})").Count == 0))
 					{
 						int distance_instructions = searchin.Matches(@"[\r\n]+([\s]*(;[^\n]+))*").Count - 1; // -1 for ourselves
 						dynamic[] registers_using = data.PatternMatches("(?<![$%0-9][a-z]*)(?<reg>[a-z]+)", IrPatterns);
@@ -114,8 +119,9 @@ namespace Swis
 								
 								return m.Value;
 							}
-						
+
 						// woop woop, we can replace it
+						replaced = true;
 						replacements.Add((varname, data));
 						have_simplified[varname] = true; // so we don't reduce this variable further accidentally
 						return m.Groups["startwhitespace"].Value + m.Groups["endwhitespace"].Value;
@@ -125,22 +131,38 @@ namespace Swis
 				return m.Value;
 			};
 
+			// note, if multipul movs get optimized together from register to register,
+			// future replacements won't pick up the "source" register, so only replace 1 at a
+			// time to make sure the sources propigate correctly, until no more replacements are made
 			// mov to op
-			searchdown = true;
-			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<reg>{ssa}), (?<data>[^,;]+)(?<endwhitespace>\s*;|\n)", tester);
 
-			// op to move
-			searchdown = false; //-V3008
-			asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<data>[^,;]+), (?<reg>{ssa})", tester);
-
-			//MatchCollection movs_to_op = "".Matches($@"mov (?<reg>{ssa}), (?<data>[^,;]+)\s*(;|\n)"); // the %28 and %29 above
-			//MatchCollection op_to_mov = "".Matches($@"mov (?<data>[^,;]+), (?<reg>{ssa})"); // the %div above
-
-			foreach ((string what, string with) in replacements)
+			bool replaced_any = true;
+			while (replaced_any)
 			{
-				asm = asm.Replace(what, with);
-			}
+				replaced_any = false;
 
+				searchdown = true;
+				do
+				{
+					replaced = false;
+					asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<reg>{ssa}), (?<data>[^,;]+)(?<endwhitespace>\s*(;|\n|\r))", tester);
+					replaced_any = replaced_any || replaced;
+					foreach ((string what, string with) in replacements)
+						asm = asm.Replace(what, with);
+				} while (replaced);
+
+				// op to move
+				searchdown = false; //-V3008
+				do
+				{
+					replaced = false;
+					asm = Regex.Replace(asm, $@"(?<startwhitespace>[ \t])*mov (?<data>[^,;]+), (?<reg>{ssa})(?<endwhitespace>\s*[;\n\r])", tester);
+					replaced_any = replaced_any || replaced;
+					foreach ((string what, string with) in replacements)
+						asm = asm.Replace(what, with);
+				} while (replaced);
+			}
+			
 			output.Assembly.Clear();
 			output.Assembly.Append(asm);
 		}
