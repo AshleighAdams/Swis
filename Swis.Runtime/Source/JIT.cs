@@ -438,7 +438,7 @@ namespace Swis
 					Expression dstexp = JitOperand(ref dst, true);
 					Expression lineexp = JitOperand(ref line, false);
 					
-					Expression<Func<uint, uint>> readline = lineval => Console.ReadKey().KeyChar;
+					Expression<Func<uint, uint>> readline = lineval => this.LineRead((UInt16)lineval);
 					exp = Expression.Assign(dstexp, Expression.Invoke(readline, lineexp));
 
 					sequential_not_gauranteed = dst.AddressingMode == 0 && dst.RegIdA == (int)NamedRegister.InstructionPointer;
@@ -452,7 +452,7 @@ namespace Swis
 					Expression lineexp = JitOperand(ref line, false);
 					Expression lttrexp = JitOperand(ref lttr, false);
 
-					Expression<Action<uint, uint>> writeline = (lineval, charval) => Console.Write((char)charval);
+					Expression<Action<uint, uint>> writeline = (lineval, charval) => this.LineWrite((UInt16)lineval, (byte)charval);
 
 					exp = Expression.Invoke(writeline, lineexp, lttrexp);
 					break;
@@ -1075,7 +1075,7 @@ namespace Swis
 					Expression leftexp = JitOperand(ref left, false);
 					Expression rightexp = JitOperand(ref right, false);
 
-					exp = Expression.Assign(dstexp, Expression.LeftShift(leftexp, rightexp));
+					exp = Expression.Assign(dstexp, Expression.LeftShift(leftexp, Expression.Convert(rightexp, typeof(int))));
 					sequential_not_gauranteed = dst.AddressingMode == 0 && dst.RegIdA == (int)NamedRegister.InstructionPointer;
 					break;
 				}
@@ -1089,7 +1089,7 @@ namespace Swis
 					Expression leftexp = JitOperand(ref left, false);
 					Expression rightexp = JitOperand(ref right, false);
 
-					exp = Expression.Assign(dstexp, Expression.RightShift(leftexp, rightexp));
+					exp = Expression.Assign(dstexp, Expression.RightShift(leftexp, Expression.Convert(rightexp, typeof(int))));
 					sequential_not_gauranteed = dst.AddressingMode == 0 && dst.RegIdA == (int)NamedRegister.InstructionPointer;
 					break;
 				}
@@ -1419,9 +1419,10 @@ namespace Swis
 			return (exp, ip - original_ip, sequential_not_gauranteed);
 		}
 
-		public override void Interrupt(int code)
+		Queue<uint> InterruptQueue = new Queue<uint>();
+		public override void Interrupt(uint code)
 		{
-			throw new NotImplementedException();
+			this.InterruptQueue.Enqueue(code);
 		}
 	}
 }

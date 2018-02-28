@@ -44,11 +44,13 @@ namespace Swis
 	{
 		public static uint NativeSizeBits = 32;
 		public static uint NativeSizeBytes = NativeSizeBits / 8;
-
+		
 		public virtual ExternalDebugger Debugger { get; set; }
 		public virtual MemoryController Memory { get; set; }
+		public virtual Action<UInt16, byte> LineWrite { get; set; } = delegate (UInt16 _, byte __) { };
+		public virtual Func<UInt16, byte> LineRead { get; set; } = delegate (UInt16 _) { return 0; };
 		public abstract uint[] Registers { get; }
-		
+
 		public abstract int Clock(int clocks = 1);
 		public abstract void Interrupt(uint code);
 		public abstract void Reset();
@@ -148,7 +150,7 @@ namespace Swis
 						break;
 
 				Opcode op = this.Memory.DecodeOpcode(ref ip);
-				
+
 				switch (op)
 				{
 				#region Misc
@@ -225,7 +227,7 @@ namespace Swis
 						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						lttr.Value = (uint)Console.ReadKey().KeyChar;
+						lttr.Value = (uint)this.LineRead((UInt16)line.Value);
 						break;
 					}
 				case Opcode.OutRR:
@@ -233,7 +235,7 @@ namespace Swis
 						Operand line = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand lttr = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						Console.Write((char)lttr.Value);
+						this.LineWrite((UInt16)line.Value, (byte)lttr.Value);
 						break;
 					}
 				#endregion
@@ -270,31 +272,17 @@ namespace Swis
 				case Opcode.CallR:
 					{
 						Operand loc = this.Memory.DecodeOperand(ref ip, this.Registers);
-						
-						// push ip ; the retaddr
-						{
-							Operand sp_ptr = this.CreatePointer(sp, Cpu.NativeSizeBits);
-							sp_ptr.Value = ip;
-							sp += Cpu.NativeSizeBytes;
-						}
 
+						// push ip
+						this.Memory[sp, Cpu.NativeSizeBits] = ip;
+						sp += Cpu.NativeSizeBytes;
 						// push bp
-						{
-							Operand sp_ptr = this.CreatePointer(sp, Cpu.NativeSizeBits);
-							sp_ptr.Value = bp;
-							sp += Cpu.NativeSizeBytes;
-						}
-
+						this.Memory[sp, Cpu.NativeSizeBits] = bp;
+						sp += Cpu.NativeSizeBytes;
 						// mov bp, sp
-						{
-							bp = sp;
-						}
-
+						bp = sp;
 						// jmp loc
-						{
-							ip = loc.Value;
-						}
-						
+						ip = loc.Value;
 						break;
 					}
 				case Opcode.Return:
@@ -302,23 +290,13 @@ namespace Swis
 						// the reverse of call
 
 						// mov sp, bp
-						{
-							sp = bp;
-						}
-
+						sp = bp;
 						// pop bp
-						{
-							sp -= Cpu.NativeSizeBytes;
-							Operand sp_ptr = this.CreatePointer(sp, Cpu.NativeSizeBits);
-							bp = sp_ptr.Value;
-						}
-
-						// pop ip ; equiv to:  pop $1 jmp $1
-						{
-							sp -= Cpu.NativeSizeBytes;
-							Operand sp_ptr = this.CreatePointer(sp, Cpu.NativeSizeBits);
-							ip = sp_ptr.Value;
-						}
+						sp -= Cpu.NativeSizeBytes;
+						bp = this.Memory[sp, Cpu.NativeSizeBits];
+						// pop ip
+						sp -= Cpu.NativeSizeBytes;
+						ip = this.Memory[sp, Cpu.NativeSizeBits];
 						
 						break;
 					}
