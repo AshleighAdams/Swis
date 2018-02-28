@@ -104,12 +104,12 @@ namespace Swis
 			{ NamedRegister.D, "d" },
 			{ NamedRegister.E, "e" },
 			{ NamedRegister.F, "f" },
-			{ NamedRegister.G, "a" },
-			{ NamedRegister.H, "b" },
-			{ NamedRegister.I, "c" },
-			{ NamedRegister.J, "d" },
-			{ NamedRegister.K, "e" },
-			{ NamedRegister.L, "f" },
+			{ NamedRegister.G, "g" },
+			{ NamedRegister.H, "h" },
+			{ NamedRegister.I, "i" },
+			{ NamedRegister.J, "j" },
+			{ NamedRegister.K, "k" },
+			{ NamedRegister.L, "l" },
 		};
 
 		public static string Disassemble(this NamedRegister self)
