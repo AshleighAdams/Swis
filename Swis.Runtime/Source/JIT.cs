@@ -102,6 +102,68 @@ namespace Swis
 
 			while (this.CycleBank > 0)
 			{
+				// handle interrupts
+				if (this.InterruptQueue.Count > 0)
+				{
+					ref uint ip = ref this.Reg1;
+					ref uint sp = ref this.Reg2;
+					ref uint bp = ref this.Reg4;
+					ref uint flags = ref this.Reg5;
+					ref uint pi = ref this.Reg7;
+
+					uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
+
+					switch (mode)
+					{
+					case 0b00: this.InterruptQueue.Clear(); break; /*disabled silent*/
+					case 0b10: break; /*queued*/
+					case 0b11: flags |= (uint)FlagsRegisterFlags.Halted; return executed; /*disabled halt*/
+					case 0b01:
+					default:
+
+						uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
+						uint @int = this.InterruptQueue.Dequeue();
+						uint ivtn = @int > 255 ? 255 : @int;
+						uint addr = this.Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
+
+						// simulate call to the interrupt address if it's enabled
+						if (addr != 0)
+						{
+							pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+							pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
+
+							// push ip
+							this.Memory[sp, Cpu.NativeSizeBits] = ip;
+							sp += Cpu.NativeSizeBytes;
+							// push bp
+							this.Memory[sp, Cpu.NativeSizeBits] = bp;
+							sp += Cpu.NativeSizeBytes;
+							// mov bp, sp
+							bp = sp;
+							// jmp loc
+							ip = addr;
+
+							if (ivtn == 255) // extended interrupt, push the interupt code
+							{
+								// push @int
+								this.Memory[sp, Cpu.NativeSizeBits] = @int;
+								sp += Cpu.NativeSizeBytes;
+							}
+						}
+						else
+						{
+							if (@int == (uint)Interrupts.DoubleFault)
+							{
+								this.Flags |= (uint)FlagsRegisterFlags.Halted;
+								return executed;
+							}
+							else
+								this.Interrupt((uint)Interrupts.DoubleFault);
+						}
+						break;
+					}
+				}
+				
 				if (!this.JitCache.TryGetValue(this.Reg1, out (Action λ, uint cycles) instr))
 				{
 					uint block_length = 0;
@@ -200,6 +262,64 @@ namespace Swis
 			#region Misc
 			case Opcode.Nop:
 				break;
+			case Opcode.InterruptR:
+				Operand @int = this.Memory.DecodeOperand(ref ip, null);
+				Expression intexp = JitOperand(ref @int, true);
+
+				Expression<Action<uint>> cpuinterrupt = intcode => this.Interrupt(intcode);
+				exp = Expression.Invoke(cpuinterrupt, intexp);
+				sequential_not_gauranteed = true;
+				break;
+			case Opcode.InterruptReturn:
+				{
+					Expression eip = RegisterExpression(NamedRegister.InstructionPointer, Cpu.NativeSizeBits, false);
+					Expression esp = RegisterExpression(NamedRegister.StackPointer, Cpu.NativeSizeBits, false);
+					Expression ebp = RegisterExpression(NamedRegister.BasePointer, Cpu.NativeSizeBits, false);
+					Expression epi = RegisterExpression(NamedRegister.ProtectedInterrupt, Cpu.NativeSizeBits, false);
+
+					Expression esp_ptr = PointerExpression(esp, Cpu.NativeSizeBits);
+
+					exp = Expression.Block(
+						// clear mode
+						Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
+						// set mode to enabled
+						Expression.OrAssign(epi,  Expression.Constant( 0b0000_0000__0000_0000__0000_0001__0000_0000u)),
+						// mov sp, bp
+						Expression.Assign(esp, ebp),
+						// pop bp
+						Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+						Expression.Assign(ebp, esp_ptr),
+						// pop ip
+						Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+						Expression.Assign(eip, esp_ptr)
+					);
+
+					sequential_not_gauranteed = true;
+					break;
+				}
+			case Opcode.SetInterrupt:
+				{
+					Expression epi = RegisterExpression(NamedRegister.ProtectedInterrupt, Cpu.NativeSizeBits, false);
+					ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
+					exp = Expression.Block(
+						// clear mode
+						Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
+						// set mode to enabled
+						Expression.OrAssign(epi, Expression.Constant(0b0000_0000__0000_0000__0000_0001__0000_0000u))
+					);
+					break;
+				}
+			case Opcode.ClearInterrupt:
+				{
+					Expression epi = RegisterExpression(NamedRegister.ProtectedInterrupt, Cpu.NativeSizeBits, false);
+					exp = Expression.Block(
+						// clear mode
+						Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
+						// set mode to enabled
+						Expression.OrAssign(epi, Expression.Constant(0b0000_0000__0000_0000__0000_0010__0000_0000u))
+					);
+					break;
+				}
 			case Opcode.SignExtendRRR:
 				{
 					Operand dst = this.Memory.DecodeOperand(ref ip, null);

@@ -50,7 +50,7 @@ namespace Swis
 		public abstract uint[] Registers { get; }
 		
 		public abstract int Clock(int clocks = 1);
-		public abstract void Interrupt(int code);
+		public abstract void Interrupt(uint code);
 		public abstract void Reset();
 
 		public virtual ref uint TimeStampCounter { get { return ref this.Registers[(int)NamedRegister.TimeStampCounter]; } }
@@ -87,6 +87,62 @@ namespace Swis
 			
 			for (int i = 0; i < count; i++)
 			{
+				if (this.InterruptQueue.Count > 0)
+				{
+					ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
+					uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
+
+					switch (mode)
+					{
+					case 0b00: this.InterruptQueue.Clear(); break; /*disabled silent*/
+					case 0b10: break; /*queued*/
+					case 0b11: flags |= (uint)FlagsRegisterFlags.Halted; return i; /*disabled halt*/
+					case 0b01: default:
+						
+						uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
+						uint @int = this.InterruptQueue.Dequeue();
+						uint ivtn = @int > 255 ? 255 : @int;
+						uint addr = this.Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
+
+						// simulate call to the interrupt address if it's enabled
+						if (addr != 0)
+						{
+							pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+							pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
+
+							// push ip
+							this.Memory[sp, Cpu.NativeSizeBits] = ip;
+							sp += Cpu.NativeSizeBytes;
+							// push bp
+							this.Memory[sp, Cpu.NativeSizeBits] = bp;
+							sp += Cpu.NativeSizeBytes;
+							// mov bp, sp
+							bp = sp;
+							// jmp loc
+							ip = addr;
+
+							if (ivtn == 255) // extended interrupt, push the interupt code
+							{
+								// push @int
+								this.Memory[sp, Cpu.NativeSizeBits] = @int;
+								sp += Cpu.NativeSizeBytes;
+							}
+						}
+						else
+						{
+							i--;
+							if (@int == (uint)Interrupts.DoubleFault)
+							{
+								this.Flags |= (uint)FlagsRegisterFlags.Halted;
+								count = 0;
+							}
+							else
+								this.Interrupt((uint)Interrupts.DoubleFault);
+						}
+						break;
+					}
+				}
+
 				if (this.Debugger != null)
 					if (!this.Debugger.Clock(this))
 						break;
@@ -98,7 +154,44 @@ namespace Swis
 				#region Misc
 				case Opcode.Nop:
 					break;
+				case Opcode.InterruptR:
+					Operand @int = this.Memory.DecodeOperand(ref ip, this.Registers);
+					this.Interrupt(@int.Value);
+					count = 0;
+					break;
+				case Opcode.InterruptReturn:
+					{
+						ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
+						pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+						pi |= 0b0000_0000__0000_0000__0000_0001__0000_0000u; // set mode to enabled
 
+						//if(realmode)
+						{
+							// mov sp, bp
+							sp = bp;
+							// pop bp
+							sp -= Cpu.NativeSizeBytes;
+							bp = this.Memory[sp, Cpu.NativeSizeBits];
+							// pop ip
+							sp -= Cpu.NativeSizeBytes;
+							ip = this.Memory[sp, Cpu.NativeSizeBits];
+						}
+						break;
+					}
+				case Opcode.SetInterrupt:
+					{
+						ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
+						pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+						pi |= 0b0000_0000__0000_0000__0000_0001__0000_0000u; // set mode to enabled
+						break;
+					}
+				case Opcode.ClearInterrupt:
+					{
+						ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
+						pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+						pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
+						break;
+					}
 				case Opcode.SignExtendRRR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
@@ -660,9 +753,10 @@ namespace Swis
 				this.Registers[i] = 0;
 		}
 
-		public override void Interrupt(int code)
+		Queue<uint> InterruptQueue = new Queue<uint>();
+		public override void Interrupt(uint code)
 		{
-			throw new NotImplementedException();
+			this.InterruptQueue.Enqueue(code);
 		}
 		
 	}
