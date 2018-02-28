@@ -277,11 +277,11 @@ namespace Swis.GuiDebugger.cs
 
 								if (local.typehint.EndsWith("*"))
 									value = $"0x{BitConverter.ToUInt32(this.StackData, pos).ToString("X8").ToLowerInvariant()}";
-								else if (local.typehint == "int" || local.typehint == "int32")
+								else if (local.typehint == "int" || local.typehint == "int32" || local.typehint == "i32")
 									value = BitConverter.ToInt32(this.StackData, pos).ToString().ToLowerInvariant();
-								else if (local.typehint == "uint" || local.typehint == "uint32")
+								else if (local.typehint == "uint" || local.typehint == "uint32" || local.typehint == "u32")
 									value = BitConverter.ToUInt32(this.StackData, pos).ToString().ToLowerInvariant();
-								else if (local.typehint == "char")
+								else if (local.typehint == "char" || local.typehint == "i8")
 									value = BitConverter.ToChar(this.StackData, pos).ToString().ToLowerInvariant();
 								else
 									value = "<unknown type>";
@@ -430,7 +430,7 @@ namespace Swis.GuiDebugger.cs
 
 			this.TextArea.SetKeywords(0, instructions.ToString());
 			this.TextArea.SetKeywords(2, registers.ToString());
-			this.TextArea.SetKeywords(3, ".align .data ascii float int int8 int16 int32 int64 pad ptr ptr8 ptr16 ptr32 ptr64");
+			this.TextArea.SetKeywords(3, ".src .loc .align .data ascii float int int8 int16 int32 int64 pad ptr ptr8 ptr16 ptr32 ptr64");
 
 			
 

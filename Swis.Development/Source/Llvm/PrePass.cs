@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Swis
@@ -10,6 +11,8 @@ namespace Swis
 			string return_type, string argslist, bool optimize_args = true)
 		{
 			int bp_offset = -(int)Cpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
+
+			List<string> src_locals = new List<string>();
 
 			{ // args
 				dynamic[] args = argslist
@@ -24,8 +27,8 @@ namespace Swis
 					bp_offset -= (int)output.Unit.SizeOfAsIntBytes(arg.type);
 
 					output.ConstantLocals[arg.name] = output.ToOperand(arg.type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
-					output.Emit($"; params: {arg.name} = {output.Unit.BasePointer} - {-bp_offset}");
-					
+					src_locals.Add($@".src local ""{((string)arg.name).TrimStart('%')}"" ""{arg.type}"" {bp_offset} {(int)output.Unit.SizeOfAsIntBytes(arg.type)}");
+
 					// optimize a copy out:
 					if (optimize_args)
 					{
@@ -57,8 +60,10 @@ namespace Swis
 				{
 					bp_offset -= (int)ret_bytes;
 					output.ConstantLocals["ret"] = output.ToOperand(return_type + "*", $"{output.Unit.BasePointer} - {-bp_offset}", indirection: true);
-					output.Emit($"; return: ret = {output.Unit.BasePointer} - {-bp_offset}");
+					src_locals.Insert(0, $@".src local ""return"" ""{return_type}"" {bp_offset} {ret_bytes}");
 				}
+
+				output.Return = (return_type, (int)ret_bytes * 8);
 			}
 
 			bp_offset = 0;
@@ -77,16 +82,34 @@ namespace Swis
 
 					// assign it a constant offset
 					output.ConstantLocals[name] = $"{output.Unit.BasePointer} + {bp_offset}";
-					output.Emit($"; locals: {name} = {output.Unit.BasePointer} + {bp_offset}");
+					src_locals.Insert(0, $@".src local ""{name.TrimStart('%')}"" ""{alloca.Groups["type"].Value}"" {bp_offset} {(int)output.Unit.SizeOfAsIntBytes(alloca.Groups["type"].Value)}");
 
 					// increase the bp offset by the size
 					bp_offset += (int)output.Unit.SizeOfAsIntBytes(alloca.Groups["type"].Value);
-
+					
 					return "";
 				});
 			}
 
-			if(bp_offset > 0)
+			// set the func sig for debugging
+			{
+				StringBuilder sb = new StringBuilder();
+				sb.Append($"{output.Return.type} {output.Id.Trim('%', '@')}(");
+				string pre = "";
+				foreach (var arg in output.Arguments)
+				{
+					sb.Append($"{pre}{arg.type} {arg.arg.TrimStart('%')}");
+					pre = ", ";
+				}
+				sb.Append(')');
+
+				output.Emit($".src func \"{sb}\"");
+
+				foreach (string loc in src_locals)
+					output.Emit(loc);
+			}
+
+			if (bp_offset > 0)
 				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
 		

@@ -122,9 +122,11 @@ namespace Swis
 					Id = func.id,
 				};
 
+
+
 				builder.Emit($"${func.id}:");
 				builder.EmitPrefix = "\t";
-
+				
 				ExpandConstants(builder);
 				BuildMethodLocals(builder, func.ret_type, func.args_inside/*, optimize_args: false*/);
 				ReplacePhis(builder);
