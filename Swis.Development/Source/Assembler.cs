@@ -7,7 +7,7 @@ namespace Swis
 {
 	public static class Assembler
 	{
-		static Dictionary<string, NamedRegister> RegisterMap = new Dictionary<string, NamedRegister>()
+		public static Dictionary<string, NamedRegister> RegisterMap = new Dictionary<string, NamedRegister>()
 		{
 			{ "tsc", NamedRegister.TimeStampCounter },
 			{ "ip", NamedRegister.InstructionPointer },
@@ -78,7 +78,7 @@ namespace Swis
 			return (RegisterMap[reg], size);
 		}
 
-		static Dictionary<string, Opcode> OpcodeMap = new Dictionary<string, Opcode>()
+		public static Dictionary<string, Opcode> OpcodeMap = new Dictionary<string, Opcode>()
 		{
 			{ "nop", Opcode.Nop },
 			{ "intR", Opcode.InterruptR },
@@ -184,14 +184,14 @@ namespace Swis
 			//named_patterns["___"] = Util.PatternCompile(___, named_patterns);
 			
 			DebugData dbg = new DebugData();
-			dbg.PtrToAsm = new Dictionary<int, (string file, int from, int to, DebugData.AsmPtrType type)>();
-			dbg.AsmToSrc = new Dictionary<int, (string file, int from, int to)>();
-			dbg.Labels = new Dictionary<string, int>();
+			dbg.PtrToAsm = new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
+			dbg.AsmToSrc = new Dictionary<uint, (string file, int from, int to)>();
+			dbg.Labels = new Dictionary<string, uint>();
 			
 			string[] lines = asm.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 			List<byte> bin = new List<byte>();
 
-			Dictionary<string, int> found_placeholders = dbg.Labels;
+			Dictionary<string, uint> found_placeholders = dbg.Labels;
 			List<(string name, int pos, int defined_line)> placeholders = new List<(string, int, int)>();
 
 			int asm_pos = 0;
@@ -266,7 +266,7 @@ namespace Swis
 					continue;
 				else if ((m = line.Match(@"^\s*(\$[^\s]+) \s* :")).Success)
 				{
-					found_placeholders[m.Groups[1].Value] = bin.Count;
+					found_placeholders[m.Groups[1].Value] = (uint)bin.Count;
 				}
 				//bp_offset += Math.Abs((-bp_offset) % align);
 				else if ((m = line.Match(@"^\s*\.align \s+ (\d+)")).Success)
@@ -285,7 +285,7 @@ namespace Swis
 					string locfile = m.Groups[3].Value;
 					
 
-					dbg.AsmToSrc.Add(bin.Count, (locfile, locpos, locto));
+					dbg.AsmToSrc.Add((uint)bin.Count, (locfile, locpos, locto));
 				}
 				else if ((m = line.Match(@"^\s*\.data \s+ ([A-Za-z][A-Za-z0-9]*) \s+ (.+)")).Success)
 				{
@@ -296,7 +296,7 @@ namespace Swis
 					int to = pos + line.Length;
 
 					var dbginfo = ("[string]", from, to, (DebugData.AsmPtrType.None));
-					int binpos = bin.Count;
+					uint binpos = (uint)bin.Count;
 
 					Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
 					switch (type)
@@ -401,7 +401,7 @@ namespace Swis
 					if (!OpcodeMap.TryGetValue(instr, out var opcode))
 						throw new Exception($"{linenum}: unknown opcode {op} that takes {mc.Count} operands.");
 
-					dbg.PtrToAsm[bin.Count] = ("[string]", op_pos, op_to, DebugData.AsmPtrType.Instruction);
+					dbg.PtrToAsm[(uint)bin.Count] = ("[string]", op_pos, op_to, DebugData.AsmPtrType.Instruction);
 					bin.Add((byte)opcode);
 
 					foreach (Match opm in mc)
@@ -415,7 +415,7 @@ namespace Swis
 						oa = Regex.Replace(oa, @"-(\s*)\-([0-9])", "+$1$2");
 						oa = Regex.Replace(oa, @"(?<!^\s*)\-(\s*)([0-9])", "+$1-$2");
 						
-						dbg.PtrToAsm[bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
+						dbg.PtrToAsm[(uint)bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
 
 						// encode the operand
 						{
@@ -782,10 +782,10 @@ namespace Swis
 			// now do the placeholders
 			foreach (var ph in placeholders)
 			{
-				if (!found_placeholders.TryGetValue(ph.name, out int foundpos))
+				if (!found_placeholders.TryGetValue(ph.name, out uint foundpos))
 					throw new Exception($"{ph.defined_line}: could not find the label {ph.name}");
 				Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
-				c.I32 = foundpos;
+				c.U32 = foundpos;
 				bin[ph.pos + 0] = c.ByteA;
 				bin[ph.pos + 1] = c.ByteB;
 				bin[ph.pos + 2] = c.ByteC;
