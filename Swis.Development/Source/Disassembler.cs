@@ -123,6 +123,7 @@ namespace Swis
 		{
 			{ Opcode.Nop, "nop" },
 			{ Opcode.InterruptR, "int" },
+			{ Opcode.InterruptReturn, "iret" },
 			{ Opcode.SignExtendRRR, "sext" },
 			{ Opcode.ZeroExtendRRR, "zext" },
 			{ Opcode.TrapR, "trap" },
@@ -199,6 +200,7 @@ namespace Swis
 		{
 			{ Opcode.Nop, 0 },
 			{ Opcode.InterruptR, 1 },
+			{ Opcode.InterruptReturn, 0 },
 			{ Opcode.SignExtendRRR, 3 },
 			{ Opcode.ZeroExtendRRR, 3 },
 			{ Opcode.TrapR, 1 },

@@ -2,6 +2,7 @@
 
 using Swis;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace SwisTest
 {
@@ -20,6 +21,9 @@ namespace SwisTest
 		{
 			asm = asm ?? System.IO.File.ReadAllText("TestProgram/program.asm");
 			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
+
+			System.IO.File.WriteAllBytes("TestProgram/program.bin", assembled);
+			System.IO.File.WriteAllText("TestProgram/program.dbg", DebugData.Serialize(dbg));
 
 			//Console.WriteLine(asm);
 			//Console.ReadLine();
@@ -41,40 +45,47 @@ namespace SwisTest
 
 			//string x = DebugData.Serialize(dbg);
 
+			StreamDebugger dbger = null;
+			try
+			{
+				TcpClient cl = new TcpClient();
+				cl.Connect("localhost", 1337);
 
-			var cpu = new JitCpu
+				dbger = new StreamDebugger(cl.GetStream(), dbg: dbg, flush: true);
+			}
+			catch { }
+
+			byte line0_in = 0;
+			var cpu = new InterpretedCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
-				//Debugger = new StreamDebugger(Console.Out, dbg),
+				Debugger = dbger,
+				LineWrite = (line, what) => Console.Write((char)what),
+				LineRead = (line) => line0_in,
 			};
 
-			
-			double target_frequency = 10000;
-			double tickrate = 10;
-			
-			Console.Write($"Push enter to execute ({target_frequency/1000} kHz): ");
-			Console.ReadLine();
-			
 			DateTime start = DateTime.UtcNow;
 			DateTime next = DateTime.UtcNow;
-			while (true)
-			{
-				double clocks = target_frequency / tickrate;
-				cpu.Clock((int)clocks);
 
-				if (cpu.Halted)
-					break;
-				
-				int ms = (int)(1000 / tickrate);
-				if (ms > 0)
-					System.Threading.Thread.Sleep(ms);
+			int total_clocks = 0;
+			while (!cpu.Halted)
+			{
+				int clocks = 1;// target_frequency / tickrate;
+				total_clocks += cpu.Clock(clocks);
+
+				System.Threading.Thread.Sleep(16);
+
+				if (Console.KeyAvailable)
+				{
+					line0_in = (byte)Console.ReadKey(true).KeyChar;
+					cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0);
+				}
 			}
 
 			DateTime end = DateTime.UtcNow;
-
 			Console.WriteLine();
-			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalSeconds:0.00} seconds");
+			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalMilliseconds:0.00} ms");
 		}
 
 		static void TestJit()
@@ -183,7 +194,7 @@ $stack:
 
 			string asm = null;
 
-			asm = IrCompileTest();
+			//asm = IrCompileTest();
 			ExecuteTest(asm);
 
 			//TestJit();

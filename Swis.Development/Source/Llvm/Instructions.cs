@@ -123,7 +123,7 @@ namespace Swis
 			{
 				if (output.Unit.OptimizationLevel >= 1)
 				{
-					output.Emit($"; getelementptr: {args.dst} = {dynamic_offsets_operands[0]}");
+					output.Emit($"; constexp getelementptr: {args.dst}");
 					output.ConstantLocals[args.dst] = dynamic_offsets_operands[0];
 				}
 				else

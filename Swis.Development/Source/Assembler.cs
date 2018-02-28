@@ -82,6 +82,9 @@ namespace Swis
 		{
 			{ "nop", Opcode.Nop },
 			{ "intR", Opcode.InterruptR },
+			{ "iret", Opcode.InterruptReturn },
+			{ "sti", Opcode.SetInterrupt },
+			{ "cli", Opcode.ClearInterrupt },
 			{ "sextRRR", Opcode.SignExtendRRR },
 			{ "zextRRR", Opcode.ZeroExtendRRR },
 			{ "trapR", Opcode.TrapR },
