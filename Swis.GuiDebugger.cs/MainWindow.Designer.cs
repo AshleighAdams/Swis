@@ -51,10 +51,13 @@
 			this.splitContainer2 = new System.Windows.Forms.SplitContainer();
 			this.TabControlVariables = new System.Windows.Forms.TabControl();
 			this.TabPageRegisters = new System.Windows.Forms.TabPage();
-			this.listView1 = new System.Windows.Forms.ListView();
-			this.ColumnHeaderRegName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-			this.ColumnHeaderRegValue = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-			this.TabPageLocals = new System.Windows.Forms.TabPage();
+			this.RegisterListView = new System.Windows.Forms.ListView();
+			this.ColumnHeaderRegNameA = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnHeaderRegValueA = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnHeaderRegNameB = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnHeaderRegValueB = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnHeaderRegNameC = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnHeaderRegValueC = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			this.RightTabs = new System.Windows.Forms.TabControl();
 			this.TabPageCallstack = new System.Windows.Forms.TabPage();
 			this.CallStackListView = new System.Windows.Forms.ListView();
@@ -63,6 +66,10 @@
 			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
 			this.SourceFileButton = new System.Windows.Forms.ToolStripButton();
 			this.DebugInfoButton = new System.Windows.Forms.ToolStripButton();
+			this.TabPageLocals = new System.Windows.Forms.TabPage();
+			this.ListViewLocals = new System.Windows.Forms.ListView();
+			this.ColumnName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+			this.ColumnValue = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
 			this.StatusStrip.SuspendLayout();
 			this.ToolStripExec.SuspendLayout();
 			this.ToolStripContainer.ContentPanel.SuspendLayout();
@@ -83,6 +90,7 @@
 			this.RightTabs.SuspendLayout();
 			this.TabPageCallstack.SuspendLayout();
 			this.toolStrip1.SuspendLayout();
+			this.TabPageLocals.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// AssemblyCodePanel
@@ -291,7 +299,7 @@
 			this.SourceTab.Location = new System.Drawing.Point(4, 22);
 			this.SourceTab.Margin = new System.Windows.Forms.Padding(0);
 			this.SourceTab.Name = "SourceTab";
-			this.SourceTab.Size = new System.Drawing.Size(845, 396);
+			this.SourceTab.Size = new System.Drawing.Size(845, 384);
 			this.SourceTab.TabIndex = 1;
 			this.SourceTab.Text = "Source";
 			this.SourceTab.UseVisualStyleBackColor = true;
@@ -328,46 +336,56 @@
 			// 
 			// TabPageRegisters
 			// 
-			this.TabPageRegisters.Controls.Add(this.listView1);
+			this.TabPageRegisters.Controls.Add(this.RegisterListView);
 			this.TabPageRegisters.Location = new System.Drawing.Point(4, 4);
+			this.TabPageRegisters.Margin = new System.Windows.Forms.Padding(0);
 			this.TabPageRegisters.Name = "TabPageRegisters";
-			this.TabPageRegisters.Padding = new System.Windows.Forms.Padding(3);
 			this.TabPageRegisters.Size = new System.Drawing.Size(404, 128);
 			this.TabPageRegisters.TabIndex = 0;
 			this.TabPageRegisters.Text = "Registers";
 			this.TabPageRegisters.UseVisualStyleBackColor = true;
 			// 
-			// listView1
+			// RegisterListView
 			// 
-			this.listView1.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.listView1.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.ColumnHeaderRegName,
-            this.ColumnHeaderRegValue});
-			this.listView1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.listView1.Location = new System.Drawing.Point(3, 3);
-			this.listView1.Name = "listView1";
-			this.listView1.Size = new System.Drawing.Size(398, 122);
-			this.listView1.TabIndex = 0;
-			this.listView1.UseCompatibleStateImageBehavior = false;
-			this.listView1.View = System.Windows.Forms.View.Details;
+			this.RegisterListView.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.RegisterListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.ColumnHeaderRegNameA,
+            this.ColumnHeaderRegValueA,
+            this.ColumnHeaderRegNameB,
+            this.ColumnHeaderRegValueB,
+            this.ColumnHeaderRegNameC,
+            this.ColumnHeaderRegValueC});
+			this.RegisterListView.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.RegisterListView.Location = new System.Drawing.Point(0, 0);
+			this.RegisterListView.Name = "RegisterListView";
+			this.RegisterListView.Size = new System.Drawing.Size(404, 128);
+			this.RegisterListView.TabIndex = 0;
+			this.RegisterListView.UseCompatibleStateImageBehavior = false;
+			this.RegisterListView.View = System.Windows.Forms.View.Details;
 			// 
-			// ColumnHeaderRegName
+			// ColumnHeaderRegNameA
 			// 
-			this.ColumnHeaderRegName.Text = "Name";
+			this.ColumnHeaderRegNameA.Text = "Name";
 			// 
-			// ColumnHeaderRegValue
+			// ColumnHeaderRegValueA
 			// 
-			this.ColumnHeaderRegValue.Text = "Value";
+			this.ColumnHeaderRegValueA.Text = "Value";
 			// 
-			// TabPageLocals
+			// ColumnHeaderRegNameB
 			// 
-			this.TabPageLocals.Location = new System.Drawing.Point(4, 4);
-			this.TabPageLocals.Name = "TabPageLocals";
-			this.TabPageLocals.Padding = new System.Windows.Forms.Padding(3);
-			this.TabPageLocals.Size = new System.Drawing.Size(404, 116);
-			this.TabPageLocals.TabIndex = 1;
-			this.TabPageLocals.Text = "Locals";
-			this.TabPageLocals.UseVisualStyleBackColor = true;
+			this.ColumnHeaderRegNameB.Text = "Name";
+			// 
+			// ColumnHeaderRegValueB
+			// 
+			this.ColumnHeaderRegValueB.Text = "Value";
+			// 
+			// ColumnHeaderRegNameC
+			// 
+			this.ColumnHeaderRegNameC.Text = "Name";
+			// 
+			// ColumnHeaderRegValueC
+			// 
+			this.ColumnHeaderRegValueC.Text = "Value";
 			// 
 			// RightTabs
 			// 
@@ -384,8 +402,8 @@
 			// 
 			this.TabPageCallstack.Controls.Add(this.CallStackListView);
 			this.TabPageCallstack.Location = new System.Drawing.Point(4, 4);
+			this.TabPageCallstack.Margin = new System.Windows.Forms.Padding(0);
 			this.TabPageCallstack.Name = "TabPageCallstack";
-			this.TabPageCallstack.Padding = new System.Windows.Forms.Padding(3);
 			this.TabPageCallstack.Size = new System.Drawing.Size(431, 128);
 			this.TabPageCallstack.TabIndex = 0;
 			this.TabPageCallstack.Text = "Call Stack";
@@ -399,9 +417,10 @@
             this.ColumnHeaderN,
             this.ColumnHeaderLocation});
 			this.CallStackListView.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.CallStackListView.Location = new System.Drawing.Point(3, 3);
+			this.CallStackListView.FullRowSelect = true;
+			this.CallStackListView.Location = new System.Drawing.Point(0, 0);
 			this.CallStackListView.Name = "CallStackListView";
-			this.CallStackListView.Size = new System.Drawing.Size(425, 122);
+			this.CallStackListView.Size = new System.Drawing.Size(431, 128);
 			this.CallStackListView.TabIndex = 0;
 			this.CallStackListView.UseCompatibleStateImageBehavior = false;
 			this.CallStackListView.View = System.Windows.Forms.View.Details;
@@ -434,7 +453,8 @@
 			this.SourceFileButton.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.SourceFileButton.Name = "SourceFileButton";
 			this.SourceFileButton.Size = new System.Drawing.Size(23, 22);
-			this.SourceFileButton.Text = "Source File";
+			this.SourceFileButton.Text = "Open Symbols";
+			this.SourceFileButton.Click += new System.EventHandler(this.SourceFileButton_Click);
 			// 
 			// DebugInfoButton
 			// 
@@ -447,6 +467,41 @@
 			this.DebugInfoButton.Size = new System.Drawing.Size(23, 22);
 			this.DebugInfoButton.Text = "Show Debug Info";
 			this.DebugInfoButton.Click += new System.EventHandler(this.DebugInfoButton_Click);
+			// 
+			// TabPageLocals
+			// 
+			this.TabPageLocals.Controls.Add(this.ListViewLocals);
+			this.TabPageLocals.Location = new System.Drawing.Point(4, 4);
+			this.TabPageLocals.Margin = new System.Windows.Forms.Padding(0);
+			this.TabPageLocals.Name = "TabPageLocals";
+			this.TabPageLocals.Size = new System.Drawing.Size(404, 128);
+			this.TabPageLocals.TabIndex = 1;
+			this.TabPageLocals.Text = "Locals";
+			this.TabPageLocals.UseVisualStyleBackColor = true;
+			// 
+			// ListViewLocals
+			// 
+			this.ListViewLocals.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.ListViewLocals.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.ColumnName,
+            this.ColumnValue});
+			this.ListViewLocals.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.ListViewLocals.Location = new System.Drawing.Point(0, 0);
+			this.ListViewLocals.Name = "ListViewLocals";
+			this.ListViewLocals.Size = new System.Drawing.Size(404, 128);
+			this.ListViewLocals.TabIndex = 0;
+			this.ListViewLocals.UseCompatibleStateImageBehavior = false;
+			this.ListViewLocals.View = System.Windows.Forms.View.Details;
+			// 
+			// ColumnName
+			// 
+			this.ColumnName.Text = "Name";
+			this.ColumnName.Width = 90;
+			// 
+			// ColumnValue
+			// 
+			this.ColumnValue.Text = "Value";
+			this.ColumnValue.Width = 111;
 			// 
 			// MainWindow
 			// 
@@ -483,6 +538,7 @@
 			this.TabPageCallstack.ResumeLayout(false);
 			this.toolStrip1.ResumeLayout(false);
 			this.toolStrip1.PerformLayout();
+			this.TabPageLocals.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -517,13 +573,20 @@
 		private System.Windows.Forms.ColumnHeader ColumnHeaderN;
 		private System.Windows.Forms.TabControl TabControlVariables;
 		private System.Windows.Forms.TabPage TabPageRegisters;
-		private System.Windows.Forms.TabPage TabPageLocals;
-		private System.Windows.Forms.ListView listView1;
-		private System.Windows.Forms.ColumnHeader ColumnHeaderRegName;
-		private System.Windows.Forms.ColumnHeader ColumnHeaderRegValue;
+		private System.Windows.Forms.ListView RegisterListView;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegNameA;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegValueA;
 		private System.Windows.Forms.TabControl RightTabs;
 		private System.Windows.Forms.TabPage TabPageCallstack;
 		private System.Windows.Forms.ColumnHeader ColumnHeaderLocation;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegNameB;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegValueB;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegNameC;
+		private System.Windows.Forms.ColumnHeader ColumnHeaderRegValueC;
+		private System.Windows.Forms.TabPage TabPageLocals;
+		private System.Windows.Forms.ListView ListViewLocals;
+		private System.Windows.Forms.ColumnHeader ColumnName;
+		private System.Windows.Forms.ColumnHeader ColumnValue;
 	}
 }
 

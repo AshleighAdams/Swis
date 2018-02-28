@@ -180,14 +180,19 @@ namespace Swis
 				"<rc:c> [*] <rc:d> [+] <rc:a>");  // from: c * d + a
 
 			named_patterns["forms"] = pattern_compile_optional_whitespace("<a:a>|<b:b>|<c:c>|<d:d>|<d1:d1>|<d2:d2>");
-			
+
 			//named_patterns["___"] = Util.PatternCompile(___, named_patterns);
-			
-			DebugData dbg = new DebugData();
-			dbg.PtrToAsm = new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
-			dbg.AsmToSrc = new Dictionary<uint, (string file, int from, int to)>();
-			dbg.Labels = new Dictionary<string, uint>();
-			
+
+			DebugData dbg = new DebugData
+			{
+				AssemblySource = asm,
+				AssemblySourceFile = false,
+				PtrToAsm = new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>(),
+				AsmToSrc = new Dictionary<uint, (string file, int from, int to)>(),
+				Labels = new Dictionary<string, uint>(),
+				SourceFunctions = new Dictionary<string, (uint loc, List<(string local, int bp_offset, uint size, string typehint)> locals)>()
+			};
+
 			string[] lines = asm.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 			List<byte> bin = new List<byte>();
 
@@ -252,7 +257,8 @@ namespace Swis
 				default: throw new Exception($"{linenum}: data hex has an invalid nybble");
 				}
 			}
-			
+
+			string source_function = null;
 
 			while (true)
 			{
@@ -278,14 +284,35 @@ namespace Swis
 						bin.AddRange(new byte[bytes]);
 					}
 				}
-				else if ((m = line.Match(@"^\s*\.loc \s+ (\d+) \s+ (\d+) \s+ (.+) \s* $")).Success)
+				else if ((m = line.Match(@"^\s*\.src loc \s+ (\d+) \s+ (\d+) \s+ (.+) \s* $")).Success)
 				{
 					int locpos = int.Parse(m.Groups[1].Value);
 					int locto = int.Parse(m.Groups[2].Value);
 					string locfile = m.Groups[3].Value;
-					
 
 					dbg.AsmToSrc.Add((uint)bin.Count, (locfile, locpos, locto));
+				}
+				else if ((m = line.Match(@"^\s*\.src \s+ func \s+ ""([^""]+)""\s*$")).Success)
+				{
+					string funcname = m.Groups[1].Value;
+
+					source_function = funcname;
+					dbg.SourceFunctions[funcname] = ((uint)bin.Count, new List<(string, int, uint, string)>());
+				}
+				else if ((m = line.Match(@"^\s*\.src \s+ local \s+ ""([^""]+)"" \s+ ""([^""]+)"" \s+ ([0-9\-]+) \s+ ([0-9]+)\s*$")).Success)
+				{
+					if (source_function == null || !dbg.SourceFunctions.ContainsKey(source_function))
+						throw new Exception(".src local requires a preceding .src func");
+					string localname = m.Groups[1].Value;
+					string typehint = m.Groups[2].Value;
+					int bp_offset = int.Parse(m.Groups[3].Value);
+					uint size = uint.Parse(m.Groups[4].Value);
+
+					dbg.SourceFunctions[source_function].locals.Add((localname, bp_offset, size, typehint));
+				}
+				else if ((m = line.Match(@"^\s*\.src")).Success)
+				{
+					throw new Exception("invalid src directive.");
 				}
 				else if ((m = line.Match(@"^\s*\.data \s+ ([A-Za-z][A-Za-z0-9]*) \s+ (.+)")).Success)
 				{
@@ -313,32 +340,38 @@ namespace Swis
 							bin.Add((byte)((read_nybble(value[n + 0]) << 4) | (read_nybble(value[n + 1]) << 0)));
 						break;
 
-					case "int32": case "i32":
+					case "int32":
+					case "i32":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.I32 = Int32.Parse(value);
 						goto four_bytes;
-					case "int16": case "i16":
+					case "int16":
+					case "i16":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.I32 = Int16.Parse(value);
 						goto two_bytes;
-					case "int8": case "i8":
+					case "int8":
+					case "i8":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.I32 = SByte.Parse(value);
 						goto one_byte;
 
-					case "uint32": case "u32":
+					case "uint32":
+					case "u32":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.U32 = UInt32.Parse(value);
 						goto four_bytes;
-					case "uint16": case "u16":
+					case "uint16":
+					case "u16":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.U32 = UInt16.Parse(value);
 						goto two_bytes;
-					case "uint8": case "u8":
+					case "uint8":
+					case "u8":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
 						c.U32 = Byte.Parse(value);
 						goto one_byte;
-						
+
 					case "float":
 						dbginfo.Item4 = DebugData.AsmPtrType.DataFloat;
 						c.F32 = float.Parse(value);
@@ -367,14 +400,14 @@ namespace Swis
 						}
 						break;
 
-					one_byte:
+						one_byte:
 						bin.Add(c.ByteA);
 						break;
-					two_bytes:
+						two_bytes:
 						bin.Add(c.ByteA);
 						bin.Add(c.ByteB);
 						break;
-					four_bytes:
+						four_bytes:
 						bin.Add(c.ByteA);
 						bin.Add(c.ByteB);
 						bin.Add(c.ByteC);
@@ -414,7 +447,7 @@ namespace Swis
 
 						oa = Regex.Replace(oa, @"-(\s*)\-([0-9])", "+$1$2");
 						oa = Regex.Replace(oa, @"(?<!^\s*)\-(\s*)([0-9])", "+$1-$2");
-						
+
 						dbg.PtrToAsm[(uint)bin.Count] = ("[string]", oa_pos, oa_to, DebugData.AsmPtrType.Operand);
 
 						// encode the operand
@@ -430,7 +463,7 @@ namespace Swis
 							uint addressing_mode = 0;
 							uint indirection_size = 0;
 							uint segmentid = 0;
-							
+
 							#region Parse operand
 							{
 								string operanducmp = @"^ ((<alphanumeric:segment> :)? <forms:form> |(?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[) <forms:form> \]) $";
@@ -459,7 +492,7 @@ namespace Swis
 									uint first = (uint)NamedRegister.StackSegment - 1;
 									switch (((string)match.segment).ToLowerInvariant())
 									{
-									case "":   segmentid = 0; break;
+									case "": segmentid = 0; break;
 									case "ss": segmentid = (uint)NamedRegister.StackSegment - first; break;
 									case "cs": segmentid = (uint)NamedRegister.CodeSegment - first; break;
 									case "ds": segmentid = (uint)NamedRegister.DataSegment - first; break;
@@ -583,12 +616,12 @@ namespace Swis
 							uint enc_indir_size = indirection_size > 0u ? (uint)(Math.Log(indirection_size, 2) - (3 - 1)) : 0u;
 
 							byte master = (byte)(0
-								| ((enc_indir_size  & 0b111) << 5)
-								| ((addressing_mode & 0b11)  << 3)
-								| ((segmentid       & 0b111) << 0)
+								| ((enc_indir_size & 0b111) << 5)
+								| ((addressing_mode & 0b11) << 3)
+								| ((segmentid & 0b111) << 0)
 							);
 							bin.Add(master);
-							
+
 							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string const_placeholder)
 							{
 								if (regsz == 0)
@@ -629,7 +662,7 @@ namespace Swis
 										extrad = (byte)(@const & 0b1111_1111);
 										@const = @const >> 8;
 									}
-									
+
 									uint enc_xtr;
 
 									switch (extra)
@@ -642,10 +675,10 @@ namespace Swis
 									}
 
 									byte constbyte = (byte)(0
-										| ((1          & 0b1)     << 7) // is_constant
-										| ((enc_xtr    & 0b11)    << 5) // extra_bytes
-										| ((0          & 0b1)     << 4) // reserved sign_extend
-										| ((value4bits & 0b1111)  << 0) // value
+										| ((1 & 0b1) << 7) // is_constant
+										| ((enc_xtr & 0b11) << 5) // extra_bytes
+										| ((0 & 0b1) << 4) // reserved sign_extend
+										| ((value4bits & 0b1111) << 0) // value
 									);
 									bin.Add(constbyte);
 
@@ -665,9 +698,9 @@ namespace Swis
 								{
 									uint enc_rsz = (uint)(Math.Log(regsz, 2) - 3);
 									byte registerbyte = (byte)(0
-										| ((0       & 0b1)     << 7) // is_constant
-										| ((regid   & 0b11111) << 2)
-										| ((enc_rsz & 0b11)    << 0)
+										| ((0 & 0b1) << 7) // is_constant
+										| ((regid & 0b11111) << 2)
+										| ((enc_rsz & 0b11) << 0)
 									);
 									bin.Add(registerbyte);
 								}

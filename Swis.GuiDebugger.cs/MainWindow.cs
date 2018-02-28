@@ -60,8 +60,33 @@ namespace Swis.GuiDebugger.cs
 
 		Scintilla TextArea;
 		TcpListener Listener = new TcpListener(IPAddress.Any, 1337);
-		DebugData DebugInfo = null;
+
+		DebugData _Info;
+		DebugData DebugInfo
+		{
+			get
+			{
+				return this._Info;
+			}
+			set
+			{
+				this._Info = value;
+
+				this.TextArea.ReadOnly = false;
+				this.TextArea.Text = value.AssemblySource;
+
+				this.AsmToPtr = new Dictionary<int, uint>();
+				foreach (var kv in this.DebugInfo.PtrToAsm)
+					this.AsmToPtr[kv.Value.from] = kv.Key;
+
+				this.TextArea.ReadOnly = true;
+			}
+		}
 		Dictionary<int, uint> AsmToPtr = null;
+
+		uint? StackBase = null;
+		byte[] StackData = new byte[128];
+		uint[] Registers = new uint[32];
 
 		Action<string> ConnectionWriter = null;
 		void ListenThread()
@@ -99,27 +124,49 @@ namespace Swis.GuiDebugger.cs
 						while (true)
 						{
 							string registers = r.ReadLine();
+							string stack = r.ReadLine();
 							string instruction = r.ReadLine();
+							
+							Regex.Replace(registers, "([0-9]+): 0x([a-zA-Z0-9]+)", 
+								delegate(Match m)
+								{
+									uint regid = uint.Parse(m.Groups[1].Value);
+									uint value = Convert.ToUInt32(m.Groups[2].Value, 16);
+									this.Registers[regid] = value;
+									return m.Value;
+								}
+							);
 
-							Match m = Regex.Match(registers, $"{(uint)NamedRegister.InstructionPointer}: 0x(?<ip>[a-zA-Z0-9]+)");
+							if (stack == "")
+							{ }
+							else if (stack == "=")
+							{ }
+							else
+							{
+								Match m = Regex.Match(stack, @"([0-9]+)\+([0-9]+): (.+)");
+								this.StackBase = uint.Parse(m.Groups[1].Value);
+								int index = int.Parse(m.Groups[2].Value);
 
-							string iphex = m.Success ? m.Groups["ip"].Value : "0";
-							uint ip = Convert.ToUInt32(iphex, 16);
+								byte[] data = Convert.FromBase64String(m.Groups[3].Value);
+
+								if (index + data.Length >= this.StackData.Length)
+								{
+									int newsz = this.StackData.Length * 2;
+									while (newsz <= index + data.Length)
+										newsz *= 2;
+									byte[] newdat = new byte[newsz];
+									Buffer.BlockCopy(this.StackData, 0, newdat, 0, this.StackData.Length);
+									for (int i = this.StackData.Length; i < newdat.Length; i++)
+										newdat[i] = 0;
+									this.StackData = newdat;
+								}
+
+								Buffer.BlockCopy(data, 0, this.StackData, index, data.Length);
+							}
 
 							this.Invoke((MethodInvoker)delegate ()
 							{
-								this.Running = false;
-
-								this.TextArea.IndicatorCurrent = INDICATOR_AT;
-								this.TextArea.IndicatorClearRange(0, this.TextArea.TextLength);
-
-								if (this.DebugInfo.PtrToAsm.TryGetValue(ip, out var posinfo))
-								{
-									var line = this.TextArea.Lines[this.TextArea.LineFromPosition(posinfo.from)];
-
-									this.TextArea.IndicatorFillRange(posinfo.from, line.EndPosition - posinfo.from);
-									line.Goto();
-								}
+								this.Clock();
 							});
 						}
 					}
@@ -134,6 +181,169 @@ namespace Swis.GuiDebugger.cs
 				});
 			}
 		}
+		
+		private void Clock()
+		{
+			uint ip = this.Registers[(int)NamedRegister.InstructionPointer];
+			this.Running = false;
+
+			this.TextArea.IndicatorCurrent = INDICATOR_AT;
+			this.TextArea.IndicatorClearRange(0, this.TextArea.TextLength);
+
+			if (this.DebugInfo.PtrToAsm.TryGetValue(ip, out var posinfo))
+			{
+				var line = this.TextArea.Lines[this.TextArea.LineFromPosition(posinfo.from)];
+
+				this.TextArea.IndicatorFillRange(posinfo.from, line.EndPosition - posinfo.from);
+				line.Goto();
+			}
+
+			for (int i = 0; i < 32; i++)
+			{
+				string @new = "0x" + this.Registers[i].ToString("X").ToLowerInvariant();
+
+				
+				this.RegisterViews[i].ForeColor = this.RegisterViews[i].Text != @new ? Color.Red : Color.Black;
+				this.RegisterViews[i].Text = @new;
+			}
+			
+			this.CallStackListView.Items.Clear();
+			{
+				int i = 1;
+				uint at = this.Registers[(int)NamedRegister.InstructionPointer];
+				uint bp = this.Registers[(int)NamedRegister.BasePointer];
+
+				
+
+				(uint loc, List<(string local, int bp_offset, uint size, string typehint)> locals, string name)? ip_to_func(uint pos)
+				{
+					string lbl = null;
+					int dist = int.MaxValue;
+					foreach (var kv in this.DebugInfo.SourceFunctions)
+					{
+						if (kv.Value.loc <= pos && ((int)pos - (int)kv.Value.loc) <= dist)
+						{
+							dist = ((int)pos - (int)kv.Value.loc);
+							lbl = kv.Key;
+						}
+					}
+
+					if (lbl == null || string.IsNullOrWhiteSpace(lbl))
+						return null;
+
+					var ret = this.DebugInfo.SourceFunctions[lbl];
+					return (ret.loc, ret.locals, lbl);
+				};
+
+				string ip_to_asm_label(uint pos)
+				{
+					string lbl = null;
+					int dist = int.MaxValue;
+					foreach (var kv in this.DebugInfo.Labels)
+					{
+						if (kv.Value <= pos  && ((int)pos - (int)kv.Value) <= dist)
+						{
+							dist = ((int)pos - (int)kv.Value);
+							lbl = kv.Key;
+						}
+					}
+					if (lbl == null)
+						return $"0x{pos.ToString("X").ToLowerInvariant()}";
+					return $"{lbl} + 0x{(dist).ToString("X").ToLowerInvariant()}";
+				};
+
+				this.ListViewLocals.Items.Clear();
+
+				while (true)
+				{
+					ListViewItem current = new ListViewItem($"{i++}");
+
+					//this.DebugInfo.SourceFunctions
+
+					string label = "";
+					var func = ip_to_func(at);
+					if (func != null)
+					{
+						label = func.Value.name;
+
+						if (this.StackBase != null)
+						{
+							foreach (var local in func.Value.locals)
+							{
+								ListViewItem lviloc = new ListViewItem(local.local);
+
+								string value = "";
+								int pos = (int)(bp + local.bp_offset - this.StackBase.Value);
+
+								if (local.typehint.EndsWith("*"))
+									value = $"0x{BitConverter.ToUInt32(this.StackData, pos).ToString("X8").ToLowerInvariant()}";
+								else if (local.typehint == "int" || local.typehint == "int32")
+									value = BitConverter.ToInt32(this.StackData, pos).ToString().ToLowerInvariant();
+								else if (local.typehint == "uint" || local.typehint == "uint32")
+									value = BitConverter.ToUInt32(this.StackData, pos).ToString().ToLowerInvariant();
+								else if (local.typehint == "char")
+									value = BitConverter.ToChar(this.StackData, pos).ToString().ToLowerInvariant();
+								else
+									value = "<unknown type>";
+
+								lviloc.SubItems.Add(value);
+								this.ListViewLocals.Items.Add(lviloc);
+							}
+						}
+					}
+					else
+						label = ip_to_asm_label(at);
+
+					current.SubItems.Add(label);
+					this.CallStackListView.Items.Add(current);
+
+					if (this.StackBase == null || bp <= this.StackBase.Value)
+						break;
+
+					at = BitConverter.ToUInt32(this.StackData, (int)(bp - 8 - this.StackBase.Value));
+					bp = BitConverter.ToUInt32(this.StackData, (int)(bp - 4 - this.StackBase.Value));
+				}
+				
+			}
+
+			// update registers
+			//this.RegisterListView.Items.Add(
+		}
+
+		ListViewItem.ListViewSubItem[] RegisterViews;
+		void InitRegisterListView()
+		{
+			this.RegisterViews = new ListViewItem.ListViewSubItem[32];
+
+			int i = 0;
+			while (i < 32)
+			{
+				ListViewItem lvi = null;
+
+				for (int n = 0; n < 3 && i < 32; n++, i++)
+				{
+					string regname = ((NamedRegister)i).Disassemble();
+					if (regname.StartsWith("ukn"))
+					{
+						n--;
+						this.RegisterViews[i] = new ListViewItem.ListViewSubItem();
+						continue;
+					}
+
+					if (i >= (int)NamedRegister.A)
+						regname = $"e{regname}x";
+
+					if(lvi == null)
+						lvi = new ListViewItem(regname);
+					else
+						lvi.SubItems.Add(regname);
+
+					this.RegisterViews[i] = lvi.SubItems.Add("0x0");
+				}
+				lvi.UseItemStyleForSubItems = false;
+				this.RegisterListView.Items.Add(lvi);
+			}
+		}
 
 		private void MainWindow_Load(object sender, EventArgs e)
 		{
@@ -143,21 +353,13 @@ namespace Swis.GuiDebugger.cs
 				Margin = Padding.Empty,
 				BorderStyle = BorderStyle.None,
 			};
-
-
-			this.TextArea.ReadOnly = false;
-			this.TextArea.Text = File.ReadAllText(@"C:\Users\Ashleigh\Documents\GitHub\Swis\Test\TestProgram\program.asm");
-			this.DebugInfo = DebugData.Deserialize(File.ReadAllText(@"C:\Users\Ashleigh\Documents\GitHub\Swis\Test\TestProgram\program.dbg"));
-
-			this.AsmToPtr = new Dictionary<int, uint>();
-			foreach (var kv in this.DebugInfo.PtrToAsm)
-				this.AsmToPtr[kv.Value.from] = kv.Key;
-
-			this.TextArea.ReadOnly = true;
+			
 			this.AssemblyCodePanel.Controls.Add(this.TextArea);
 
 			this.Running = false;
 			this.Connected = false;
+
+			this.InitRegisterListView();
 
 			// INITIAL VIEW CONFIG
 			this.TextArea.WrapMode = WrapMode.None;
@@ -479,6 +681,21 @@ namespace Swis.GuiDebugger.cs
 		{
 			this.CodeInfoSplitContainer.Panel2Collapsed = !this.CodeInfoSplitContainer.Panel2Collapsed;
 			this.DebugInfoButton.Checked = !this.CodeInfoSplitContainer.Panel2Collapsed;
+		}
+
+		private void SourceFileButton_Click(object sender, EventArgs e)
+		{
+			OpenFileDialog ofd = new OpenFileDialog
+			{
+				AddExtension = true,
+				DefaultExt = "dbg",
+				Filter = "Debug Symbols (*.dbg) | *.dbg; | All Files (*.*) | *.*;",
+				Multiselect = false,
+				CheckFileExists = true
+			};
+
+			if (ofd.ShowDialog() == DialogResult.OK)
+				this.DebugInfo = DebugData.Deserialize(File.ReadAllText(ofd.FileName));
 		}
 	}
 }

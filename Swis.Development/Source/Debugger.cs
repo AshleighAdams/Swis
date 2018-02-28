@@ -18,6 +18,7 @@ namespace Swis
 		ConcurrentDictionary<uint, bool> Breakpoints = new ConcurrentDictionary<uint, bool>();
 		uint? RunUntil = null;
 		uint? BasePtrSmaller = null;
+		uint? StackBottom = null;
 		bool Step = false;
 
 		WeakReference<Cpu> Cpu = null; // for halt and reset
@@ -94,11 +95,14 @@ namespace Swis
 		}
 
 		uint[] _LastValues;
-		
+		byte[] _LastStack;
+
 		public override bool Clock(Cpu cpu)
 		{
 			if (this.Cpu == null)
 				this.Cpu = new WeakReference<Cpu>(cpu);
+			if (this.StackBottom == null && cpu.StackPointer != 0)
+				this.StackBottom = cpu.StackPointer;
 
 			// if we're paused, wait for instruction
 			bool step = false;
@@ -203,6 +207,55 @@ namespace Swis
 					this.WriteLine($"{sb}");
 					sb.Clear();
 				}
+				// write the stack
+				{
+					if (this.StackBottom == null)
+						this.WriteLine(""); // stack not yet set up
+					else
+					{
+						if (this._LastStack == null)
+							this._LastStack = new byte[128];
+
+						uint sbtm = this.StackBottom.Value;
+						uint sptr = cpu.StackPointer - sbtm;
+
+						if (sptr >= this._LastStack.Length)
+						{
+							int newsz = this._LastStack.Length * 2;
+							while (newsz <= sptr)
+								newsz *= 2;
+							byte[] newls = new byte[newsz];
+							Buffer.BlockCopy(this._LastStack, 0, newls, 0, this._LastStack.Length);
+							for (int i = this._LastStack.Length; i < newls.Length; i++)
+								newls[i] = 0;
+							this._LastStack = newls;
+						}
+
+						int index = -1;
+						int length = 0;
+
+						for (int i = 0; i < sptr; i++)
+						{
+							byte mem = cpu.Memory[sbtm + (uint)i];
+							if (this._LastStack[i] != mem)
+							{
+								if (index == -1)
+									index = i;
+								length = (i - index) + 1;
+								this._LastStack[i] = mem;
+							}
+						}
+
+						if (length != 0)
+						{
+							string base64 = Convert.ToBase64String(this._LastStack, index, length, Base64FormattingOptions.None);
+							this.WriteLine($"{sbtm}+{index}: {base64}");
+						}
+						else
+							this.WriteLine($"=");
+					}
+				}
+				
 				// write the instruction
 				{
 					uint original_ip = cpu.InstructionPointer;
@@ -228,6 +281,9 @@ namespace Swis
 	[Serializable]
 	public class DebugData
 	{
+		public bool AssemblySourceFile;
+		public string AssemblySource;
+
 		[Serializable]
 		public enum AsmPtrType
 		{
@@ -249,6 +305,7 @@ namespace Swis
 
 		// for asm disasm
 		public Dictionary<string, uint> Labels;
+		public Dictionary<string, (uint loc, List<(string local, int bp_offset, uint size, string typehint)> locals)> SourceFunctions;
 
 		public static string Serialize(DebugData data)
 		{

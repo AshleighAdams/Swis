@@ -57,6 +57,8 @@ $@main:
 	$main_ret:
 	ret
 
+.src func "void puts(char*)"
+.src local "str" "int8*" -12 4
 $puts:
 	; ptr = -12
 	mov eax, [ebp - 12]
