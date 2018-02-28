@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Development", "Swis.Development\Swis.Development.csproj", "{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Swis.GuiDebugger.cs", "Swis.GuiDebugger.cs\Swis.GuiDebugger.cs.csproj", "{049B63C7-E967-4C8E-B995-1D820625ED19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{049B63C7-E967-4C8E-B995-1D820625ED19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{049B63C7-E967-4C8E-B995-1D820625ED19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{049B63C7-E967-4C8E-B995-1D820625ED19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{049B63C7-E967-4C8E-B995-1D820625ED19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
