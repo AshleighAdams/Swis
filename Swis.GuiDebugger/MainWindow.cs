@@ -251,6 +251,11 @@ namespace Swis.GuiDebugger.cs
 						return $"0x{pos.ToString("X").ToLowerInvariant()}";
 					return $"{lbl} + 0x{(dist).ToString("X").ToLowerInvariant()}";
 				};
+				
+				this.SuspendLayout();
+				this.RegisterListView.SuspendLayout();
+				this.ListViewLocals.SuspendLayout();
+				this.CallStackListView.SuspendLayout();
 
 				this.ListViewLocals.Items.Clear();
 
@@ -303,7 +308,11 @@ namespace Swis.GuiDebugger.cs
 					at = BitConverter.ToUInt32(this.StackData, (int)(bp - 8 - this.StackBase.Value));
 					bp = BitConverter.ToUInt32(this.StackData, (int)(bp - 4 - this.StackBase.Value));
 				}
-				
+
+				this.RegisterListView.ResumeLayout();
+				this.ListViewLocals.ResumeLayout();
+				this.CallStackListView.ResumeLayout();
+				this.ResumeLayout();
 			}
 
 			// update registers

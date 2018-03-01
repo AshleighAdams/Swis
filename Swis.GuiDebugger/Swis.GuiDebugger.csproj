@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{049B63C7-E967-4C8E-B995-1D820625ED19}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Swis.GuiDebugger.cs</RootNamespace>
-    <AssemblyName>Swis.GuiDebugger.cs</AssemblyName>
+    <RootNamespace>Swis.GuiDebugger</RootNamespace>
+    <AssemblyName>Swis.GuiDebugger</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -64,6 +64,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

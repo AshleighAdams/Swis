@@ -6,6 +6,13 @@
 -nostdsysteminc
 -fnew-alignment=<align>*/
 
+void display()
+{
+	asm(".align 1024"); // make sure we're at 1024
+	asm(".data pad 12288"); // then allocate us 64*64*3 global bytes
+}
+
+/*
 void reverse(char str[], int length)
 {
 	int start = 0;
@@ -59,6 +66,20 @@ char* itoa(int num, char* str, int base)
 	return str;
 }
 
+#define RAND_MAX 32767
+static unsigned int next = 1;
+int rand(void) // RAND_MAX assumed to be 32767
+{
+	next = 1103515245 * next + 12345;
+	return (unsigned int)(next / ((RAND_MAX + 1) * 2)) % (RAND_MAX + 1);
+}
+void srand(unsigned int seed)
+{
+	next = seed;
+}
+
+*/
+
 void out(unsigned int port, unsigned char val)
 {
 	// https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
@@ -67,7 +88,7 @@ void out(unsigned int port, unsigned char val)
 	// X = any operand
 	asm("out %0, %1"
 		:                     // outputs
-	: "X"(port), "X"(val) // inputs
+		: "X"(port), "X"(val) // inputs
 		:                     // valid registers
 		);
 }
@@ -87,7 +108,7 @@ void put(char c)
 {
 	asm("out 0, %0"
 		:        // outputs
-	: "X"(c) // inputs
+		: "X"(c) // inputs
 		:        // valid registers
 		);
 }
@@ -99,43 +120,24 @@ void puts(const char* str)
 		str++;
 	}
 }
-#define RAND_MAX 32767
-static unsigned int next = 1;
-int rand(void) // RAND_MAX assumed to be 32767
-{
-	next = 1103515245 * next + 12345;
-	return (unsigned int)(next / ((RAND_MAX + 1) * 2)) % (RAND_MAX + 1);
-}
-void srand(unsigned int seed)
-{
-	next = seed;
-}
 
-bool is_prime(int x)
+struct pixel
 {
-	if (x == 1)
-		return 0;
-	if (x == 2)
-		return 1;
-	for (int i = 2; i * i <= x; i++)
-		if (x % i == 0)
-			return 0;
-	return 1;
-}
+	unsigned char r, g, b;
+};
 
 int main()
 {
-	puts("primes, 1-100000: \n");
+	pixel* display = (pixel*)1024;
 
-	char output[sizeof(int) * 8 + 1];
-	for (int i = 1; i <= 10000; i++)
-		if (is_prime(i))
+	for (int y = 0; y < 64; y++)
+		for (int x = 0; x < 64; x++)
 		{
-			itoa(i, output, 10);
-			puts(output);
-			put(' ');
+			pixel& pix = display[y * 64 + x];
+			pix.r = x;
+			pix.g = 0;
+			pix.b = y;
 		}
 
-	put('\n');
 	return 0;
 }
