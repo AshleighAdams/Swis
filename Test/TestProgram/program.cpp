@@ -139,5 +139,8 @@ int main()
 			pix.b = y;
 		}
 
+	char msg[] = "We have written everything to the display!";
+	puts(msg);
+
 	return 0;
 }

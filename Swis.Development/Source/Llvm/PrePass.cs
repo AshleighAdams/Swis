@@ -38,11 +38,14 @@ namespace Swis
 						var alloc = output.Code.IndexOf(argalloc);
 						var store = output.Code.IndexOf(argstore);
 
+						if (alloc == -1 || store == -1)
+							continue;
+
 						var allocend = output.Code.IndexOf('\n', alloc);
 						var storeend = output.Code.IndexOf('\n', store);
 
-						if (alloc == -1 || store == -1 || allocend == -1 || storeend == -1)
-							throw new Exception();
+						if (allocend == -1 || storeend == -1)
+							continue;
 
 						// remove it
 						output.Code = output.Code.Remove(store, storeend - store);

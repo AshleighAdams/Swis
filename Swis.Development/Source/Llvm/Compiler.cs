@@ -196,7 +196,38 @@ namespace Swis
 			                    $"	.data pad 1024\n";
 			
 
-			return bootloader + all.ToString() + postcode;
+			return bootloader + all.ToString() + LlvmIntrinsics + postcode;
 		}
+
+		const string LlvmIntrinsics = @"
+
+$@llvm.memcpy.p0i8.p0i8.i32:
+        .src func ""void llvm.memcpy.p0i8.p0i8.i32(i8* dst, i8* src, i32 len, i32 align, i8 isvolatile)""
+        .src local ""i"" ""i32"" 0 4
+        .src local ""isvolatile"" ""i8"" -9 1
+        .src local ""align"" ""i32"" -13 4
+        .src local ""len"" ""i32"" -17 4
+        .src local ""src"" ""i8*"" -21 4
+        .src local ""dst"" ""i8*"" -25 4
+
+		add esp, esp, 4 ; alloca
+		mov ptr32 [ebp + 0], 0
+
+        $@llvm.memcpy.p0i8.p0i8.i32_loop:
+        cmp ptr32 [ebp + 0], ptr32 [ebp - 17]
+		jge $@llvm.memcpy.p0i8.p0i8.i32_end
+
+        mov eax, ptr32 [ebp - 21]
+		mov ebx, ptr32 [ebp - 25]
+		mov edx, ptr32 [ebp + 0]
+
+		mov ptr8 [ebx + edx], ptr8 [eax + edx]
+
+        add ptr32 [ebp + 0], ptr32 [ebp + 0], 1
+		jmp $@llvm.memcpy.p0i8.p0i8.i32_loop
+        $@llvm.memcpy.p0i8.p0i8.i32_end:
+        ret
+
+";
 	}
 }

@@ -71,7 +71,7 @@ namespace SwisTest
 			int total_clocks = 0;
 			while (!cpu.Halted)
 			{
-				int clocks = 1;// target_frequency / tickrate;
+				int clocks = 100;// target_frequency / tickrate;
 				total_clocks += cpu.Clock(clocks);
 
 				System.Threading.Thread.Sleep(16);
@@ -194,7 +194,7 @@ $stack:
 
 			string asm = null;
 
-			//asm = IrCompileTest();
+			asm = IrCompileTest();
 			ExecuteTest(asm);
 
 			//TestJit();
