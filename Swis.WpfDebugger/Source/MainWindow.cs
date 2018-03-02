@@ -27,6 +27,45 @@ namespace Swis.WpfDebugger
 {
 	public partial class MainWindow : System.Windows.Window
 	{
+		string VisualizeValue(uint stack_base, uint base_ptr, int bp_offset, string type)
+		{
+			int pos = (int)(base_ptr + bp_offset - stack_base);
+			uint stack_ptr = this.Registers[(int)NamedRegister.StackPointer] - stack_base;
+
+			if (pos > stack_ptr || pos < 0)
+				return "<not in stack>";
+
+			if (type.EndsWith("*"))
+			{
+				uint ptr = BitConverter.ToUInt32(this.StackData, pos);
+
+				if (ptr > stack_base && ptr < stack_base + stack_ptr)
+				{
+					return $"0x{ptr.ToString("X").ToLowerInvariant()}: {this.VisualizeValue(stack_base, base_ptr, (int)(stack_base + bp_offset - pos), type.Substring(0, type.Length-1))}";
+				}
+				else
+					return $"0x{ptr.ToString("X").ToLowerInvariant()}";
+			}
+
+			//if (type == "char*" || type == "i8*")
+			//{
+			//	// see if the value falls on the stack
+			//	StringBuilder ret = new StringBuilder();
+			//	for (int i = pos; i < 128 && i < stack_ptr && this.StackData[i] != '\0'; i++)
+			//		ret.Append((char)this.StackData[i]);
+			//	return ret.ToString();
+			//}
+				
+			else if (type == "int" || type == "int32" || type == "i32")
+				return BitConverter.ToInt32(this.StackData, pos).ToString().ToLowerInvariant();
+			else if (type == "uint" || type == "uint32" || type == "u32")
+				return BitConverter.ToUInt32(this.StackData, pos).ToString().ToLowerInvariant();
+			else if (type == "char" || type == "i8")
+				return ((char)this.StackData[pos]).ToString();
+
+			return "?";
+		}
+
 		ScintillaWPF AssemblyEditor;
 		DebugData _Dbg = null;
 		DebugData DebugInfo
@@ -189,19 +228,8 @@ namespace Swis.WpfDebugger
 									CallLevel = $"{n}: {label}",
 								};
 								
-								int pos = (int)(bp + local.bp_offset - this.StackBase.Value);
-
-								if (local.typehint.EndsWith("*"))
-									lviloc.Value = $"0x{BitConverter.ToUInt32(this.StackData, pos).ToString("X8").ToLowerInvariant()}";
-								else if (local.typehint == "int" || local.typehint == "int32" || local.typehint == "i32")
-									lviloc.Value = BitConverter.ToInt32(this.StackData, pos).ToString().ToLowerInvariant();
-								else if (local.typehint == "uint" || local.typehint == "uint32" || local.typehint == "u32")
-									lviloc.Value = BitConverter.ToUInt32(this.StackData, pos).ToString().ToLowerInvariant();
-								else if (local.typehint == "char" || local.typehint == "i8")
-									lviloc.Value = BitConverter.ToChar(this.StackData, pos).ToString().ToLowerInvariant();
-								else
-									lviloc.Value = "<unknown type>";
-
+								lviloc.Value = this.VisualizeValue(this.StackBase.Value, bp, local.bp_offset, local.typehint);
+								
 								this.ListLocals.Add(lviloc);
 							}
 						}
