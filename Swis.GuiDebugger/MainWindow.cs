@@ -95,12 +95,7 @@ namespace Swis.GuiDebugger.cs
 			while (true)
 			{
 				TcpClient cl = this.Listener.AcceptTcpClient();
-
-				this.Invoke((MethodInvoker)delegate ()
-				{
-					this.StatusLabel.Text = $"Connected to {cl.Client.RemoteEndPoint}";
-				});
-
+				
 				var w = new StreamWriter(cl.GetStream());
 				this.ConnectionWriter = delegate (string cmd)
 				{
@@ -117,6 +112,8 @@ namespace Swis.GuiDebugger.cs
 					this.Invoke((MethodInvoker)delegate ()
 					{
 						this.Connected = true;
+						this.Running = false;
+						this.StatusLabel.Text = $"Connected to {cl.Client.RemoteEndPoint}";
 					});
 
 					using (StreamReader r = new StreamReader(cl.GetStream()))
@@ -587,7 +584,7 @@ namespace Swis.GuiDebugger.cs
 		void SendBreakpoints()
 		{
 			string s = "";
-			foreach (uint bp in Breakpoints)
+			foreach (uint bp in this.Breakpoints)
 				s += $" {bp}";
 			this.ConnectionWriter?.Invoke($"break {s}");
 		}

@@ -1,0 +1,285 @@
+﻿<Window x:Class="Swis.WpfDebugger.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Swis.WpfDebugger"
+        mc:Ignorable="d"
+		
+		xmlns:dock="http://schemas.xceed.com/wpf/xaml/avalondock"
+		xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
+		
+        Title="Swis Debugger"
+		Width="525" 
+		Height="350"
+		ResizeMode="CanResizeWithGrip"
+		Background="#eeeef2">
+
+	<Window.CommandBindings>
+		<CommandBinding Executed="ContinueButton_Click" Command="{x:Static local:MainWindow.ContinueCommand}" />
+		<CommandBinding Executed="PauseButton_Click" Command="{x:Static local:MainWindow.StopCommand}" />
+		<CommandBinding Executed="StopButton_Click" Command="{x:Static local:MainWindow.StopCommand}" />
+		<CommandBinding Executed="ResetButton_Click" Command="{x:Static local:MainWindow.ResetCommand}" />
+		<CommandBinding Executed="StepInButton_Click" Command="{x:Static local:MainWindow.StepOverCommand}" />
+		<CommandBinding Executed="StepOverButton_Click" Command="{x:Static local:MainWindow.StepInCommand}" />
+		<CommandBinding Executed="StepOutButton_Click" Command="{x:Static local:MainWindow.StepOutCommand}" />
+	</Window.CommandBindings>
+	
+	<Window.InputBindings>
+		<KeyBinding Key="F5"
+					Command="{x:Static local:MainWindow.ContinueCommand}" />
+		<KeyBinding Key="Pause"
+					Command="{x:Static local:MainWindow.PauseCommand}" 
+					Modifiers="Ctrl+Alt" />
+		<KeyBinding Key="F5"
+					Command="{x:Static local:MainWindow.StopCommand}"
+					Modifiers="Ctrl" />
+		<KeyBinding Key="F5"
+					Command="{x:Static local:MainWindow.ResetCommand}"
+					Modifiers="Ctrl+Shift" />
+		<KeyBinding Key="F10"
+					Command="{x:Static local:MainWindow.StepOverCommand}" />
+		<KeyBinding Key="F11"
+					Command="{x:Static local:MainWindow.StepInCommand}" />
+		<KeyBinding Key="F11"
+					Command="{x:Static local:MainWindow.StepOutCommand}"
+					Modifiers="Shift" />
+	</Window.InputBindings>
+
+	<Window.Resources>
+
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="/Resources/Expander/PlusMinusExpanderStyles.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+			
+			<Style TargetType="{x:Type GridViewColumnHeader}">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+			</Style>
+			<Style TargetType="{x:Type ListView}">
+				<Setter Property="BorderThickness" Value="0" />
+			</Style>
+
+			<Style TargetType="{x:Type ToolBar}">
+				<Setter Property="Background" Value="Transparent" />
+			</Style>
+			<Style TargetType="{x:Type ToolBarTray}">
+				<Setter Property="Background" Value="Transparent" />
+			</Style>
+
+
+			<Style TargetType="Image">
+				<!--x:Key="ImageEnabled"-->
+				<Style.Triggers>
+					<Trigger Property="IsEnabled" Value="False">
+						<Setter Property="Opacity" Value="0.25"></Setter>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+		</ResourceDictionary>
+	</Window.Resources>
+	
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+
+		<ToolBarPanel HorizontalAlignment="Stretch" Grid.Row="0">
+			<ToolBarTray>
+				<ToolBar>
+
+					<Button Name="OpenSymbolsButton" Click="OpenSymbolsButton_Click" ToolTip="Open Symbols">
+						<local:AutoGrayableImage Source="/Resources/fileopen.png" />
+					</Button>
+					<Button Name="ViewWindows">
+						<local:AutoGrayableImage Source="/Resources/callstack.png" />
+					</Button>
+				</ToolBar>
+
+				<ToolBar>
+					<Button Name="ContinueButton" Click="ContinueButton_Click" ToolTip="Continue (F5)">
+						<StackPanel Orientation="Horizontal">
+							<local:AutoGrayableImage Source="/Resources/start.png" />
+							<TextBlock Text="Continue"/>
+						</StackPanel>
+					</Button>
+					<Separator/>
+					<Button Name="PauseButton" Click="PauseButton_Click" ToolTip="Pause">
+						<local:AutoGrayableImage Source="/Resources/pause.png" />
+					</Button>
+					<Button Name="StopButton" Click="StopButton_Click" ToolTip="Stop (Ctrl+F5)">
+						<local:AutoGrayableImage Source="/Resources/stop.png" />
+					</Button>
+					<Button Name="ResetButton" Click="ResetButton_Click" ToolTip="Reset (Ctrl+Shift+F5)">
+						<local:AutoGrayableImage Source="/Resources/reset.png" />
+					</Button>
+					<Separator/>
+					<Button Name="StepInButton" Click="StepInButton_Click" ToolTip="Step In (F11)">
+						<local:AutoGrayableImage Source="/Resources/step-in.png" />
+					</Button>
+					<Button Name="StepOverButton" Click="StepOverButton_Click" ToolTip="Step Over (F10)">
+						<local:AutoGrayableImage Source="/Resources/step.png" />
+					</Button>
+					<Button Name="StepOutButton" Click="StepOutButton_Click" ToolTip="Step Out (Shift+F11)">
+						<local:AutoGrayableImage Source="/Resources/step-out.png" />
+					</Button>
+				</ToolBar>
+			</ToolBarTray>
+		</ToolBarPanel>
+
+		<dock:DockingManager
+			Grid.Row="1"
+			AllowMixedOrientation="True">
+
+			<dock:DockingManager.Theme>
+				<dock:Vs2013LightTheme />
+			</dock:DockingManager.Theme>
+
+			<dock:DockingManager.DocumentHeaderTemplate>
+				<DataTemplate>
+					<StackPanel Orientation="Horizontal">
+						<!--<Image Source="{Binding IconSource}" Margin="0,0,4,0"/>-->
+						<TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+						<TextBlock Text="🔒" FontSize="7" Padding="4" />
+					</StackPanel>
+				</DataTemplate>
+			</dock:DockingManager.DocumentHeaderTemplate>
+
+			<dock:LayoutRoot x:Name="_LayoutRoot">
+
+				<dock:LayoutPanel Orientation="Vertical">
+					<dock:LayoutDocumentPaneGroup>
+						<dock:LayoutDocumentPane x:Name="DocumentPane">
+							
+							<!--<dock:LayoutDocument Title="Assembly" ContentId="asm" CanClose="False" >
+								<TextBox Name="AssemblyText" Text="Todo" AcceptsReturn="True" />
+							</dock:LayoutDocument>
+
+							<dock:LayoutDocument Title="Source" ContentId="src" >
+								<TextBox Text="Todo2" AcceptsReturn="True" />
+							</dock:LayoutDocument>-->
+
+						</dock:LayoutDocumentPane>
+					</dock:LayoutDocumentPaneGroup>
+
+					<dock:LayoutAnchorablePaneGroup DockHeight="125">
+						
+						<dock:LayoutAnchorablePane>
+							<dock:LayoutAnchorable ContentId="locals" Title="Locals" CanClose="False">
+								<ListView x:Name="LocalsListView">
+									<ListView.View>
+										<GridView>
+											<GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="100" />
+											
+											<GridViewColumn Header="Value" Width="100">
+												<GridViewColumn.CellTemplate>
+													<DataTemplate>
+														<TextBlock Text="{Binding Value}" Foreground="{Binding Foreground}" />
+													</DataTemplate>
+												</GridViewColumn.CellTemplate>
+											</GridViewColumn>
+										</GridView>
+									</ListView.View>
+
+									<ListView.GroupStyle>
+										<GroupStyle>
+											<GroupStyle.ContainerStyle>
+												<Style TargetType="{x:Type GroupItem}">
+													<Setter Property="Template">
+														<Setter.Value>
+															<ControlTemplate>
+																<Expander IsExpanded="True" Style="{StaticResource PlusMinusExpander}">
+																	<Expander.Header>
+																		<TextBlock Text="{Binding Name}" />
+																	</Expander.Header>
+																	<ItemsPresenter />
+																</Expander>
+															</ControlTemplate>
+														</Setter.Value>
+													</Setter>
+												</Style>
+											</GroupStyle.ContainerStyle>
+										</GroupStyle>
+									</ListView.GroupStyle>
+
+								</ListView>
+							</dock:LayoutAnchorable>
+
+							<dock:LayoutAnchorable ContentId="registers" Title="Registers" CanClose="False">
+								<ListView x:Name="RegistersListView">
+									<ListView.View>
+										<GridView>
+											<GridViewColumn Header="Register" DisplayMemberBinding="{Binding Register}" Width="100" />
+
+											<GridViewColumn Header="Value" Width="100">
+												<GridViewColumn.CellTemplate>
+													<DataTemplate>
+														<TextBlock Text="{Binding Value}" Foreground="{Binding Foreground}" />
+													</DataTemplate>
+												</GridViewColumn.CellTemplate>
+											</GridViewColumn>
+										</GridView>
+									</ListView.View>
+
+									<ListView.GroupStyle>
+										<GroupStyle>
+											<GroupStyle.ContainerStyle>
+												<Style TargetType="{x:Type GroupItem}">
+													<Setter Property="Template">
+														<Setter.Value>
+															<ControlTemplate>
+																<Expander IsExpanded="True" Style="{StaticResource PlusMinusExpander}">
+																	<Expander.Header>
+																		<TextBlock Text="{Binding Name}" />
+																	</Expander.Header>
+																	<ItemsPresenter />
+																</Expander>
+															</ControlTemplate>
+														</Setter.Value>
+													</Setter>
+												</Style>
+											</GroupStyle.ContainerStyle>
+										</GroupStyle>
+									</ListView.GroupStyle>
+									
+								</ListView>
+							</dock:LayoutAnchorable>
+						</dock:LayoutAnchorablePane>
+						
+						<dock:LayoutAnchorablePane>
+							<dock:LayoutAnchorable ContentId="callstack" Title="Call Stack" CanClose="False">
+								<ListView x:Name="CallStackListView">
+									<ListView.View>
+										<GridView>
+											<GridViewColumn Header="#" DisplayMemberBinding="{Binding N}" Width="30" />
+											<GridViewColumn Header="Location" DisplayMemberBinding="{Binding Location}" Width="100" />
+										</GridView>
+									</ListView.View>
+								</ListView>
+							</dock:LayoutAnchorable>
+							<dock:LayoutAnchorable ContentId="stack" Title="Stack" CanClose="False">
+							</dock:LayoutAnchorable>
+						</dock:LayoutAnchorablePane>
+						
+					</dock:LayoutAnchorablePaneGroup>
+				</dock:LayoutPanel>
+			</dock:LayoutRoot>
+
+		</dock:DockingManager>
+
+		<StatusBar
+			Grid.Row="4"
+			Name="StatusBar"
+			Background="#007acc"
+			>
+
+			<StatusBarItem>
+				<TextBlock Name="StatusBarLabel" Text="Ready" Foreground="White"/>
+			</StatusBarItem>
+		</StatusBar>
+	</Grid>
+
+</Window>

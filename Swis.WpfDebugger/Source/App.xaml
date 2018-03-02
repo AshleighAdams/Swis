@@ -1,0 +1,8 @@
+﻿<Application x:Class="Swis.WpfDebugger.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Swis.WpfDebugger"
+             StartupUri="Source/MainWindow.xaml">
+	<Application.Resources>
+	</Application.Resources>
+</Application>

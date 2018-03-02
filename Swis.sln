@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Development", "Swis.De
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Swis.GuiDebugger", "Swis.GuiDebugger\Swis.GuiDebugger.csproj", "{049B63C7-E967-4C8E-B995-1D820625ED19}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Swis.WpfDebugger", "Swis.WpfDebugger\Swis.WpfDebugger.csproj", "{5582A013-FFB3-4296-A661-98C6CCAF1945}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{049B63C7-E967-4C8E-B995-1D820625ED19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{049B63C7-E967-4C8E-B995-1D820625ED19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{049B63C7-E967-4C8E-B995-1D820625ED19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
