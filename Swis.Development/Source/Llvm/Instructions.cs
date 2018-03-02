@@ -9,6 +9,17 @@ namespace Swis
 	public static partial class LlvmIrCompiler
 	{
 		#region Misc
+		[IrInstruction("bitcast", "<operand:dst> = bitcast <type:srctype> <operand:src> to <type:dsttype>")]
+		private static bool Bitcast(MethodBuilder output, dynamic args)
+		{
+			string dst = args.dst;
+			string dsttype = args.dsttype;
+			string src = args.src;
+			string srctype = args.srctype;
+
+			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}; bitcast");
+			return true;
+		}
 
 		[IrInstruction("ptrtoint", "<operand:dst> = ptrtoint <type:srctype> <operand:src> to <type:dsttype>")]
 		private static bool Ptrtoint(MethodBuilder output, dynamic args)
@@ -18,7 +29,7 @@ namespace Swis
 			string src = args.src;
 			string srctype = args.srctype;
 
-			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}");
+			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}; ptrtoint");
 			return true;
 		}
 
@@ -30,7 +41,7 @@ namespace Swis
 			string src = args.src;
 			string srctype = args.srctype;
 			
-			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}");
+			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}; inttoptr");
 			return true;
 		}
 
