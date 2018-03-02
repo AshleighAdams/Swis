@@ -21,7 +21,7 @@
                                 <ColumnDefinition Width="15"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Image x:Name="arrow" Source="/Resources/Expander/closed.png"  Width="9"/>
+                            <Image x:Name="arrow" Source="/Resources/Expander/closed.png"  Width="11"/>
                             <ContentPresenter Grid.Column="1" HorizontalAlignment="Left" Margin="4,0,0,0" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center"/>
                         </Grid>
                     </Border>

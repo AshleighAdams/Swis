@@ -198,8 +198,7 @@ $stack:
 			ExecuteTest(asm);
 
 			//TestJit();
-
-			Console.ReadLine();
+			
 		}
     }
 }
