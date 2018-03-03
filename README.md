@@ -97,7 +97,7 @@ Each of the address parts can specify a register or a constant.
 If a constant can be encoded in 4 bits, 12 bits, or 20 bits then it will be encoded in 0, 1, or 2 extra bytes respectively.
 Above 20 bits, it will be encoded in 4 extra bytes, with 4 unused bits.
 
-<sup><sup>1.</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits.</sup>
+<sup><sup>1</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits.</sup>
 
 ## Registers
 
@@ -112,7 +112,7 @@ The following are the register sizes possible, demonstrated on the general purpo
 | 32 bits            | `eax`, `ebp` |
 | 64 bits<sup>2</sup>| `rax`, `rbp` |
 
-<sup><sup>2.</sup> 64 bit is not currently used, but infrastructure is in place to support it in future.</sup>
+<sup><sup>2</sup> 64 bit is not currently used, but infrastructure is in place to support it in future.</sup>
 
 ### Special Registers
 
