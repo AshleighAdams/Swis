@@ -430,6 +430,9 @@ namespace Swis
 					int args_pos = pos + m.Groups[3].Index;
 					MatchCollection mc = args.Matches("[^,]+");
 
+					if (mc.Count == 1 && string.IsNullOrWhiteSpace(mc[0].Value)) // HACK
+						mc = "".Matches("nope");
+
 					string instr = $"{op.ToLowerInvariant()}{"R".Times(mc.Count)}";
 					if (!OpcodeMap.TryGetValue(instr, out var opcode))
 						throw new Exception($"{linenum}: unknown opcode {op} that takes {mc.Count} operands.");

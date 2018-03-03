@@ -1,92 +1,175 @@
 # Swis
 
-LLVM-IR to Swis
+Simple Wire Instruction Set, intended for an emulated CPU in a sandbox-style game.
+Includes a super-bad-but-gets-the-job-done IR to SwisASM compiler, assembler, interpreted CPU, and jitted CPU.
 
-For emulated CPUs in sandbox video games.
-Because it's not backed by actual hardware, registers aren't specialized or annything.
-It's also for fun, not for actual computation.
+## Sample Code
 
-## Instructions
+```asm
+; setup the stack and base pointer
+mov esp, $stack
+mov ebp, esp
 
+; call main, then halt
+add esp, esp, 4            ; allocate stack space for the argument
+mov ptr32 [esp - 4], $msg  ; both of these are equivalent to a `push $msg`
+call $print
+sub esp, esp, 4            ; pop to nowhere
+halt                       ; finish execution
+
+$print:
+	mov eax, [ebp - 12]       ; -4 = old ebp, -8 = old eip, -12 = first 4 byte arg
+
+	$main_loop:
+	jz ptr8 [eax], $main_end  ; jump if zero to
+
+	out 0, ptr8 [eax]         ; write a character out
+
+	add eax, eax, 1           ; and re-loop
+	jmp $main_loop
+	$main_end:
+	ret
+
+$msg:
+	.data ascii "Hello, world!\x0a\x00"
+
+.align 4
+$stack:
+	.data pad 128 ; give the stack 128 bytes
 ```
-struct register
+
+```C#
+(byte[] assembled, var dbg) = Swis.Assembler.Assemble(File.ReadAllText("program.asm"));
+
+byte line0_in = 0;
+var cpu = new Swis.JitCpu()
 {
-	union
-	{
-		int8   s8;
-		int16  s16;
-		int32  s32;
-	};
+	Memory = new PointerMemoryController(assembled),
+
+	LineWrite = (line, what) => Console.Write((char)what),
+	//LineRead = (line) => (char)Console.Read(), // < this will cause `in dest, line` to block and freeze the cpu while waiting for input
+	LineRead = (line) => line0_in, // use the interrupt version, so we won't freeze (if desired); note: interrupt handler not included in this demo, so it will be silently ignored
 };
 
-struct registers
+while(!cpu.Halted)
 {
-	register zero; // always reads 0
-	register ip;
-	register sp;
-	register flags;
-	
-	register r0, r1, r2, r3, r4; // will be the same as you left 'em
-	register t0, t1, t2, t3, t4; // will most likely change
-	
-}
+	cpu.Clock(1000); // execute 1k instructions
 
-stack int offset, int size // set the bounds of the stack
-push reg // the stack down
-pop reg // push the stack up
-
-call reg
-call addr
-ret
-
-load reg, addr, len
-store reg, addr, len
-const reg, value
-
-div x, l, r // the method these eventually call depends on the type of
-mul x, l, r
-add x, l, r
-sub x, l, r
-sqrt x, a
-pow x, l, r
-log x, a
-exp x, b
-
-int // interupt
-halt // end execution, requires power cycle
-trap
-trap
-singal
-```
-
-## Example
-
-```llvm-ir
-@.str = internal constant [14 x i8] c"hello, world\0A\00"
-
-declare i32 @printf(i8*, ...)
-
-define i32 @main(i32 %argc, i8** %argv) nounwind {
-entry:
-    %tmp1 = getelementptr [14 x i8], [14 x i8]* @.str, i32 0, i32 0
-    %tmp2 = call i32 (i8*, ...) @printf( i8* %tmp1 ) nounwind
-    ret i32 0
+	if (Console.KeyAvailable)
+	{
+		line0_in = (byte)Console.ReadKey(true).KeyChar;
+		cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0); // interrupt for io input #0
+	}
 }
 ```
 
-```
-.str:
-	data 68656c6c6f202c20776f72640a00 // "hello, world\0A\00"
+## Assembly Syntax
 
-main:
-	const t0, $.str
-	push t0
-		call $print // push ip64; mov ip64, $print
-		pop none
-	const t0, 0
-		push t0
-		ret
+The syntax closely resembles Intel's syntax.  The main differences are:
 
-print:
-	
-```
+ - indirection sizes are, if implicit, always the size of a pointer (32 bits),
+	and if explicit, the size specified in bits in the form of `ptr8 [...]` as opposed to `byte ptr [...]`;
+ - directives do not use a `.data` or `.text` segment;
+ - the type an instruction operates on is specified after, i.e. `subu` as opposed to `isub`;
+ - there is no need for load effective address, as `lea eax, [ebx + ecx]` is equivalent to `mov eax, ebx + ecx`; and
+ - placeholders (labels) are explicitly referenced by prefixing them with `$` (e.g. `mov sp, $stack`).
+
+### Directives
+
+Directives are prefaced with a period, and instruct the assembler to do something,
+such as including debugging information (`.src`), inserting padding (`.data pad N`),
+aligning (`.align N`), and so on.
+
+## Operands
+
+Operands in Swis are fully orthogonal; each operand can use indirection, segments<sup>1</sup>,
+along with one of the following addressing modes:
+
+ 1. `a`
+ 2. `a + b`
+ 3. `c * d`
+ 4. `a + b + c * d`
+
+When subtracting a constant, i.e. `ebp - 4`, the subtracted constant is encoded as `ebp + -4`,
+this means operations such as `eax - ebx` are not possible—tho it may be encoded as `eax + 0 + ebx * -1`.
+
+Each of the address parts can specify a register or a constant.
+If a constant can be encoded in 4 bits, 12 bits, or 20 bits then it will be encoded in 0, 1, or 2 extra bytes respectively.
+Above 20 bits, it will be encoded in 4 extra bytes, with 4 unused bits.
+
+<sup><sup>1.</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits.</sup>
+
+## Registers
+
+Registers specify their size by the first and last letter.
+The following are the register sizes possible, demonstrated on the general purpose A register and the base pointer register.
+
+
+| Bits               | Example       |
+| ------------------ | ------------- |
+| 8 bits             | `al`, `bpl`  |
+| 16 bits            | `ax`, `bp`   |
+| 32 bits            | `eax`, `ebp` |
+| 64 bits<sup>2</sup>| `rax`, `rbp` |
+
+<sup><sup>2.</sup> 64 bit is not currently used, but infrastructure is in place to support it in future.</sup>
+
+### Special Registers
+
+ - Time Stamp Counter (`etsc`): Increases by 1 with every instruction executed.
+ - Instruction Pointer (`eip`): Points to the next instruction to be executed.
+ - Stack Pointer (`esp`): Points to the next free space on the stack.
+   The stack grows up, i.e. add to it to allocate, and subtract to deallocate.
+ - Base Pointer (`ebp`): Points to the current frame pointer.  Note, the `call` and `ret` instructions control
+   this register automatically, which also makes it easy to unwind the stack.
+ - Flag (`eflag`): Stores various flags about the system, such as halted and compare results.
+ - Protected Mode (`epm`): Not used currently, will be used to control privileges.
+ - Protected Interrupt (`epi`): Store the interrupt mode, the location of the Interrupt Vector Table,
+   and such.  See [Interrupts](#interrupts) for more information.
+
+### General Purpose Registers
+
+The general purpose registers are `eax` thru `elx`.
+
+## Interrupts
+
+TOWRITE: this, talk about the IVT, enabling interrupts, and cli/sti.
+
+## Debugger
+
+The CPU communicates to the debugger by setting the `Cpu`'s `Debugger` property to a `StreamDebugger`,
+which will pipe the necessary information to and from the debugger that it connects to over a TCP stream.
+Modifying the `Debugger` property on a `JitCpu` will cause the JIT cache to be flushed.
+
+![](Images/swis-wpf-debugger.png?raw=true "WPF Debugger")
+
+### Features
+
+ - Set breakpoints.
+ - Step into, out, and over.
+ - View locals.
+ - Inspect the call stack.
+ - Reset/halt the CPU.
+
+Note, to view the current instruction being executed, the locals, and labels for the call stack,
+then debugging symbols must be loaded.
+
+#### Future Features
+
+ - Decode instructions and slowly build up the program as it executes without needing to load
+   the debugging symbols.
+ - Add support for loading the source files that generated the assembly, along with
+   + breakpoint support,
+   + viewing the current execution position, and
+   + inspecting locals from the code editor.
+
+## LLVM-IR
+
+The LLVM-IR translator is strictly works-on-my-machine.
+It needs to be rebuilt from the ground up, but for now, it is sufficient.
+
+Compile your IR by calling `string asm = LlvmIrCompiler.Compile(ircode)`.
+
+## JIT
+
+TOWRITE: this
