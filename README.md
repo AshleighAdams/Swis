@@ -18,7 +18,7 @@ sub esp, esp, 4            ; pop to nowhere
 halt                       ; finish execution
 
 $print:
-	mov eax, [ebp - 12]       ; -4 = old ebp, -8 = old eip, -12 = first 4 byte arg
+	mov eax, [ebp - 12]       ; -1 to -8 = call return info, -12 = first 4 byte arg
 
 	$main_loop:
 	jz ptr8 [eax], $main_end  ; jump if zero to
@@ -70,7 +70,7 @@ The syntax closely resembles Intel's syntax.  The main differences are:
  - indirection sizes are, if implicit, always the size of a pointer (32 bits),
 	and if explicit, the size specified in bits in the form of `ptr8 [...]` as opposed to `byte ptr [...]`;
  - directives do not use a `.data` or `.text` segment;
- - the type an instruction operates on is specified after, i.e. `subu` as opposed to `isub`;
+ - the type an instruction operates on is specified after, i.e. `addf` as opposed to `fadd`;
  - there is no need for load effective address, as `lea eax, [ebx + ecx]` is equivalent to `mov eax, ebx + ecx`; and
  - placeholders (labels) are explicitly referenced by prefixing them with `$` (e.g. `mov sp, $stack`).
 
