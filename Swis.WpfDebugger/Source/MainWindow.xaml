@@ -174,7 +174,7 @@
 										<GridView>
 											<GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="100" />
 											
-											<GridViewColumn Header="Value" Width="100">
+											<GridViewColumn Header="Value" Width="200">
 												<GridViewColumn.CellTemplate>
 													<DataTemplate>
 														<TextBlock Text="{Binding Value}" Foreground="{Binding Foreground}" />
@@ -214,7 +214,7 @@
 										<GridView>
 											<GridViewColumn Header="Register" DisplayMemberBinding="{Binding Register}" Width="100" />
 
-											<GridViewColumn Header="Value" Width="100">
+											<GridViewColumn Header="Value" Width="200">
 												<GridViewColumn.CellTemplate>
 													<DataTemplate>
 														<TextBlock Text="{Binding Value}" Foreground="{Binding Foreground}" />
@@ -255,7 +255,7 @@
 									<ListView.View>
 										<GridView>
 											<GridViewColumn Header="#" DisplayMemberBinding="{Binding N}" Width="30" />
-											<GridViewColumn Header="Location" DisplayMemberBinding="{Binding Location}" Width="100" />
+											<GridViewColumn Header="Location" DisplayMemberBinding="{Binding Location}" Width="300" />
 										</GridView>
 									</ListView.View>
 								</ListView>

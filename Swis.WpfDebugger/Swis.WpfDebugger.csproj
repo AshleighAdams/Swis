@@ -138,10 +138,8 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Expander\closed.png" />
-    <Resource Include="Resources\Expander\closed_neonglow.png" />
     <Resource Include="Resources\Expander\closed_plasticwrap.png" />
     <Resource Include="Resources\Expander\open.png" />
-    <Resource Include="Resources\Expander\open_neonglow.png" />
     <Resource Include="Resources\Expander\open_plasticwrap.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

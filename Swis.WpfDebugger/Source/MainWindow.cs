@@ -117,7 +117,16 @@ namespace Swis.WpfDebugger
 				= this.Connected
 				? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xca, 0x51, 0x00))
 				: new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0x7a, 0xcc));
+
+			if ((!this.Connected || this.Running == true) && this.AssemblyEditor != null)
+			{
+				// clear the current position
+				this.AssemblyEditor.IndicatorCurrent = INDICATOR_AT;
+				this.AssemblyEditor.IndicatorClearRange(0, this.AssemblyEditor.TextLength);
+				this.AssemblyEditor.MarkerDeleteAll(AT_MARKER);
+			}
 		}
+
 		
 		private void Clock()
 		{
@@ -132,6 +141,9 @@ namespace Swis.WpfDebugger
 				{
 					var line = this.AssemblyEditor.Lines[this.AssemblyEditor.LineFromPosition(posinfo.from)];
 
+					this.AssemblyEditor.MarkerDeleteAll(AT_MARKER);
+					line.MarkerAdd(AT_MARKER);
+					
 					this.AssemblyEditor.IndicatorFillRange(posinfo.from, line.EndPosition - posinfo.from);
 					line.Goto();
 				}
@@ -363,15 +375,17 @@ namespace Swis.WpfDebugger
 		}
 
 		const int INDICATOR_BREAKPOINT = 8;
-		const int INDICATOR_AT = 9;
+		const int INDICATOR_BREAKPOINT_FORE = 9;
+		const int INDICATOR_AT = 10;
+		const int NUMBER_MARGIN = 2;
+		const int BOOKMARK_MARGIN = 1;
+		const int BOOKMARK_MARKER = 1;
+		const int AT_MARKER = 2;
 		ScintillaWPF CreateEditor(string file, string source, string language)
 		{
-			const int NUMBER_MARGIN = 2;
-			const int BOOKMARK_MARGIN = 1;
-			const int BOOKMARK_MARKER = 1;
 			//const int FOLDING_MARGIN = 3;
 			//const bool CODEFOLDING_CIRCULAR = true;
-			
+
 			var ta = new ScintillaWPF
 			{
 				BorderStyle = System.Windows.Forms.BorderStyle.None,
@@ -465,13 +479,14 @@ namespace Swis.WpfDebugger
 							// we need to search for the next instruction
 							//var line = this.TextArea.Lines[this.TextArea.LineFromPosition(posinfo.from)];
 							//this.TextArea.IndicatorFillRange(posinfo.from, line.EndPosition - posinfo.from);
-
-							ta.IndicatorCurrent = INDICATOR_BREAKPOINT;
-
+							
 							if ((line.MarkerGet() & mask) > 0)
 							{
 								// Remove existing bookmark
 								line.MarkerDelete(BOOKMARK_MARKER);
+								ta.IndicatorCurrent = INDICATOR_BREAKPOINT;
+								ta.IndicatorClearRange(srcpos, line.EndPosition - srcpos);
+								ta.IndicatorCurrent = INDICATOR_BREAKPOINT_FORE;
 								ta.IndicatorClearRange(srcpos, line.EndPosition - srcpos);
 								while (this.Breakpoints.Remove(asmptr)) ;
 							}
@@ -479,6 +494,9 @@ namespace Swis.WpfDebugger
 							{
 								// Add bookmark
 								line.MarkerAdd(BOOKMARK_MARKER);
+								ta.IndicatorCurrent = INDICATOR_BREAKPOINT;
+								ta.IndicatorFillRange(srcpos, line.EndPosition - srcpos);
+								ta.IndicatorCurrent = INDICATOR_BREAKPOINT_FORE;
 								ta.IndicatorFillRange(srcpos, line.EndPosition - srcpos);
 								this.Breakpoints.Add(asmptr);
 							}
@@ -497,28 +515,37 @@ namespace Swis.WpfDebugger
 					margin.Width = 24;
 					margin.Sensitive = true;
 					margin.Type = MarginType.Symbol;
-					margin.Mask = (1 << BOOKMARK_MARKER);
-
+					margin.Mask = (1 << BOOKMARK_MARKER) | (1 << AT_MARKER);
+					
 					var marker = ta.Markers[BOOKMARK_MARKER];
 					marker.Symbol = MarkerSymbol.Circle;
-					marker.SetBackColor(IntToColor(0xFF003B));
+					marker.SetBackColor(IntToColor(0xe41400));
 					marker.SetForeColor(Color.Transparent);
 					marker.SetAlpha(100);
+
+					var atmark = ta.Markers[AT_MARKER];
+					atmark.Symbol = MarkerSymbol.Arrow;
+					atmark.SetBackColor(IntToColor(0xfff181));
+					atmark.SetForeColor(Color.Black);
+					atmark.SetAlpha(100);
 				}
 
 				// indicators
 				{
+					ta.Indicators[INDICATOR_BREAKPOINT_FORE].Style = IndicatorStyle.TextFore;
+					ta.Indicators[INDICATOR_BREAKPOINT_FORE].ForeColor = IntToColor(0xffffff);
+
 					ta.Indicators[INDICATOR_BREAKPOINT].Style = IndicatorStyle.StraightBox;
 					ta.Indicators[INDICATOR_BREAKPOINT].Under = true;
-					ta.Indicators[INDICATOR_BREAKPOINT].ForeColor = IntToColor(0xcc8888);
-					ta.Indicators[INDICATOR_BREAKPOINT].OutlineAlpha = 128;
+					ta.Indicators[INDICATOR_BREAKPOINT].ForeColor = IntToColor(0xab616b);
+					ta.Indicators[INDICATOR_BREAKPOINT].OutlineAlpha = 255;
 					ta.Indicators[INDICATOR_BREAKPOINT].Alpha = 255;
 
 					ta.Indicators[INDICATOR_AT].Style = IndicatorStyle.StraightBox;
 					ta.Indicators[INDICATOR_AT].Under = true;
-					ta.Indicators[INDICATOR_AT].ForeColor = Color.Yellow;
-					ta.Indicators[INDICATOR_AT].OutlineAlpha = 255;
-					ta.Indicators[INDICATOR_AT].Alpha = 128;
+					ta.Indicators[INDICATOR_AT].ForeColor = IntToColor(0xfff181);
+					ta.Indicators[INDICATOR_AT].OutlineAlpha = 0;
+					ta.Indicators[INDICATOR_AT].Alpha = 255;
 				}
 			}
 			
