@@ -112,7 +112,7 @@ The following are the register sizes possible, demonstrated on the general purpo
 | 32 bits            | `eax`, `ebp` |
 | 64 bits<sup>2</sup>| `rax`, `rbp` |
 
-<sup><sup>2</sup> 64 bit is not currently used, but infrastructure is in place to support it in future.</sup>
+<sup><sup>2</sup> 64 bit is not currently used, but infrastructure is in place to support it in the future.</sup>
 
 ### Special Registers
 

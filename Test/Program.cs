@@ -145,46 +145,56 @@ $stack:
 	.data pad 1024
 ");
 
-			JitCpu cpu = new JitCpu()
-			{
-				Memory = new PointerMemoryController(assembled),
-				//Debugger = new StreamDebugger(Console.Out, dbg),
-			};
-
 			InterpretedCpu old = new InterpretedCpu()
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
+
+			JitCpu cpu = new JitCpu()
+			{
+				Memory = new PointerMemoryController(assembled),
+				JitCostFactor = 0,
+				//Debugger = new StreamDebugger(Console.Out, dbg),
+			};
+
 			
+
+			Stopwatch w = new Stopwatch();
 			TimeSpan jitfirst, jit, notjit;
-			DateTime start, end;
 
+			w.Start();
 			{
-				start = DateTime.UtcNow;
-				//while (!old.Halted)
-					old.Clock(1000);
-				end = DateTime.UtcNow;
-				notjit = end - start;
+				cpu.Clock(1000);
 			}
+			w.Stop();
+			notjit = w.Elapsed;
 
+
+			cpu = new JitCpu()
 			{
-				start = DateTime.UtcNow;
-				//while (!cpu.Halted)
-					cpu.Clock(1000);
-				end = DateTime.UtcNow;
-				jitfirst = end - start;
+				Memory = new PointerMemoryController(assembled),
+			};
 
-				cpu.Reset();
-
-				start = DateTime.UtcNow;
-				//while(!cpu.Halted)
-					cpu.Clock(1000);
-				end = DateTime.UtcNow;
-				jit = end - start;
+			//cpu.Reset();
+			//cpu.ClearJitCache();
+			w.Restart();
+			{
+				cpu.Clock(1000);
 			}
+			w.Stop();
+			jitfirst = w.Elapsed;
+
+			cpu.Reset();
+			w.Restart();
+			{
+				cpu.Clock(1000);
+			}
+			w.Stop();
+			jit = w.Elapsed;
 			
-			Console.WriteLine($"JIT(1): {jitfirst.TotalMilliseconds:0.00}ms; JIT: {jit.TotalMilliseconds:0.00}ms; Interpreted: {notjit.TotalMilliseconds:0.00}ms");
+			Console.WriteLine($"JIT(jit): {notjit.TotalMilliseconds:0.00}ms; JIT(1): {jitfirst.TotalMilliseconds:0.00}ms; JIT: {jit.TotalMilliseconds:0.00}ms");
+			Console.ReadLine();
 		}
 
 		static void Main(string[] args)

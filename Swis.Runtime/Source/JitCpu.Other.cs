@@ -85,6 +85,7 @@ namespace Swis
 				= this.Reg8 = this.Reg9 = this.Reg10 = this.Reg11 = this.Reg12 = this.Reg13 = this.Reg14 = this.Reg15
 				= this.Reg16 = this.Reg17 = this.Reg18 = this.Reg19 = this.Reg20 = this.Reg21 = this.Reg22 = this.Reg23
 				= this.Reg24 = this.Reg25 = this.Reg26 = this.Reg27 = this.Reg28 = this.Reg29 = this.Reg30 = this.Reg31 = 0;
+			this.CycleBank = 0;
 		}
 
 		Expression RegisterExpression(NamedRegister reg, uint size, bool reading)

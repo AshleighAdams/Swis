@@ -67,6 +67,7 @@ namespace Swis
 		uint JitCacheFirst = uint.MaxValue, JitCacheLast = 0; // track the jitted bounds so as to clear jit instructions
 		Dictionary<uint, (Action λ, uint cycles)> JitCache = new Dictionary<uint, (Action, uint)>();
 		uint _JitBlockSize = 16;
+		public uint JitCostFactor = 1000; // how much slower the first time code is JITed approx is, to prevent abuse
 
 		public void ClearJitCache()
 		{
@@ -92,7 +93,7 @@ namespace Swis
 			set { this._JitBlockSize = value; this.ClearJitCache(); }
 		}
 		
-		private int CycleBank = 0; // don't execute the next instruction block until we can afford it
+		private long CycleBank = 0; // don't execute the next instruction block until we can afford it
 		public override int Clock(int cycles = 1)
 		{
 			if (this.Halted)
@@ -187,6 +188,8 @@ namespace Swis
 
 						if (jitinst.sequential_not_gauranteed)
 							break;
+						if (this.JitCache.ContainsKey(simulated_ip)) // we have already jitted from this address, so use it
+							break;
 					}
 
 					if (simulated_ip > this.JitCacheLast)
@@ -197,6 +200,12 @@ namespace Swis
 					//Console.WriteLine($"JIT: [{this.Reg1}] = {λ.GetDebugView()}");
 
 					instr = this.JitCache[this.Reg1] = (λ.Compile(), (uint)block_instructions.Count);
+
+					// cost in cycles for jitting an instruction
+					uint jitcost = (uint)block_instructions.Count * this.JitCostFactor;
+
+					this.Reg0 += jitcost;
+					this.CycleBank -= jitcost;
 				}
 
 				if (this.CycleBank >= instr.cycles)
