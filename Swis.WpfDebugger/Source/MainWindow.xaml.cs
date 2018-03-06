@@ -71,6 +71,10 @@ namespace Swis.WpfDebugger
 				this.CallStackListView.ItemsSource = this.ListCallStacks;
 			}
 
+			{
+				this.DisassemblyEditor = this.CreateEditor("Disassembly", "; disassembled instructions will be populated here as they're executed", "asm");
+			}
+
 			this.UpdateState();
 
 			var thread = new Thread(this.ListenThread);

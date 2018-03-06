@@ -9,7 +9,7 @@
 		xmlns:dock="http://schemas.xceed.com/wpf/xaml/avalondock"
 		xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
 		
-        Title="Swis Debugger"
+        Title="Swisual Debugger"
 		Width="525" 
 		Height="350"
 		ResizeMode="CanResizeWithGrip"

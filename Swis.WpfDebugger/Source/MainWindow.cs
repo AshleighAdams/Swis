@@ -66,7 +66,7 @@ namespace Swis.WpfDebugger
 			return "?";
 		}
 
-		ScintillaWPF AssemblyEditor;
+		ScintillaWPF AssemblyEditor, DisassemblyEditor;
 		DebugData _Dbg = null;
 		DebugData DebugInfo
 		{
@@ -79,6 +79,14 @@ namespace Swis.WpfDebugger
 				this.DocumentPane.Children.Clear();
 				this._Dbg = value;
 				this.AssemblyEditor = this.CreateEditor("Assembly", this._Dbg.AssemblySource, "asm");
+
+				this.DocumentPane.Children.Add(new Xceed.Wpf.AvalonDock.Layout.LayoutDocument()
+				{
+					Title = "Disassembly",
+					ToolTip = "Disassembly",
+					Content = this.DisassemblyEditor,
+					CanClose = false,
+				});
 
 				this.AsmToPtr = new Dictionary<int, uint>();
 				foreach (var kv in value.PtrToAsm)
@@ -130,8 +138,8 @@ namespace Swis.WpfDebugger
 			}
 		}
 
-		
-		private void Clock()
+		private DebugDisassembler _Disassembler = new DebugDisassembler();
+		private void Clock(byte[] newinstr = null)
 		{
 			uint ip = this.Registers[(int)NamedRegister.InstructionPointer];
 			
@@ -269,6 +277,50 @@ namespace Swis.WpfDebugger
 				this.UpdateState();
 			}
 
+			if (newinstr != null)
+			{
+				this._Disassembler.Registers = this.Registers;
+				this._Disassembler.Clock(ip, newinstr);
+
+				if (this.DisassemblyEditor != null)
+				{
+					this.DisassemblyEditor.ReadOnly = false;
+					
+					{
+						// find where the view is
+						int last = this.DisassemblyEditor.Scintilla.FirstVisibleLine + this.DisassemblyEditor.Scintilla.LinesOnScreen - 1;
+						
+						var pos = this.DisassemblyEditor.Scintilla.CurrentPosition;
+						this.DisassemblyEditor.Text = this._Disassembler.ToString();
+						{
+							//last.Goto();
+							var line = this.DisassemblyEditor.Scintilla.Lines[last];
+							line.Goto();
+							this.DisassemblyEditor.Scintilla.ClearSelections();
+							//this.DisassemblyEditor.Scintilla.CurrentPosition = line.Position;
+							//this.DisassemblyEditor.Scintilla.ScrollCaret();
+						}
+						this.DisassemblyEditor.Scintilla.CurrentPosition = pos;
+						
+					}
+
+					this.DisassemblyEditor.ReadOnly = true;
+
+					this.DisassemblyEditor.IndicatorCurrent = INDICATOR_AT;
+					this.DisassemblyEditor.IndicatorClearRange(0, this.DisassemblyEditor.TextLength);
+
+					if (this._Disassembler.DbgGuessed.PtrToAsm.TryGetValue(ip, out var posinfo))
+					{
+						var line = this.DisassemblyEditor.Lines[this.DisassemblyEditor.LineFromPosition(posinfo.from)];
+
+						this.DisassemblyEditor.MarkerDeleteAll(AT_MARKER);
+						line.MarkerAdd(AT_MARKER);
+
+						this.DisassemblyEditor.IndicatorFillRange(posinfo.from, line.EndPosition - posinfo.from);
+						line.Goto();
+					}
+				}
+			}
 		}
 		
 		TcpListener Listener = new TcpListener(IPAddress.Any, 1337);
@@ -291,7 +343,9 @@ namespace Swis.WpfDebugger
 					catch { }
 				};
 
-				string exception = null;
+				string status_message = null;
+				var status_color = Brushes.Cyan;
+
 				try
 				{
 					this.Dispatcher.Invoke(delegate ()
@@ -348,16 +402,24 @@ namespace Swis.WpfDebugger
 								Buffer.BlockCopy(data, 0, this.StackData, index, data.Length);
 							}
 
+							byte[] instr = Convert.FromBase64String(instruction);
+
 							this.Dispatcher.Invoke(delegate ()
 							{
-								this.Clock();
+								this.Clock(instr);
 							});
 						}
 					}
 				}
+				catch (IOException io) when (io.InnerException is SocketException && io.InnerException.Message.Contains("forcibly closed"))
+				{
+					status_message = "Disconnected";
+					status_color = Brushes.Crimson;
+				}
 				catch (Exception ex)
 				{
-					exception = ex.ToString();
+					status_message = $"Exception: {ex.ToString()}";
+					status_color = Brushes.Crimson;
 				}
 				this.ConnectionWriter = null;
 				
@@ -368,10 +430,10 @@ namespace Swis.WpfDebugger
 					this.Running = false;
 					this.UpdateState();
 
-					if (exception != null)
+					if (status_message != null)
 					{
-						this.StatusBar.Background = Brushes.Crimson;
-						this.StatusBarLabel.Text = $"Exception: {exception}";
+						this.StatusBar.Background = status_color;
+						this.StatusBarLabel.Text = status_message;
 					}
 				});
 			}
