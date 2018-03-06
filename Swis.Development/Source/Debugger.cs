@@ -266,7 +266,7 @@ namespace Swis
 					// TODO: use the span
 					byte[] arr = new byte[span.Length];
 					for (int i = 0; i < span.Length; i++)
-						arr[0] = span[0];
+						arr[i] = span[i];
 
 					string base64 = Convert.ToBase64String(arr, Base64FormattingOptions.None);
 					
