@@ -16,8 +16,9 @@ namespace Swis
 		bool Paused = false;
 		bool First = true;
 		ConcurrentDictionary<uint, bool> Breakpoints = new ConcurrentDictionary<uint, bool>();
-		uint? RunUntil = null;
+		uint? IpEquals = null;
 		uint? BasePtrSmaller = null;
+		uint? BasePtrEquals = null;
 		uint? StackBottom = null;
 		bool Step = false;
 
@@ -97,6 +98,7 @@ namespace Swis
 		uint[] _LastValues;
 		byte[] _LastStack;
 
+		const uint max_inst_len = 64; // so we can inspect the current instruction without needing to depend on Swis.Development
 		public override bool Clock(Cpu cpu)
 		{
 			if (this.Cpu == null)
@@ -121,12 +123,20 @@ namespace Swis
 				}
 				else if (line == "step-over")
 				{
+					// this is basically run until bp <= currentbp
+
+					this.BasePtrSmaller = cpu.BasePointer;
+					this.BasePtrEquals = cpu.BasePointer;
+					this.Paused = false;
+					return true; // execute self
+
+					/*
 					uint eip = cpu.InstructionPointer;
 					(Opcode op, _) = cpu.Memory.DisassembleInstruction(ref eip, null);
 
 					if (op == Opcode.CallR)
 					{
-						this.RunUntil = eip;
+						this.IpEquals = eip;
 						this.Paused = false;
 					}
 					else // nothing to step over, so step next
@@ -135,6 +145,7 @@ namespace Swis
 						this.Step = true;
 						return true;
 					}
+					*/
 				}
 				else if (line == "step-out")
 				{
@@ -160,22 +171,13 @@ namespace Swis
 					this.Step = false;
 					this.Paused = true;
 				}
-				else if (this.RunUntil != null && this.RunUntil.Value == eip)
+				else if (
+					(this.Breakpoints.ContainsKey(eip)) ||
+					(this.IpEquals != null && this.IpEquals.Value == eip) ||
+					(this.BasePtrEquals != null && cpu.BasePointer == this.BasePtrEquals.Value) ||
+					(this.BasePtrSmaller != null && cpu.BasePointer < this.BasePtrSmaller.Value))
 				{
-					this.BasePtrSmaller = null;
-					this.RunUntil = null;
-					this.Paused = true;
-				}
-				else if (this.BasePtrSmaller != null && cpu.BasePointer < this.BasePtrSmaller.Value)
-				{
-					this.BasePtrSmaller = null;
-					this.RunUntil = null;
-					this.Paused = true;
-				}
-				else if (this.Breakpoints.TryGetValue(eip, out var _))
-				{
-					this.BasePtrSmaller = null;
-					this.RunUntil = null;
+					this.IpEquals = this.BasePtrEquals = this.BasePtrSmaller = null;
 					this.Paused = true;
 				}
 			}
@@ -258,18 +260,17 @@ namespace Swis
 				
 				// write the instruction
 				{
-					uint original_ip = cpu.InstructionPointer;
-					ip = original_ip;
-					(Opcode op, Operand[] args) = memory.DisassembleInstruction(ref ip, registers);
+					uint len = Math.Min(64, memory.Length - cpu.InstructionPointer);
+					ReadOnlySpan<byte> span = memory.Span(cpu.InstructionPointer, len);
 
-					// write the hex rep
-					{
-						string pre = "";
-						for (uint i = original_ip; i < ip; i++, pre = " ")
-							sb.Append($"{pre}{memory[i].ToString("X2").ToLowerInvariant()}");
-					}
+					// TODO: use the span
+					byte[] arr = new byte[span.Length];
+					for (int i = 0; i < span.Length; i++)
+						arr[0] = span[0];
 
-					this.WriteLine($"{sb}");
+					string base64 = Convert.ToBase64String(arr, Base64FormattingOptions.None);
+					
+					this.WriteLine($"{base64}");
 				}
 				return step;
 			}
@@ -298,7 +299,7 @@ namespace Swis
 			DataPadding,
 		}
 
-		// what the code here corrosponds to, in absolute position.
+		// what the code here corresponds to, in absolute position.
 		// type =
 		public Dictionary<uint, (string file, int from, int to, AsmPtrType type)> PtrToAsm;
 		public Dictionary<uint, (string file, int from, int to)> AsmToSrc;
