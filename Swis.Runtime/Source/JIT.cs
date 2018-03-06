@@ -1,57 +1,54 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace Swis
 {
 	public sealed partial class JitCpu : Cpu
 	{
-		volatile uint Reg0;
+		uint Reg0;
 		#region Other Registers
-		volatile uint Reg1;
-		volatile uint Reg2;
-		volatile uint Reg3;
-		volatile uint Reg4;
-		volatile uint Reg5;
-		volatile uint Reg6;
-		volatile uint Reg7;
-		volatile uint Reg8;
-		volatile uint Reg9;
-		volatile uint Reg10;
-		volatile uint Reg11;
-		volatile uint Reg12;
-		volatile uint Reg13;
-		volatile uint Reg14;
-		volatile uint Reg15;
-		volatile uint Reg16;
-		volatile uint Reg17;
-		volatile uint Reg18;
-		volatile uint Reg19;
-		volatile uint Reg20;
-		volatile uint Reg21;
-		volatile uint Reg22;
-		volatile uint Reg23;
-		volatile uint Reg24;
-		volatile uint Reg25;
-		volatile uint Reg26;
-		volatile uint Reg27;
-		volatile uint Reg28;
-		volatile uint Reg29;
-		volatile uint Reg30;
-		volatile uint Reg31;
+		uint Reg1;
+		uint Reg2;
+		uint Reg3;
+		uint Reg4;
+		uint Reg5;
+		uint Reg6;
+		uint Reg7;
+		uint Reg8;
+		uint Reg9;
+		uint Reg10;
+		uint Reg11;
+		uint Reg12;
+		uint Reg13;
+		uint Reg14;
+		uint Reg15;
+		uint Reg16;
+		uint Reg17;
+		uint Reg18;
+		uint Reg19;
+		uint Reg20;
+		uint Reg21;
+		uint Reg22;
+		uint Reg23;
+		uint Reg24;
+		uint Reg25;
+		uint Reg26;
+		uint Reg27;
+		uint Reg28;
+		uint Reg29;
+		uint Reg30;
+		uint Reg31;
 
 		public override uint[] Registers
 		{
 			get
 			{
 				return new uint[] {
-					Reg0,  Reg1,  Reg2,  Reg3,  Reg4,  Reg5,  Reg6,  Reg7,  Reg8,  Reg9,
-					Reg10, Reg11, Reg12, Reg13, Reg14, Reg15, Reg16, Reg17, Reg18, Reg19,
-					Reg20, Reg21, Reg22, Reg23, Reg24, Reg25, Reg26, Reg27, Reg28, Reg29,
-					Reg30, Reg31,
+					this.Reg0,  this.Reg1,  this.Reg2,  this.Reg3,  this.Reg4,  this.Reg5,  this.Reg6,  this.Reg7,  this.Reg8,  this.Reg9,
+					this.Reg10, this.Reg11, this.Reg12, this.Reg13, this.Reg14, this.Reg15, this.Reg16, this.Reg17, this.Reg18, this.Reg19,
+					this.Reg20, this.Reg21, this.Reg22, this.Reg23, this.Reg24, this.Reg25, this.Reg26, this.Reg27, this.Reg28, this.Reg29,
+					this.Reg30, this.Reg31,
 				};
 			}
 		}
@@ -64,10 +61,17 @@ namespace Swis
 			set { this._Memory = new JitCacheInvalidator(this, value); }
 		}
 
-		uint JitCacheFirst = uint.MaxValue, JitCacheLast = 0; // track the jitted bounds so as to clear jit instructions
-		Dictionary<uint, (Action λ, uint cycles)> JitCache = new Dictionary<uint, (Action, uint)>();
+		public uint JitCostFactor = 100; // how much slower the first time code is JITed approx is, to prevent abuse
+		Dictionary<uint, (Action λ, uint cycles)> JitCache;
 		uint _JitBlockSize = 16;
-		public uint JitCostFactor = 1000; // how much slower the first time code is JITed approx is, to prevent abuse
+		uint JitCacheFirst;
+		uint JitCacheLast; // track the jitted bounds so as to clear JIT instructions
+		
+		public JitCpu()
+		{
+			this.JitCache = new Dictionary<uint, (Action λ, uint cycles)>();
+			this.ClearJitCache(); // sets up default values
+		}
 
 		public void ClearJitCache()
 		{
