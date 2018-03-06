@@ -250,21 +250,17 @@ namespace Swis
 				case Opcode.PushR:
 					{
 						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
-
-						Operand ptr = this.CreatePointer(sp, src.ValueSize);
+						
+						this.Memory[sp, src.ValueSize] = src.Value;
 						sp += src.ValueSize / 8;
-
-						ptr.Value = src.Value;
 						break;
 					}
 				case Opcode.PopR:
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						sp -= dst.ValueSize / 8;
-						Operand ptr = this.CreatePointer(sp, dst.ValueSize);
-
-						dst.Value = ptr.Value;
+						sp -= dst.ValueSize;
+						dst.Value = this.Memory[sp, dst.ValueSize];
 						break;
 					}
 				#endregion

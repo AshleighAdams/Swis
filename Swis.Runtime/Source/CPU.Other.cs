@@ -28,19 +28,5 @@
 		{
 			get { return ref this.Registers[(int)NamedRegister.Flag]; }
 		}
-		
-		Operand CreatePointer(uint address, uint size)
-		{
-			return new Operand
-			{
-				Memory = this.Memory,
-				Registers = null,
-				RegIdA = -1,
-				SizeA = (byte)Cpu.NativeSizeBits, // size of the const (address), not the size of the value at the address
-				ConstA = address,
-				IndirectionSize = (byte)size,
-			};
-		}
-
 	}
 }
