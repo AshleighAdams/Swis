@@ -120,8 +120,8 @@ The following are the register sizes possible, demonstrated on the general purpo
  - Instruction Pointer (`eip`): Points to the next instruction to be executed.
  - Stack Pointer (`esp`): Points to the next free space on the stack.
    The stack grows up, i.e. add to it to allocate, and subtract to deallocate.
- - Base Pointer (`ebp`): Points to the current frame pointer.  Note, the `call` and `ret` instructions control
-   this register automatically, which also makes it easy to unwind the stack.
+ - Base Pointer (`ebp`): Points to the current frame pointer.  Note, the `call` and `ret`
+   instructions control this register automatically, which also makes it easy to unwind the stack.
  - Flag (`eflag`): Stores various flags about the system, such as halted and compare results.
  - Protected Mode (`epm`): Not used currently, will be used to control privileges.
  - Protected Interrupt (`epi`): Store the interrupt mode, the location of the Interrupt Vector Table,
@@ -133,7 +133,7 @@ The general purpose registers are `eax` thru `elx`.
 
 ## Interrupts
 
-TOWRITE: this, talk about the IVT, enabling interrupts, and cli/sti.
+TOWRITE: this, talk about the IVT, enabling interrupts, and `cli`/`sti`.
 
 ## Debugger
 
@@ -141,7 +141,7 @@ The CPU communicates to the debugger by setting the `Cpu`'s `Debugger` property 
 which will pipe the necessary information to and from the debugger that it connects to over a TCP stream.
 Modifying the `Debugger` property on a `JitCpu` will cause the JIT cache to be flushed.
 
-![](Images/swis-wpf-debugger.png?raw=true "WPF Debugger")
+![](Images/swisual-debugger-disassembler.png?raw=true "Swisual Debugger")
 
 ### Features
 
@@ -150,14 +150,13 @@ Modifying the `Debugger` property on a `JitCpu` will cause the JIT cache to be f
  - View locals.
  - Inspect the call stack.
  - Reset/halt the CPU.
+ - Disassemble the program as it runs
 
-Note, to view the current instruction being executed, the locals, and labels for the call stack,
+Note, to view the locals, and labels for the call stack, and full assembly beyond the disassembly
 then debugging symbols must be loaded.
 
 #### Future Features
 
- - Decode instructions and slowly build up the program as it executes without needing to load
-   the debugging symbols.
  - Add support for loading the source files that generated the assembly, along with
    + breakpoint support,
    + viewing the current execution position, and
