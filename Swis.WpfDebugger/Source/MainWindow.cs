@@ -516,7 +516,7 @@ namespace Swis.WpfDebugger
 
 				// margins
 				{
-					if (language == "asm")
+					if (file == "Assembly")
 					{
 						ta.MarginClick += delegate (object sender, MarginClickEventArgs e)
 						{

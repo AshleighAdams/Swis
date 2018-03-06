@@ -113,12 +113,17 @@ namespace Swis.WpfDebugger
 					}
 					else if(!this.Labeled.ContainsKey(dest.Value))
 					{
-						string prefix = "label";
+						string prefix;
 						if (opcode == Opcode.CallR)
-							prefix = "function";
-						string lbl = $"${prefix}_0x{dest.Value:X}";
+							prefix = "$function";
+						else if (dest.Value < ip)
+							prefix = $"\t$loop";
+						else
+							prefix = $"\t$end";
+
+						string lbl = $"{prefix}_0x{dest.Value:X}";
 						this.Labeled[dest.Value] = lbl;
-						this.DbgGuessed.Labels[lbl] = dest.Value;
+						this.DbgGuessed.Labels[lbl.Trim()] = dest.Value;
 
 						// to update the new label found
 						ni.Asm = this.Disassemble(ni.Bin, out ni.Bin).str;
