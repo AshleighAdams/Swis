@@ -83,7 +83,7 @@ namespace Swis
 		}
 	}
 
-	public class ByteArrayMemoryController : MemoryController // 25% slower than the pointer version, but garunteed safe
+	public class ByteArrayMemoryController : MemoryController // 25% slower than the pointer version, but guaranteed safe
 	{
 		public byte[] Memory;
 		public ByteArrayMemoryController(byte[] memory) // TODO: use Span<>
