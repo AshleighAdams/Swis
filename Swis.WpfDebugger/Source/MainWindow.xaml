@@ -46,40 +46,6 @@
 					Modifiers="Shift" />
 	</Window.InputBindings>
 
-	<Window.Resources>
-
-		<ResourceDictionary>
-			<ResourceDictionary.MergedDictionaries>
-				<ResourceDictionary Source="/Resources/Expander/PlusMinusExpanderStyles.xaml" />
-			</ResourceDictionary.MergedDictionaries>
-			
-			<Style TargetType="{x:Type GridViewColumnHeader}">
-				<Setter Property="HorizontalContentAlignment" Value="Left" />
-			</Style>
-			<Style TargetType="{x:Type ListView}">
-				<Setter Property="BorderThickness" Value="0" />
-			</Style>
-
-			<Style TargetType="{x:Type ToolBar}">
-				<Setter Property="Background" Value="Transparent" />
-			</Style>
-			<Style TargetType="{x:Type ToolBarTray}">
-				<Setter Property="Background" Value="Transparent" />
-			</Style>
-
-
-			<Style TargetType="Image">
-				<!--x:Key="ImageEnabled"-->
-				<Style.Triggers>
-					<Trigger Property="IsEnabled" Value="False">
-						<Setter Property="Opacity" Value="0.25"></Setter>
-					</Trigger>
-				</Style.Triggers>
-			</Style>
-
-		</ResourceDictionary>
-	</Window.Resources>
-	
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />

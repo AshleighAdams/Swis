@@ -1,8 +1,31 @@
-﻿<Application x:Class="Swis.WpfDebugger.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Swis.WpfDebugger"
-             StartupUri="Source/MainWindow.xaml">
+﻿<Application
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:local="clr-namespace:Swis.WpfDebugger"
+			 StartupUri="MainWindow.xaml">
 	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="/Resources/ToolBar/ToolBarStyles.xaml" />
+				<ResourceDictionary Source="/Resources/Expander/PlusMinusExpanderStyles.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+
+			<Style TargetType="{x:Type GridViewColumnHeader}">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+			</Style>
+			<Style TargetType="{x:Type ListView}">
+				<Setter Property="BorderThickness" Value="0" />
+			</Style>
+
+			<!--make disabled buttons gray-->
+			<Style TargetType="Image">
+				<!--x:Key="ImageEnabled"-->
+				<Style.Triggers>
+					<Trigger Property="IsEnabled" Value="False">
+						<Setter Property="Opacity" Value="0.25"></Setter>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+		</ResourceDictionary>
 	</Application.Resources>
 </Application>
