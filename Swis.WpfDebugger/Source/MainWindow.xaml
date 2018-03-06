@@ -17,11 +17,11 @@
 
 	<Window.CommandBindings>
 		<CommandBinding Executed="ContinueButton_Click" Command="{x:Static local:MainWindow.ContinueCommand}" />
-		<CommandBinding Executed="PauseButton_Click" Command="{x:Static local:MainWindow.StopCommand}" />
+		<CommandBinding Executed="PauseButton_Click" Command="{x:Static local:MainWindow.PauseCommand}" />
 		<CommandBinding Executed="StopButton_Click" Command="{x:Static local:MainWindow.StopCommand}" />
 		<CommandBinding Executed="ResetButton_Click" Command="{x:Static local:MainWindow.ResetCommand}" />
-		<CommandBinding Executed="StepInButton_Click" Command="{x:Static local:MainWindow.StepOverCommand}" />
-		<CommandBinding Executed="StepOverButton_Click" Command="{x:Static local:MainWindow.StepInCommand}" />
+		<CommandBinding Executed="StepInButton_Click" Command="{x:Static local:MainWindow.StepInCommand}" />
+		<CommandBinding Executed="StepOverButton_Click" Command="{x:Static local:MainWindow.StepOverCommand}" />
 		<CommandBinding Executed="StepOutButton_Click" Command="{x:Static local:MainWindow.StepOutCommand}" />
 	</Window.CommandBindings>
 	
