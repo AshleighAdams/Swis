@@ -83,6 +83,9 @@ namespace Swis.WpfDebugger
 				this.AsmToPtr = new Dictionary<int, uint>();
 				foreach (var kv in value.PtrToAsm)
 					this.AsmToPtr[kv.Value.from] = kv.Key;
+
+				// update the asm
+				this.Clock();
 			}
 		}
 		Dictionary<int, uint> AsmToPtr = null;
