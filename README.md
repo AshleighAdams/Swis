@@ -93,11 +93,20 @@ along with one of the following addressing modes:
 When subtracting a constant, i.e. `ebp - 4`, the subtracted constant is encoded as `ebp + -4`,
 this means operations such as `eax - ebx` are not possible—tho it may be encoded as `eax + 0 + ebx * -1`.
 
-Each of the address parts can specify a register or a constant.
-If a constant can be encoded in 4 bits, 12 bits, or 20 bits then it will be encoded in 0, 1, or 2 extra bytes respectively.
-Above 20 bits, it will be encoded in 4 extra bytes, with 4 unused bits.
-
-<sup><sup>1</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits.</sup>
+Each of the address parts can specify a register or a constant (encoded as a signed int).
+If a constant can be encoded in 5 bits<sup>2a</sup>, 13 bits<sup>2b</sup>, or
+21 bits<sup>2c</sup> then it will be encoded in 0, 1, or 2 extra bytes respectively.
+Above 21 bits, it will be encoded in 4 extra bytes, with 5 unused bits.
+  
+<sub>
+	<sup>1</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits. <br/>
+	<sup>2a</sup> [-16, 15]&emsp;
+	<sup>2b</sup> [-8192, 8191]&emsp;
+	<sup>2c</sup> [-2097152, 2097151]<br/>
+	<!--<sup>2a</sup> -16 &le; &#x1d465; &le; 15 &emsp;
+	<sup>2b</sup> -8192 &le; &#x1d465; &le; 8191 &emsp;
+	<sup>2c</sup> -2,097,152 &le; &#x1d465; &le; 2,097,151 <br/>-->
+</sub>
 
 ## Registers
 
@@ -110,9 +119,11 @@ The following are the register sizes possible, demonstrated on the general purpo
 | 8 bits             | `al`, `bpl`  |
 | 16 bits            | `ax`, `bp`   |
 | 32 bits            | `eax`, `ebp` |
-| 64 bits<sup>2</sup>| `rax`, `rbp` |
+| 64 bits<sup>3</sup>| `rax`, `rbp` |
 
-<sup><sup>2</sup> 64 bit is not currently used, but infrastructure is in place to support it in the future.</sup>
+<sub>
+	<sup>3</sup>64 bit is not currently used, but infrastructure is in place to support it in the future. <br/>
+</sub>
 
 ### Special Registers
 

@@ -8,14 +8,14 @@ using System.Runtime.InteropServices;
 namespace Swis
 {
 
-	public sealed partial class JitCpu : Cpu
+	public sealed partial class JittedCpu : Cpu
 	{
 		class JitCacheInvalidator : MemoryController
 		{
 			MemoryController Parent;
-			JitCpu Cpu;
+			JittedCpu Cpu;
 
-			public JitCacheInvalidator(JitCpu cpu, MemoryController parent)
+			public JitCacheInvalidator(JittedCpu cpu, MemoryController parent)
 			{
 				this.Parent = parent;
 				this.Cpu = cpu;
@@ -90,10 +90,10 @@ namespace Swis
 
 		Expression RegisterExpression(NamedRegister reg, uint size, bool reading)
 		{
-			FieldInfo reg_field = typeof(JitCpu).GetField($"Reg{(int)reg}", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+			FieldInfo reg_field = typeof(JittedCpu).GetField($"Reg{(int)reg}", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
 
 			if (reading && size != Cpu.NativeSizeBits)
-				return Expression.And(
+				return Expression.And( // TODO: sign extend it if signed
 					Expression.Constant((1u << (int)size) - 1, typeof(uint)), // ensure that we don't read/write too much from this register
 					Expression.Field(Expression.Constant(this), reg_field)
 				);
@@ -103,7 +103,7 @@ namespace Swis
 
 		IndexExpression PointerExpression(Expression memloc, uint indirection_size)
 		{
-			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JitCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
+			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JittedCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
 
 			PropertyInfo mem_indexer = (from p in mem.Type.GetDefaultMembers().OfType<PropertyInfo>()
 											// check return type
@@ -136,9 +136,10 @@ namespace Swis
 					if (!signed)
 						return RegisterExpression((NamedRegister)regid, size, within_indirection || !write);
 					else if (within_indirection || !write)
-						return Expression.Convert(RegisterExpression((NamedRegister)regid, size, within_indirection || !write), typeof(uint));
+						return Expression.Convert(RegisterExpression((NamedRegister)regid, size, within_indirection || !write), typeof(int));
 					else
-						throw new Exception("can't write to calculation");
+						// TODO: only throw if invoked
+						throw new Exception("can't write to addressing mode calculation");
 				}
 			}
 
@@ -157,9 +158,12 @@ namespace Swis
 				);
 				break;
 			case 2: // c * d
-				inside = Expression.Multiply(
-					jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, arg.ConstDSigned),
-					jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, arg.ConstDSigned)
+				inside = Expression.Convert(
+					Expression.Multiply(
+						jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, true),
+						jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, true)
+					),
+					typeof(uint)
 				);
 				break;
 			case 3: // a + b + c * d
@@ -168,9 +172,12 @@ namespace Swis
 						jit_part(arg.RegIdA, arg.SizeA, arg.ConstA, has_indirection),
 						jit_part(arg.RegIdB, arg.SizeB, arg.ConstB, has_indirection)
 					),
-					Expression.Multiply(
-						jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, arg.ConstDSigned),
-						jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, arg.ConstDSigned)
+					Expression.Convert(
+						Expression.Multiply(
+							jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, true),
+							jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, true)
+						),
+						typeof(uint)
 					)
 				);
 				break;

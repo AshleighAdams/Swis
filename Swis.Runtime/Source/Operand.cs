@@ -8,8 +8,7 @@ namespace Swis
 		//public Emulator Owner;
 		public MemoryController Memory;
 		public uint[] Registers;
-
-		public bool ConstDSigned; // if to do smul for c*d
+		
 		public sbyte RegIdA, RegIdB, RegIdC, RegIdD;
 		public byte SizeA, SizeB, SizeC, SizeD;
 		public uint ConstA, ConstB, ConstC, ConstD;
@@ -54,6 +53,7 @@ namespace Swis
 					if (regid == -1)
 						return @const;
 					else
+						// maybe sign extend
 						return (uint)(regs[regid] & (((ulong)1u << size) - 1)); //-V3106
 				}
 
@@ -70,12 +70,9 @@ namespace Swis
 				case 3:
 					total = part_value(this.RegIdA, this.SizeA, this.ConstA);
 					total += part_value(this.RegIdB, this.SizeB, this.ConstB);
-					if (this.ConstDSigned) // does this need the caster?
-						return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC)
-							* (int)part_value(this.RegIdD, this.SizeD, this.ConstD));
-					else
-						return total + part_value(this.RegIdC, this.SizeC, this.ConstC)
-							* part_value(this.RegIdD, this.SizeD, this.ConstD);
+					
+					return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC)
+						* (int)part_value(this.RegIdD, this.SizeD, this.ConstD));
 				default: throw new NotImplementedException();
 				}
 			}
@@ -85,7 +82,7 @@ namespace Swis
 		{
 			string @base;
 
-			string do_part(sbyte regid, byte size, uint @const, bool signed = false)
+			string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
 				{
@@ -137,11 +134,11 @@ namespace Swis
 				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}";
 				break;
 			case 2:
-				@base = $"{do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD, this.ConstDSigned)}";
+				@base = $"{do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD)}";
 				break;
 			case 3:
 				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}" +
-					$" + {do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD, this.ConstDSigned)}";
+					$" + {do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD)}";
 				break;
 			default:
 				@base = "???";
@@ -291,9 +288,8 @@ namespace Swis
 			sbyte rida, ridb, ridc, ridd;
 			byte sza, szb, szc, szd;
 			uint cona, conb, conc, cond;
-			bool dsign = false;
 
-			bool decode_part(out sbyte regid, out byte size, out uint @const, ref uint ipinside) // returns true if signed
+			void decode_part(out sbyte regid, out byte size, out uint @const, ref uint ipinside)
 			{
 				byte control = memory[ipinside + 0];
 				ipinside += 1;
@@ -301,7 +297,6 @@ namespace Swis
 				if ((control & 0b1000_0000u) != 0) // is it a constant?
 				{
 					uint extra_bytes = ((control & 0b0110_0000u) >> 5);
-					bool signed = (control & 0b0001_0000u) != 0;
 					switch (extra_bytes)
 					{
 					case 0: goto default;
@@ -314,17 +309,14 @@ namespace Swis
 					uint total;
 					if (extra_bytes != 4)
 					{
-						// todo: check endianness here
-						total = (control & 0b0000_1111u);
-						for (int i = 0; i < extra_bytes; i++)
+						uint extra_bits = extra_bytes * 8;
+						total = (control & 0b0001_1111u);
+						if (extra_bytes > 0)
 						{
-							// TODO: use the aligned accessor
-							uint constpart = memory[ipinside + 0];
-							ipinside += 1;
-							total |= constpart << (i * 8 + 4);
+							total |= (memory[ipinside, extra_bits] << 5);
+							ipinside += extra_bytes;
 						}
-						if (signed)
-							total = Util.SignExtend(total, 4 + extra_bytes * 8);
+						total = Util.SignExtend(total, 5 + extra_bits);
 					}
 					else
 					{
@@ -334,7 +326,7 @@ namespace Swis
 					regid = -1;
 					size = 32; // todo: maybe
 					@const = total;
-					return signed;
+					return;
 				}
 				else
 				{
@@ -349,7 +341,7 @@ namespace Swis
 					//case 3: size = 64; break;
 					default: throw new Exception();
 					}
-					return false;
+					return;
 				}
 			}
 
@@ -370,7 +362,7 @@ namespace Swis
 				break;
 			case 2: // c * d
 				decode_part(out ridc, out szc, out conc, ref ip);
-				dsign = decode_part(out ridd, out szd, out cond, ref ip);
+				decode_part(out ridd, out szd, out cond, ref ip);
 				rida = ridb = -1;
 				sza = szb = 0;
 				cona = conb = 0;
@@ -379,7 +371,7 @@ namespace Swis
 				decode_part(out rida, out sza, out cona, ref ip);
 				decode_part(out ridb, out szb, out conb, ref ip);
 				decode_part(out ridc, out szc, out conc, ref ip);
-				dsign = decode_part(out ridd, out szd, out cond, ref ip);
+				decode_part(out ridd, out szd, out cond, ref ip);
 				break;
 			default:
 				throw new Exception();

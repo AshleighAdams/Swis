@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace Swis
 {
-	public sealed partial class JitCpu : Cpu
+	public sealed partial class JittedCpu : Cpu
 	{
 		uint Reg0;
 		#region Other Registers
@@ -67,7 +67,7 @@ namespace Swis
 		uint JitCacheFirst;
 		uint JitCacheLast; // track the jitted bounds so as to clear JIT instructions
 		
-		public JitCpu()
+		public JittedCpu()
 		{
 			this.JitCache = new Dictionary<uint, (Action λ, uint cycles)>();
 			this.ClearJitCache(); // sets up default values

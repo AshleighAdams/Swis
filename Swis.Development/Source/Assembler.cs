@@ -528,17 +528,13 @@ namespace Swis
 										@const = c.U32;
 										constsz = 32;
 									}
-									else if (char.IsDigit(input[0]))
-									{
-										@const = uint.Parse(input);
-										constsz = (uint)Math.Ceiling(Math.Log(@const + 1, 2)); // number of bits needed to store it
-										return;
-									}
-									else if (input[0] == '-') // negatives must be encoded in full to keep all the sign bits (twos compliment), or i could TODO: use a signextend bit
+									else if (input[0] == '-' || char.IsDigit(input[0]))
 									{
 										c.I32 = int.Parse(input);
+										constsz = c.I32 >= 0
+											? (uint)Math.Ceiling(Math.Log(c.I32 + 1, 2) + 1)
+											: (uint)Math.Ceiling(Math.Log(-c.I32, 2) + 1);
 										@const = c.U32;
-										constsz = 32;
 										return;
 									}
 									else if (input[0] == '$')
@@ -629,23 +625,23 @@ namespace Swis
 							{
 								if (regsz == 0)
 								{
-									uint value4bits;
+									uint value5bits;
 									uint extra = 0;
 									byte extraa = 0, extrab = 0, extrac = 0, extrad = 0;
 
-									if (constsz <= 4 + 2 * 8) // can we store it in <= 2.5 bytes
+									if (constsz <= 5 + 2 * 8) // can we store it in <= 2.5 bytes
 									{
-										value4bits = @const & 0b1111;
-										@const = @const >> 4;
+										value5bits = @const & 0b1_1111;
+										@const = @const >> 5;
 
-										if (constsz > 4 + 0 * 8)
+										if (constsz > 5 + 0 * 8)
 										{
 											extra = 1;
 											extraa = (byte)(@const & 0b1111_1111);
 											@const = @const >> 8;
 										}
 
-										if (constsz > 4 + 1 * 8)
+										if (constsz > 5 + 1 * 8)
 										{
 											extra = 2;
 											extrab = (byte)(@const & 0b1111_1111);
@@ -654,7 +650,7 @@ namespace Swis
 									}
 									else
 									{
-										value4bits = 0;
+										value5bits = 0;
 										extra = 4;
 										extraa = (byte)(@const & 0b1111_1111);
 										@const = @const >> 8;
@@ -680,8 +676,7 @@ namespace Swis
 									byte constbyte = (byte)(0
 										| ((1 & 0b1) << 7) // is_constant
 										| ((enc_xtr & 0b11) << 5) // extra_bytes
-										| ((0 & 0b1) << 4) // reserved sign_extend
-										| ((value4bits & 0b1111) << 0) // value
+										| ((value5bits) << 0) // value
 									);
 									bin.Add(constbyte);
 

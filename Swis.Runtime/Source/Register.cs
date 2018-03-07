@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Swis
 {
-	[Flags]
 	public enum FlagsRegisterFlags
 	{
 		TrapMask  = 0b00000000_00000000_00000000_00000011,

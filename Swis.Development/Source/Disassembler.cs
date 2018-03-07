@@ -10,7 +10,7 @@ namespace Swis
 		{
 			string @base;
 			
-			string do_part(sbyte regid, byte size, uint @const, bool signed = false)
+			string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
 				{
@@ -66,11 +66,11 @@ namespace Swis
 				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}";
 				break;
 			case 2:
-				@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD, self.ConstDSigned)}";
+				@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
 				break;
 			case 3:
 				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" +
-					$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD, self.ConstDSigned)}";
+					$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
 				break;
 			default:
 				@base = "???";
