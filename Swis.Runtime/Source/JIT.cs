@@ -318,7 +318,7 @@ namespace Swis
 						// clear mode
 						Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
 						// set mode to enabled
-						Expression.OrAssign(epi, Expression.Constant(0b0000_0000__0000_0000__0000_0001__0000_0000u))
+						Expression.OrAssign(epi,  Expression.Constant( 0b0000_0000__0000_0000__0000_0001__0000_0000u))
 					);
 					break;
 				}
@@ -328,8 +328,8 @@ namespace Swis
 					exp = Expression.Block(
 						// clear mode
 						Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
-						// set mode to enabled
-						Expression.OrAssign(epi, Expression.Constant(0b0000_0000__0000_0000__0000_0010__0000_0000u))
+						// set mode to queue
+						Expression.OrAssign(epi,  Expression.Constant( 0b0000_0000__0000_0000__0000_0010__0000_0000u))
 					);
 					break;
 				}
