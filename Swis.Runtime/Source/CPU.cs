@@ -572,6 +572,7 @@ namespace Swis
 						Operand left = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand right = this.Memory.DecodeOperand(ref ip, this.Registers);
 
+						dst.Signed = left.Signed >> (int)right.Value; // TODO: check this
 						throw new NotImplementedException();
 					}
 				case Opcode.OrRRR:

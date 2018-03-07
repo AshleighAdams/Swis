@@ -1116,6 +1116,16 @@ namespace Swis
 					Expression leftexp = JitOperand(ref left, false);
 					Expression rightexp = JitOperand(ref right, false);
 
+					exp = Expression.Assign(dstexp, // TODO: check this
+						Expression.Convert(
+							Expression.RightShift(
+								Expression.Convert(leftexp, typeof(int)), 
+								Expression.Convert(rightexp, typeof(int))
+							),
+							typeof(int)
+						)
+					);
+					sequential_not_gauranteed = dst.AddressingMode == 0 && dst.RegIdA == (int)NamedRegister.InstructionPointer;
 					throw new NotImplementedException();
 				}
 			case Opcode.OrRRR:
