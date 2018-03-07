@@ -56,7 +56,7 @@ namespace SwisTest
 			catch { }
 
 			byte line0_in = 0;
-			var cpu = new InterpretedCpu
+			var cpu = new JittedCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
@@ -148,52 +148,51 @@ $stack:
 			InterpretedCpu old = new InterpretedCpu()
 			{
 				Memory = new PointerMemoryController(assembled),
-				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
 
-			JitCpu cpu = new JitCpu()
+			JittedCpu jit = new JittedCpu()
 			{
 				Memory = new PointerMemoryController(assembled),
 				JitCostFactor = 0,
 				//Debugger = new StreamDebugger(Console.Out, dbg),
 			};
-
 			
-
 			Stopwatch w = new Stopwatch();
-			TimeSpan jitfirst, jit, notjit;
+			TimeSpan tsjitfirst, tsjit, tsnotjit;
 
+			const int cycles = 1000;
+
+			old.Clock(cycles);
+			old.Reset();
+			System.Threading.Thread.Sleep(10000);
 			w.Start();
 			{
-				cpu.Clock(1000);
+				old.Clock(cycles);
 			}
 			w.Stop();
-			notjit = w.Elapsed;
+			tsnotjit = w.Elapsed;
 
-
-			cpu = new JitCpu()
-			{
-				Memory = new PointerMemoryController(assembled),
-			};
-
-			//cpu.Reset();
-			//cpu.ClearJitCache();
+			jit.Clock(10);
+			jit.Reset();
+			jit.ClearJitCache();
+			System.Threading.Thread.Sleep(10000);
 			w.Restart();
 			{
-				cpu.Clock(1000);
+				jit.Clock(cycles);
 			}
 			w.Stop();
-			jitfirst = w.Elapsed;
+			tsjitfirst = w.Elapsed;
 
-			cpu.Reset();
+			jit.Reset();
+			System.Threading.Thread.Sleep(10000);
 			w.Restart();
 			{
-				cpu.Clock(1000);
+				jit.Clock(cycles);
 			}
 			w.Stop();
-			jit = w.Elapsed;
+			tsjit = w.Elapsed;
 			
-			Console.WriteLine($"JIT(jit): {notjit.TotalMilliseconds:0.00}ms; JIT(1): {jitfirst.TotalMilliseconds:0.00}ms; JIT: {jit.TotalMilliseconds:0.00}ms");
+			Console.WriteLine($"OLD: {tsnotjit.TotalMilliseconds:0.00}ms; JIT(1): {tsjitfirst.TotalMilliseconds:0.00}ms; JIT: {tsjit.TotalMilliseconds:0.00}ms");
 			Console.ReadLine();
 		}
 

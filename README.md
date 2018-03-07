@@ -42,7 +42,7 @@ $stack:
 (byte[] assembled, var dbg) = Swis.Assembler.Assemble(File.ReadAllText("program.asm"));
 
 byte line0_in = 0;
-var cpu = new Swis.JitCpu()
+var cpu = new Swis.JittedCpu()
 {
 	Memory = new PointerMemoryController(assembled),
 
