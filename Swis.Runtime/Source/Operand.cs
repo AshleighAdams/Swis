@@ -66,7 +66,9 @@ namespace Swis
 					return part_value(this.RegIdA, this.SizeA, this.ConstA)
 						+ part_value(this.RegIdB, this.SizeB, this.ConstB);
 				case 2:
-					return total;
+					return (uint)(
+						(int)part_value(this.RegIdC, this.SizeC, this.ConstC) * (int)part_value(this.RegIdD, this.SizeD, this.ConstD)
+					);
 				case 3:
 					total = part_value(this.RegIdA, this.SizeA, this.ConstA);
 					total += part_value(this.RegIdB, this.SizeB, this.ConstB);
@@ -389,7 +391,6 @@ namespace Swis
 				ConstB = conb,
 				ConstC = conc,
 				ConstD = cond,
-				ConstDSigned = dsign,
 				SizeA = sza,
 				SizeB = szb,
 				SizeC = szc,
