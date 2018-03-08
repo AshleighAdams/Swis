@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-//using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
@@ -25,6 +25,36 @@ using System.Text.RegularExpressions;
 
 namespace Swis.WpfDebugger
 {
+	public class SymbolicButton : Button
+	{
+		public static readonly DependencyProperty SymbolicColorAProperty = DependencyProperty.Register("SymbolicColorA", typeof(Brush), typeof(SymbolicButton), new PropertyMetadata(Brushes.Crimson));
+		public static readonly DependencyProperty SymbolicColorBProperty = DependencyProperty.Register("SymbolicColorB", typeof(Brush), typeof(SymbolicButton), new PropertyMetadata(Brushes.Cyan));
+		public static readonly DependencyProperty SymbolicColorCProperty = DependencyProperty.Register("SymbolicColorC", typeof(Brush), typeof(SymbolicButton), new PropertyMetadata(Brushes.Green));
+		
+		public Brush SymbolicColorA
+		{
+			get { return (Brush)this.GetValue(SymbolicColorAProperty); }
+			set { this.SetValue(SymbolicColorAProperty, value); }
+		}
+		public Brush SymbolicColorB
+		{
+			get { return (Brush)this.GetValue(SymbolicColorBProperty); }
+			set { this.SetValue(SymbolicColorBProperty, value); }
+		}
+		public Brush SymbolicColorC
+		{
+			get { return (Brush)this.GetValue(SymbolicColorCProperty); }
+			set { this.SetValue(SymbolicColorCProperty, value); }
+		}
+		
+		public SymbolicButton() : base()
+		{
+			//this.BorderThickness = new Thickness(0);
+			//this.Background = Brushes.Transparent;
+			
+		}
+	}
+
 	public partial class MainWindow : System.Windows.Window
 	{
 		string VisualizeValue(uint stack_base, uint base_ptr, int bp_offset, string type)

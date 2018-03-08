@@ -122,17 +122,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\callstack.png" />
-    <Resource Include="Resources\fileopen.png" />
-    <Resource Include="Resources\pause.png" />
-    <Resource Include="Resources\reset.png" />
-    <Resource Include="Resources\start.png" />
-    <Resource Include="Resources\step-in.png" />
-    <Resource Include="Resources\step-out.png" />
-    <Resource Include="Resources\step.png" />
-    <Resource Include="Resources\stop.png" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Swis.Development\Swis.Development.csproj">
       <Project>{ec1e830d-1456-4d56-9253-ef4ba27b6dd4}</Project>
       <Name>Swis.Development</Name>

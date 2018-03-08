@@ -46,6 +46,68 @@
 					Modifiers="Shift" />
 	</Window.InputBindings>
 
+	<Window.Resources>
+
+		<Style TargetType="local:SymbolicButton" x:Key="DefaultSymbolicStyle">
+			<Setter Property="Background" Value="Transparent" />
+			<Setter Property="MinWidth" Value="22" />
+			<Setter Property="MinHeight" Value="22" />
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="local:SymbolicButton">
+						<Border TextBlock.Foreground="{TemplateBinding Foreground}" Background="{TemplateBinding Background}"
+								x:Name="Border" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" >
+
+							<ContentPresenter 
+								ContentTemplate="{TemplateBinding ContentTemplate}"
+								Content="{TemplateBinding Content}"
+								RecognizesAccessKey="True" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							<!--<Viewbox Stretch="Uniform">
+								<Canvas Width="16" Height="16">
+									<ContentPresenter 
+										ContentTemplate="{TemplateBinding ContentTemplate}"
+										Content="{TemplateBinding Content}"
+										RecognizesAccessKey="True"/>
+								</Canvas>
+							</Viewbox>-->
+
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter Property="Background" Value="#ffc9def5" />
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter Property="Background" Value="#ff007fcc" />
+							</Trigger>
+							<Trigger Property="IsEnabled" Value="False">
+								<Setter Property="SymbolicColorA" Value="Gray" />
+								<Setter Property="SymbolicColorB" Value="Gray" />
+								<Setter Property="SymbolicColorC" Value="Gray" />
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+		
+		<Style TargetType="local:SymbolicButton" BasedOn="{StaticResource DefaultSymbolicStyle}" />
+
+		<Style TargetType="local:SymbolicButton" x:Key="SymbolicStateStyle" BasedOn="{StaticResource DefaultSymbolicStyle}">
+			<Setter Property="SymbolicColorA" Value="#FF368632" />
+			<Setter Property="SymbolicColorB" Value="#FF005098" />
+			<Setter Property="SymbolicColorC" Value="#FF9d240c" />
+		</Style>
+
+		<Style TargetType="local:SymbolicButton" x:Key="SymbolicHueStyle" BasedOn="{StaticResource DefaultSymbolicStyle}">
+			<Setter Property="SymbolicColorA" Value="#FF005098" />
+			<Setter Property="SymbolicColorB" Value="#FF404040" />
+		</Style>
+
+		<Style TargetType="local:SymbolicButton" x:Key="SymbolicLoadStyle" BasedOn="{StaticResource SymbolicHueStyle}">
+			<Setter Property="SymbolicColorC" Value="#ffdab173" />
+		</Style>
+	</Window.Resources>
+	
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -57,41 +119,130 @@
 			<ToolBarTray>
 				<ToolBar>
 
-					<Button Name="OpenSymbolsButton" Click="OpenSymbolsButton_Click" ToolTip="Open Symbols">
-						<local:AutoGrayableImage Source="/Resources/fileopen.png" />
-					</Button>
-					<Button Name="ViewWindows">
-						<local:AutoGrayableImage Source="/Resources/callstack.png" />
-					</Button>
+					<local:SymbolicButton x:Name="OpenSymbolsButton" Style="{StaticResource SymbolicLoadStyle}" Click="OpenSymbolsButton_Click" ToolTip="Open Symbols">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<!-- arrow curve -->
+								<Path Stroke="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="1"
+									  Data="M 4,7.5 L 3,7.5 A 1.5,2 0 1 1 3,3.5 L 7.5,3.5" />
+								<!-- arrow -->
+								<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}"
+									  Data="M 8.5,3.5 6.5,6 4,6 6,3.5 4,1 6.5,1 Z" />
+								<Path Stroke="{Binding Path=SymbolicColorC, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="1" 
+									  Data="M 9,4.5 14.5,4.5 14.5,15 M 2.5,11.5 2.5,9 " />
+								<Path Fill="{Binding Path=SymbolicColorC, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 1,10 11,10 14,15 3,15 Z " />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+
+					<local:SymbolicButton x:Name="ViewWindows" Style="{StaticResource SymbolicHueStyle}">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<!-- phone -->
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 1,12 A 3,3 0 0 0 4,15 L 4,12 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 1,8 A 3,3 0 0 1 4,5 L 4,8 Z" />
+								<Path Stroke="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}"
+									  Data="M 1.5,8 L 1.5,12" />
+								<!-- stack -->
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 2,1 15,1 15,4 2,4 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 5,6 15,6 15,9 5,9 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 5,11 15,11 15,14 5,14 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+					
 				</ToolBar>
 
 				<ToolBar>
-					<Button Name="ContinueButton" Click="ContinueButton_Click" ToolTip="Continue (F5)">
+					
+					<local:SymbolicButton x:Name="ContinueButton" Style="{StaticResource SymbolicStateStyle}" Click="ContinueButton_Click" ToolTip="Continue (F5)">
 						<StackPanel Orientation="Horizontal">
-							<local:AutoGrayableImage Source="/Resources/start.png" />
-							<TextBlock Text="Continue"/>
+							<Viewbox Stretch="Uniform">
+								<Canvas Width="16" Height="16">
+									<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+										  Data="M 4,2 11,8 4,14 Z" />
+								</Canvas>
+							</Viewbox>
+							<TextBlock Text="Continue" Margin="0,-1,0,0" />
 						</StackPanel>
+					</local:SymbolicButton>
+					
 					</Button>
 					<Separator/>
-					<Button Name="PauseButton" Click="PauseButton_Click" ToolTip="Pause">
-						<local:AutoGrayableImage Source="/Resources/pause.png" />
-					</Button>
-					<Button Name="StopButton" Click="StopButton_Click" ToolTip="Stop (Ctrl+F5)">
-						<local:AutoGrayableImage Source="/Resources/stop.png" />
-					</Button>
-					<Button Name="ResetButton" Click="ResetButton_Click" ToolTip="Reset (Ctrl+Shift+F5)">
-						<local:AutoGrayableImage Source="/Resources/reset.png" />
-					</Button>
+					<local:SymbolicButton x:Name="PauseButton" Style="{StaticResource SymbolicStateStyle}" Click="PauseButton_Click" ToolTip="Pause">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 4,3 7,3 7,12 4,12 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 9,3 12,3 12,12 9,12 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+					<local:SymbolicButton x:Name="StopButton" Style="{StaticResource SymbolicStateStyle}" Click="StopButton_Click" ToolTip="Stop (Ctrl+F5)">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Data="M 4,4 12,4 12,12 4,12 Z" Fill="{Binding Path=SymbolicColorC, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+					<!--<local:SymbolicButton Style="{StaticResource SymbolicRedStyle}" x:Name="StopButton" Click="StopButton_Click" ToolTip="Stop (Ctrl+F5)">
+						<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+							Data="M 4,4 12,4 12,12 4,12 Z" />
+					</local:SymbolicButton>-->
+					<local:SymbolicButton x:Name="ResetButton" Style="{StaticResource SymbolicHueStyle}" Click="ResetButton_Click" ToolTip="Reset (Ctrl+Shift+F5)">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Stroke="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="2.25" 
+									  Data="M 3.5,6.5 a 5,5 23 1 0 4.4,-2.6 l -1,0" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 3,4 6,1 9,1 7,3 7,5 9,7 6,7 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
 					<Separator/>
-					<Button Name="StepInButton" Click="StepInButton_Click" ToolTip="Step In (F11)">
-						<local:AutoGrayableImage Source="/Resources/step-in.png" />
-					</Button>
-					<Button Name="StepOverButton" Click="StepOverButton_Click" ToolTip="Step Over (F10)">
-						<local:AutoGrayableImage Source="/Resources/step.png" />
-					</Button>
-					<Button Name="StepOutButton" Click="StepOutButton_Click" ToolTip="Step Out (Shift+F11)">
-						<local:AutoGrayableImage Source="/Resources/step-out.png" />
-					</Button>
+					<local:SymbolicButton x:Name="StepInButton" Style="{StaticResource SymbolicHueStyle}" Click="StepInButton_Click" ToolTip="Step In (F11)">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Stroke="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="2" 
+									  Data="M 8,1 L 8,6" />
+								<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 8,8 5,5 5,3 8,6 11,3 11,5 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 8,10 a 2,2 0 1 0 0,4 M 8,10 a 2,2 0 1 1 0,4 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+					<local:SymbolicButton x:Name="StepOverButton" Style="{StaticResource SymbolicHueStyle}" Click="StepOverButton_Click" ToolTip="Step Over (F10)">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Stroke="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="2" 
+									  Data="M 3,7 A 1.1,1 0 0 1 12,7" />
+								<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 14,8 10,8 8,6 12,6 12,2 14,4 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 8,10 a 2,2 0 1 0 0,4 M 8,10 a 2,2 0 1 1 0,4 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
+					<local:SymbolicButton x:Name="StepOutButton" Style="{StaticResource SymbolicHueStyle}" Click="StepOutButton_Click" ToolTip="Step Out (Shift+F11)">
+						<Viewbox Stretch="Uniform">
+							<Canvas Width="16" Height="16">
+								<Path Stroke="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" StrokeThickness="2" 
+									  Data="M 8,3 L 8,8" />
+								<Path Fill="{Binding Path=SymbolicColorA, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 8,1 5,4 5,6 8,3 11,6 11,4 Z" />
+								<Path Fill="{Binding Path=SymbolicColorB, RelativeSource={RelativeSource AncestorType={x:Type local:SymbolicButton}}}" 
+									  Data="M 8,10 a 2,2 0 1 0 0,4 M 8,10 a 2,2 0 1 1 0,4 Z" />
+							</Canvas>
+						</Viewbox>
+					</local:SymbolicButton>
 				</ToolBar>
 			</ToolBarTray>
 		</ToolBarPanel>
