@@ -61,7 +61,7 @@ namespace Swis
 					else if (line == "halt")
 					{
 						if (this.Cpu.TryGetTarget(out var cpu))
-							cpu.Registers[(int)NamedRegister.Flag] |= (uint)FlagsRegisterFlags.Halted;
+							cpu.Flags |= (uint)FlagsRegisterFlags.Halted;
 						this.Paused = false;
 						this.First = true;
 					}
