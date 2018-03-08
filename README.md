@@ -122,7 +122,7 @@ The following are the register sizes possible, demonstrated on the general purpo
 | 64 bits<sup>3</sup>| `rax`, `rbp` |
 
 <sub>
-	<sup>3</sup>64 bit is not currently used, but infrastructure is in place to support it in the future. <br/>
+	<sup>3</sup> 64 bit is not currently used, but infrastructure is in place to support it in the future. <br/>
 </sub>
 
 ### Special Registers
@@ -148,11 +148,15 @@ TOWRITE: this, talk about the IVT, enabling interrupts, and `cli`/`sti`.
 
 ## Debugger
 
-The CPU communicates to the debugger by setting the `Cpu`'s `Debugger` property to a `StreamDebugger`,
-which will pipe the necessary information to and from the debugger that it connects to over a TCP stream.
-Modifying the `Debugger` property on a `JitCpu` will cause the JIT cache to be flushed.
+The CPU communicates to the debugger by setting the `Cpu`'s `Debugger` property 
+to an instance of a `RemoteDebugger`, which will pipe the necessary information to and from the
+debugger that it connects to over a TCP stream.<sup>4</sup>
 
 ![](Images/swisual-debugger-disassembler.png?raw=true "Swisual Debugger")
+
+<sub>
+	<sup>4</sup> Modifying the `Debugger` property on a `JittedCpu` will cause the JIT cache to be flushed.
+</sub>
 
 ### Features
 

@@ -45,13 +45,13 @@ namespace SwisTest
 
 			//string x = DebugData.Serialize(dbg);
 
-			StreamDebugger dbger = null;
+			RemoteDebugger dbger = null;
 			try
 			{
 				TcpClient cl = new TcpClient();
 				cl.Connect("localhost", 1337);
 
-				dbger = new StreamDebugger(cl.GetStream(), dbg: dbg, flush: true);
+				dbger = new RemoteDebugger(cl.GetStream(), dbg: dbg, flush: true);
 			}
 			catch { }
 

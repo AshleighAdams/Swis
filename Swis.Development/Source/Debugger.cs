@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Swis
 {
-	public class StreamDebugger : ExternalDebugger
+	public class RemoteDebugger : ExternalDebugger
 	{
 		protected NetworkStream Stream;
 		protected DebugData Dbg;
@@ -38,8 +38,11 @@ namespace Swis
 		{
 			while (this.Stream.CanRead || this.Stream.CanWrite)
 			{
+				bool idle = true;
+
 				if (this.Stream.DataAvailable && this.ReadQueue.Count < 16)
 				{
+					idle = false;
 					string line = this._Reader.ReadLine();
 
 					if (line.StartsWith("break "))
@@ -72,20 +75,23 @@ namespace Swis
 					else if (this.Paused) // ignore step-over, step into, and continue unless we're paused
 						this.ReadQueue.Enqueue(line);
 				}
-				else if (this.WriteQueue.TryDequeue(out byte[] tosend))
+
+				if (this.WriteQueue.TryDequeue(out byte[] tosend))
 				{
-					this.Stream.WriteTimeout = 1;
+					idle = false;
+					this.Stream.WriteTimeout = 10;
 					this.Stream.Write(tosend, 0, tosend.Length);
 
 					if (this.Flush)
 						this.Stream.Flush();
 				}
-				else
+				
+				if(idle)
 					System.Threading.Thread.Sleep(33);
 			}
 		}
 
-		public StreamDebugger(NetworkStream str, DebugData dbg = null, bool flush = false)
+		public RemoteDebugger(NetworkStream str, DebugData dbg = null, bool flush = true)
 		{
 			this.Stream = str;
 			this.Dbg = dbg;
