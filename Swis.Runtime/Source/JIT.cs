@@ -1439,7 +1439,7 @@ namespace Swis
 				);
 			}
 			
-			return (exp, ip - original_ip, sequential_not_gauranteed);
+			return (exp, ip - original_ip, sequential_not_gauranteed || this.Debugger != null /*TODO: why is this necessary? it shouldn't be*/);
 		}
 
 		Queue<uint> InterruptQueue = new Queue<uint>();

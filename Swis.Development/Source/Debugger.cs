@@ -135,23 +135,6 @@ namespace Swis
 					this.BasePtrEquals = cpu.BasePointer;
 					this.Paused = false;
 					return true; // execute self
-
-					/*
-					uint eip = cpu.InstructionPointer;
-					(Opcode op, _) = cpu.Memory.DisassembleInstruction(ref eip, null);
-
-					if (op == Opcode.CallR)
-					{
-						this.IpEquals = eip;
-						this.Paused = false;
-					}
-					else // nothing to step over, so step next
-					{
-						this.Paused = false;
-						this.Step = true;
-						return true;
-					}
-					*/
 				}
 				else if (line == "step-out")
 				{
