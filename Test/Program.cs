@@ -3,6 +3,7 @@
 using Swis;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace SwisTest
 {
@@ -19,32 +20,13 @@ namespace SwisTest
 
 		static void ExecuteTest(string asm)
 		{
-			asm = asm ?? System.IO.File.ReadAllText("TestProgram/program.asm");
+			int clocks = 10;
+			int delay = 100;
 			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
 
 			System.IO.File.WriteAllBytes("TestProgram/program.bin", assembled);
 			System.IO.File.WriteAllText("TestProgram/program.dbg", DebugData.Serialize(dbg));
-
-			//Console.WriteLine(asm);
-			//Console.ReadLine();
-			//return;
-			/*
-			byte[] test = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
-			var dm = new DirectMemoryController(test);
-
-			byte[] back = new byte[test.Length];
-			for (uint i = 0; i < back.Length; i++)
-				back[i] = (byte)dm[i, 8];
-
-			uint whatitis = dm[1, 32];
-			uint shouldbe = BitConverter.ToUInt32(back, 1);
-
-			string abc = Convert.ToString(whatitis, 2);
-			string def = Convert.ToString(shouldbe, 2);
-			*/
-
-			//string x = DebugData.Serialize(dbg);
-
+			
 			RemoteDebugger dbger = null;
 			try
 			{
@@ -56,7 +38,7 @@ namespace SwisTest
 			catch { }
 
 			byte line0_in = 0;
-			var cpu = new JittedCpu
+			var cpu = new InterpretedCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
@@ -65,22 +47,26 @@ namespace SwisTest
 				LineRead = (line) => line0_in,
 			};
 
-			DateTime start = DateTime.UtcNow;
-			DateTime next = DateTime.UtcNow;
-
-			int total_clocks = 0;
-			while (!cpu.Halted)
+			new Thread(delegate ()
 			{
-				int clocks = 100;// target_frequency / tickrate;
-				total_clocks += cpu.Clock(clocks);
-
-				System.Threading.Thread.Sleep(16);
-
-				if (Console.KeyAvailable)
+				while (true)
 				{
 					line0_in = (byte)Console.ReadKey(true).KeyChar;
 					cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0);
 				}
+			})
+			{
+				IsBackground = true,
+				Name = "stdin interrupter"
+			}.Start();
+
+			DateTime start = DateTime.UtcNow;
+			DateTime next = DateTime.UtcNow;
+
+			while (!cpu.Halted)
+			{
+				cpu.Clock(clocks);
+				Thread.Sleep(delay);
 			}
 
 			DateTime end = DateTime.UtcNow;
@@ -88,111 +74,41 @@ namespace SwisTest
 			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalMilliseconds:0.00} ms");
 		}
 
+		private class TestDebugger : ExternalDebugger
+		{
+			bool @break = false;
+			public override bool Clock(Cpu cpu)
+			{
+				if (cpu.TimeStampCounter % 3 == 0 && this.@break)
+					return this.@break = false;
+				return this.@break = true;
+			}
+		}
 		static void TestJit()
 		{
 			(byte[] assembled, var dbg) = Assembler.Assemble(
-@"
-; code
-mov esp, $stack
-mov ebp, esp
-call $main
-halt
-$main:
-	mov efx, 0
-	$loop:
-		add esp, esp, 8
-			mov ptr32 [esp - 4], 5
-			call $factorial
-		sub esp, esp, 8
-		add efx, efx, 1
-		cmp efx, 100
-		jl $loop
-	ret
-
-$factorial:
-	; params: %n = ebp - 12
-	; return: ret = ebp - 16
-	; locals: %retval = ebp + 0
-	add esp, esp, 4 ; alloca
-	cmpu ptr32 [ebp - 12], 1
-	jg $@_Z9factoriali_label_3
-
-	$@_Z9factoriali_label_2:
-	mov ptr32 [ebp + 0], 1
-	jmp $@_Z9factoriali_label_6
-
-	$@_Z9factoriali_label_3:
-	mov eax, ptr32 [ebp - 12]
-	sub ebx, ptr32 [ebp - 12], 1
-
-	; call i32 @_Z9factoriali(i32)
-	push eax
-	add esp, esp, 8 ; allocate space for return and arguments
-	mov ptr32 [esp - 4], ebx ; copy arg #1
-	call $factorial
-	mov ebx, ptr32 [esp - 8] ; copy return
-	sub esp, esp, 8 ; pop args and ret
-	pop eax
-	mulu ptr32 [ebp + 0], eax, ebx
-
-	$@_Z9factoriali_label_6:
-	mov ptr32 [ebp - 16], ptr32 [ebp + 0]
-	ret
-
-; globals
-.align 4
-$stack:
-	.data pad 1024
-");
-
-			InterpretedCpu old = new InterpretedCpu()
-			{
-				Memory = new PointerMemoryController(assembled),
-			};
-
+				@"$start:
+				mov eax, ebx
+				mov ebx, ecx
+				mov edx, eex
+				mov eax, ebx
+				mov ebx, ecx
+				mov edx, eex
+				mov eax, ebx
+				mov ebx, ecx
+				mov edx, eex
+				jmp $start");
+			
 			JittedCpu jit = new JittedCpu()
 			{
 				Memory = new PointerMemoryController(assembled),
-				JitCostFactor = 0,
-				//Debugger = new StreamDebugger(Console.Out, dbg),
+				Debugger = new TestDebugger(),
 			};
-			
-			Stopwatch w = new Stopwatch();
-			TimeSpan tsjitfirst, tsjit, tsnotjit;
 
-			const int cycles = 1000;
+			while (!jit.Halted)
+				jit.Clock(100);
 
-			old.Clock(cycles);
-			old.Reset();
-			System.Threading.Thread.Sleep(10000);
-			w.Start();
-			{
-				old.Clock(cycles);
-			}
-			w.Stop();
-			tsnotjit = w.Elapsed;
-
-			jit.Clock(10);
-			jit.Reset();
-			jit.ClearJitCache();
-			System.Threading.Thread.Sleep(10000);
-			w.Restart();
-			{
-				jit.Clock(cycles);
-			}
-			w.Stop();
-			tsjitfirst = w.Elapsed;
-
-			jit.Reset();
-			System.Threading.Thread.Sleep(10000);
-			w.Restart();
-			{
-				jit.Clock(cycles);
-			}
-			w.Stop();
-			tsjit = w.Elapsed;
-			
-			Console.WriteLine($"OLD: {tsnotjit.TotalMilliseconds:0.00}ms; JIT(1): {tsjitfirst.TotalMilliseconds:0.00}ms; JIT: {tsjit.TotalMilliseconds:0.00}ms");
+			Console.WriteLine("done");
 			Console.ReadLine();
 		}
 
@@ -203,8 +119,13 @@ $stack:
 
 			string asm = null;
 
-			asm = IrCompileTest();
+			//asm = IrCompileTest();
+			//asm = System.IO.File.ReadAllText("TestProgram/program.asm");
+			asm = System.IO.File.ReadAllText("TestProgram/interrupt-test.asm");
+
 			ExecuteTest(asm);
+
+			Console.ReadLine();
 
 			//TestJit();
 			
