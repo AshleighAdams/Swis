@@ -286,7 +286,7 @@ namespace Swis
 					{
 						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
 
-						sp -= dst.ValueSize;
+						sp -= dst.ValueSize / 8;
 						dst.Value = this.Memory[sp, dst.ValueSize];
 						break;
 					}
