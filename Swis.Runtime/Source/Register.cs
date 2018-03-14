@@ -5,16 +5,20 @@ namespace Swis
 {
 	public enum FlagsRegisterFlags
 	{
-		TrapMask  = 0b00000000_00000000_00000000_00000011,
 		Equal     = 0b00000000_00000000_00000000_00000100,
 		Less      = 0b00000000_00000000_00000000_00001000,
 		Greater   = 0b00000000_00000000_00000000_00010000,
 		Overflow  = 0b00000000_00000000_00000000_00100000,
 		Underflow = 0b00000000_00000000_00000000_01000000,
-		Halted    = 0b00000000_00000000_00000000_10000000,
 	}
 
-	public enum NamedRegister
+	public enum ProtectedModeRegisterFlags : uint
+	{
+		TrapMask = 0b00000000_00000000_00000000_00000011u,
+		Halted = 0b00000000_00000000_00000000_00000100u,
+	}
+
+	public enum NamedRegister : uint
 	{
 		TimeStampCounter = 0,
 		InstructionPointer = 1,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -55,17 +56,93 @@ namespace Swis
 		public abstract void Interrupt(uint code);
 		public abstract void Reset();
 
-		public virtual ref uint TimeStampCounter { get { return ref this.Registers[(int)NamedRegister.TimeStampCounter]; } }
-		public virtual ref uint InstructionPointer { get { return ref this.Registers[(int)NamedRegister.InstructionPointer]; } }
-		public virtual ref uint StackPointer { get { return ref this.Registers[(int)NamedRegister.StackPointer]; } }
-		public virtual ref uint BasePointer { get { return ref this.Registers[(int)NamedRegister.BasePointer]; } }
-		public virtual ref uint Flags { get { return ref this.Registers[(int)NamedRegister.Flag]; } }
+		public abstract ref uint TimeStampCounter { get; }
+		public abstract ref uint InstructionPointer { get; }
+		public abstract ref uint StackPointer { get; }
+		public abstract ref uint BasePointer { get; }
+		public abstract ref uint Flags { get; }
+		public abstract ref uint ProtectedMode { get; }
+		public abstract ref uint ProtectedInterrupt { get; }
 
-		public virtual bool Halted { get { return ((FlagsRegisterFlags)this.Flags).HasFlag(FlagsRegisterFlags.Halted); } }
+		public virtual bool Halted { get { return (this.ProtectedMode & (uint)ProtectedModeRegisterFlags.Halted) != 0; } }
+
+		protected virtual bool HandleInterrupts(IProducerConsumerCollection<uint> interrupt_queue)
+		{
+			if (interrupt_queue.Count == 0)
+				return false;
+
+			ref uint sp = ref this.StackPointer;
+			ref uint bp = ref this.BasePointer;
+			ref uint ip = ref this.InstructionPointer;
+			ref uint pm = ref this.ProtectedMode;
+			ref uint pi = ref this.ProtectedInterrupt;
+			uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
+
+			switch (mode)
+			{
+			case 0b00: /*disabled silent*/
+				while (interrupt_queue.TryTake(out _)) { } // clear the remaining
+				return false;
+			case 0b10: return false; /*queued*/
+			case 0b11: pm |= (uint)ProtectedModeRegisterFlags.Halted; return true; /*disabled halt*/
+			case 0b01:
+			default: /*consume one*/
+				if (!interrupt_queue.TryTake(out uint @int))
+					return false;
+
+				uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
+				uint ivtn = @int > 255 ? 255 : @int;
+				uint addr = this.Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
+				
+				// simulate call to the interrupt address if it's enabled
+				if (addr != 0)
+				{
+					pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
+					pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
+
+					// push ip
+					this.Memory[sp, Cpu.NativeSizeBits] = ip;
+					sp += Cpu.NativeSizeBytes;
+					// push bp
+					this.Memory[sp, Cpu.NativeSizeBits] = bp;
+					sp += Cpu.NativeSizeBytes;
+					// push flags
+					this.Memory[sp, Cpu.NativeSizeBits] = this.Flags;
+					sp += Cpu.NativeSizeBytes;
+					// mov bp, sp
+					bp = sp;
+					// jmp loc
+					ip = addr;
+
+					if (ivtn == 255) // extended interrupt, push the interrupt code
+					{
+						// push @int
+						this.Memory[sp, Cpu.NativeSizeBits] = @int;
+						sp += Cpu.NativeSizeBytes;
+					}
+					return false;
+				}
+				else
+				{
+					if (@int == (uint)Interrupts.DoubleFault)
+					{
+						pm |= (uint)ProtectedModeRegisterFlags.Halted;
+						return true;
+					}
+					else
+					{
+						this.Interrupt((uint)Interrupts.DoubleFault);
+						return this.HandleInterrupts(interrupt_queue);
+					}
+				}
+			}
+		}
+
+		
 	}
 
 	public sealed partial class InterpretedCpu : Cpu
-    {
+	{
 		//public uint[] Registers = new uint[32];
 		public override uint[] Registers { get; }
 
@@ -86,64 +163,11 @@ namespace Swis
 
 			if (this.Halted)
 				return 0;
-			
+
 			for (int i = 0; i < count; i++)
 			{
-				if (this.InterruptQueue.Count > 0)
-				{
-					ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
-					uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
-
-					switch (mode)
-					{
-					case 0b00: this.InterruptQueue.Clear(); break; /*disabled silent*/
-					case 0b10: break; /*queued*/
-					case 0b11: flags |= (uint)FlagsRegisterFlags.Halted; return i; /*disabled halt*/
-					case 0b01: default:
-						
-						uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
-						uint @int = this.InterruptQueue.Dequeue();
-						uint ivtn = @int > 255 ? 255 : @int;
-						uint addr = this.Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
-
-						// simulate call to the interrupt address if it's enabled
-						if (addr != 0)
-						{
-							pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
-							pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
-
-							// push ip
-							this.Memory[sp, Cpu.NativeSizeBits] = ip;
-							sp += Cpu.NativeSizeBytes;
-							// push bp
-							this.Memory[sp, Cpu.NativeSizeBits] = bp;
-							sp += Cpu.NativeSizeBytes;
-							// mov bp, sp
-							bp = sp;
-							// jmp loc
-							ip = addr;
-
-							if (ivtn == 255) // extended interrupt, push the interupt code
-							{
-								// push @int
-								this.Memory[sp, Cpu.NativeSizeBits] = @int;
-								sp += Cpu.NativeSizeBytes;
-							}
-						}
-						else
-						{
-							i--;
-							if (@int == (uint)Interrupts.DoubleFault)
-							{
-								this.Flags |= (uint)FlagsRegisterFlags.Halted;
-								count = 0;
-							}
-							else
-								this.Interrupt((uint)Interrupts.DoubleFault);
-						}
-						break;
-					}
-				}
+				if (this.HandleInterrupts(this.InterruptQueue))
+					return i;
 
 				if (this.Debugger != null)
 					if (!this.Debugger.Clock(this))
@@ -171,6 +195,9 @@ namespace Swis
 						{
 							// mov sp, bp
 							sp = bp;
+							// pop flags
+							sp -= Cpu.NativeSizeBytes;
+							flags = this.Memory[sp, Cpu.NativeSizeBits];
 							// pop bp
 							sp -= Cpu.NativeSizeBytes;
 							bp = this.Memory[sp, Cpu.NativeSizeBits];
@@ -199,7 +226,7 @@ namespace Swis
 						Operand dst = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
 						Operand bit = this.Memory.DecodeOperand(ref ip, this.Registers);
-						
+
 						dst.Value = Util.SignExtend(src.Value, bit.Value);
 						break;
 					}
@@ -219,7 +246,7 @@ namespace Swis
 						break;
 					}
 				case Opcode.Halt:
-					flags |= (uint)FlagsRegisterFlags.Halted;
+					this.ProtectedMode |= (uint)ProtectedModeRegisterFlags.Halted;
 					count = 0; // so we break from the loop
 					break;
 				case Opcode.InRR:
@@ -250,7 +277,7 @@ namespace Swis
 				case Opcode.PushR:
 					{
 						Operand src = this.Memory.DecodeOperand(ref ip, this.Registers);
-						
+
 						this.Memory[sp, src.ValueSize] = src.Value;
 						sp += src.ValueSize / 8;
 						break;
@@ -293,7 +320,7 @@ namespace Swis
 						// pop ip
 						sp -= Cpu.NativeSizeBytes;
 						ip = this.Memory[sp, Cpu.NativeSizeBits];
-						
+
 						break;
 					}
 				case Opcode.JumpR:
@@ -727,12 +754,5 @@ namespace Swis
 			for (int i = 0; i < this.Registers.Length; i++)
 				this.Registers[i] = 0;
 		}
-
-		Queue<uint> InterruptQueue = new Queue<uint>();
-		public override void Interrupt(uint code)
-		{
-			this.InterruptQueue.Enqueue(code);
-		}
-		
 	}
 }

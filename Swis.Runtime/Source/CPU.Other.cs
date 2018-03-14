@@ -1,8 +1,9 @@
-﻿namespace Swis
+﻿using System.Collections.Concurrent;
+
+namespace Swis
 {
 	public sealed partial class InterpretedCpu
 	{
-
 		//ref Register StackRegister = null;
 		public override ref uint TimeStampCounter
 		{
@@ -28,5 +29,22 @@
 		{
 			get { return ref this.Registers[(int)NamedRegister.Flag]; }
 		}
+
+		public override ref uint ProtectedMode
+		{
+			get { return ref this.Registers[(int)NamedRegister.ProtectedMode]; }
+		}
+
+		public override ref uint ProtectedInterrupt
+		{
+			get { return ref this.Registers[(int)NamedRegister.ProtectedInterrupt]; }
+		}
+
+		public override void Interrupt(uint code)
+		{
+			this.InterruptQueue.Enqueue(code);
+		}
+
+		ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
 	}
 }

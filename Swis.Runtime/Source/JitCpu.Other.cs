@@ -77,6 +77,16 @@ namespace Swis
 		{
 			get { return ref this.Reg5; }
 		}
+
+		public override ref uint ProtectedMode
+		{
+			get { return ref this.Reg6; }
+		}
+
+		public override ref uint ProtectedInterrupt
+		{
+			get { return ref this.Reg7; }
+		}
 		#endregion
 
 		public override void Reset()

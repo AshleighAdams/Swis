@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
@@ -107,67 +108,8 @@ namespace Swis
 
 			while (this.CycleBank > 0)
 			{
-				// handle interrupts
-				if (this.InterruptQueue.Count > 0)
-				{
-					ref uint ip = ref this.Reg1;
-					ref uint sp = ref this.Reg2;
-					ref uint bp = ref this.Reg4;
-					ref uint flags = ref this.Reg5;
-					ref uint pi = ref this.Reg7;
-
-					uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
-
-					switch (mode)
-					{
-					case 0b00: this.InterruptQueue.Clear(); break; /*disabled silent*/
-					case 0b10: break; /*queued*/
-					case 0b11: flags |= (uint)FlagsRegisterFlags.Halted; return executed; /*disabled halt*/
-					case 0b01:
-					default:
-
-						uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
-						uint @int = this.InterruptQueue.Dequeue();
-						uint ivtn = @int > 255 ? 255 : @int;
-						uint addr = this.Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
-
-						// simulate call to the interrupt address if it's enabled
-						if (addr != 0)
-						{
-							pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
-							pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
-
-							// push ip
-							this.Memory[sp, Cpu.NativeSizeBits] = ip;
-							sp += Cpu.NativeSizeBytes;
-							// push bp
-							this.Memory[sp, Cpu.NativeSizeBits] = bp;
-							sp += Cpu.NativeSizeBytes;
-							// mov bp, sp
-							bp = sp;
-							// jmp loc
-							ip = addr;
-
-							if (ivtn == 255) // extended interrupt, push the interupt code
-							{
-								// push @int
-								this.Memory[sp, Cpu.NativeSizeBits] = @int;
-								sp += Cpu.NativeSizeBytes;
-							}
-						}
-						else
-						{
-							if (@int == (uint)Interrupts.DoubleFault)
-							{
-								this.Flags |= (uint)FlagsRegisterFlags.Halted;
-								return executed;
-							}
-							else
-								this.Interrupt((uint)Interrupts.DoubleFault);
-						}
-						break;
-					}
-				}
+				if (this.HandleInterrupts(this.InterruptQueue))
+					return executed;
 				
 				if (!this.JitCache.TryGetValue(this.Reg1, out (Action λ, uint cycles) instr))
 				{
@@ -288,6 +230,7 @@ namespace Swis
 					Expression eip = RegisterExpression(NamedRegister.InstructionPointer, Cpu.NativeSizeBits, false);
 					Expression esp = RegisterExpression(NamedRegister.StackPointer, Cpu.NativeSizeBits, false);
 					Expression ebp = RegisterExpression(NamedRegister.BasePointer, Cpu.NativeSizeBits, false);
+					Expression epm = RegisterExpression(NamedRegister.ProtectedMode, Cpu.NativeSizeBits, false);
 					Expression epi = RegisterExpression(NamedRegister.ProtectedInterrupt, Cpu.NativeSizeBits, false);
 
 					Expression esp_ptr = PointerExpression(esp, Cpu.NativeSizeBits);
@@ -299,6 +242,9 @@ namespace Swis
 						Expression.OrAssign(epi,  Expression.Constant( 0b0000_0000__0000_0000__0000_0001__0000_0000u)),
 						// mov sp, bp
 						Expression.Assign(esp, ebp),
+						// pop pm
+						Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+						Expression.Assign(epm, esp_ptr),
 						// pop bp
 						Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
 						Expression.Assign(ebp, esp_ptr),
@@ -438,8 +384,8 @@ namespace Swis
 				}
 			case Opcode.Halt:
 				{
-					var flagregister = this.RegisterExpression(NamedRegister.Flag, 32, false);
-					exp = Expression.OrAssign(flagregister, Expression.Constant((uint)FlagsRegisterFlags.Halted));
+					var pmregister = this.RegisterExpression(NamedRegister.ProtectedMode, 32, false);
+					exp = Expression.OrAssign(pmregister, Expression.Constant((uint)ProtectedModeRegisterFlags.Halted));
 					sequential_not_gauranteed = true;
 					break;
 				}
@@ -1442,7 +1388,7 @@ namespace Swis
 			return (exp, ip - original_ip, sequential_not_gauranteed || this.Debugger != null /*TODO: why is this necessary? it shouldn't be*/);
 		}
 
-		Queue<uint> InterruptQueue = new Queue<uint>();
+		ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
 		public override void Interrupt(uint code)
 		{
 			this.InterruptQueue.Enqueue(code);
