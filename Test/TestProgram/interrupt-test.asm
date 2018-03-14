@@ -17,7 +17,9 @@ $interrupt_vector_table:
 ;############
 
 $string:
-	.data ascii "Lorem ipsum...\x0a\x00"
+	.data ascii "Lorem ipsum... hello world\x0d"
+	.data ascii "Abcdefghijklmnopqrstuvwxyz\x0d"
+	.data ascii "Testing long output complete...\x0a\x00"
 
 $stdin_buff:
 	.data pad 16
@@ -26,7 +28,7 @@ $stdin_buffreadpos:
 $stdin_buffwritepos:
 	.data int32 0
 
-$int251_stdin:
+$int251_stdin_old:
 	in ptr8 [ebp + 0], 0
 	mov ptr32 [ebp + 1], ptr32 [$stdin_buffwritepos]
 	add ptr32 [$stdin_buffwritepos], ptr32 [$stdin_buffwritepos], 1
@@ -35,6 +37,13 @@ $int251_stdin:
 	modu eax, ptr32 [ebp + 1], 16
 	mov ptr8 [$stdin_buff + eax], ptr8 [ebp + 0]
 	pop eax
+	iret
+
+$int251_stdin:
+	in ptr8 [ebp + 0], 0
+	modu eflag, ptr32 [$stdin_buffwritepos], 16
+	mov ptr8 [$stdin_buff + eflag], ptr8 [ebp + 0]
+	add ptr32 [$stdin_buffwritepos], ptr32 [$stdin_buffwritepos], 1
 	iret
 
 $@main:
@@ -57,9 +66,9 @@ $@main:
 	$main_ret:
 	ret
 
-.src func "void puts(char*)"
-.src local "str" "int8*" -12 4
 $puts:
+	.src func "void puts(char* str)"
+	.src local "str" "int8*" -12 4
 	; ptr = -12
 	mov eax, [ebp - 12]
 
