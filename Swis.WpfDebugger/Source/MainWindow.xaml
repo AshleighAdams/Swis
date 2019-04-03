@@ -62,14 +62,6 @@
 								ContentTemplate="{TemplateBinding ContentTemplate}"
 								Content="{TemplateBinding Content}"
 								RecognizesAccessKey="True" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							<!--<Viewbox Stretch="Uniform">
-								<Canvas Width="16" Height="16">
-									<ContentPresenter 
-										ContentTemplate="{TemplateBinding ContentTemplate}"
-										Content="{TemplateBinding Content}"
-										RecognizesAccessKey="True"/>
-								</Canvas>
-							</Viewbox>-->
 
 						</Border>
 						<ControlTemplate.Triggers>
@@ -173,6 +165,13 @@
 						</StackPanel>
 					</local:SymbolicButton>
 					
+					<Button x:Name="ContinueDropDown" Padding="0" Margin="0" BorderThickness="1" Click="ContinueDropDown_Click" VerticalAlignment="Stretch" HorizontalAlignment="Left">
+						<Path x:Name="BtnArrow" Margin="0" Width="7" Fill="#666" Stretch="Uniform" Data="F1 M 301.14,-189.041L 311.57,-189.041L 306.355,-182.942L 301.14,-189.041 Z" />
+						<Button.ContextMenu>
+							<ContextMenu>
+								<MenuItem Header="Auto Step" />
+							</ContextMenu>
+						</Button.ContextMenu>
 					</Button>
 					<Separator/>
 					<local:SymbolicButton x:Name="PauseButton" Style="{StaticResource SymbolicStateStyle}" Click="PauseButton_Click" ToolTip="Pause">

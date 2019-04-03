@@ -6,11 +6,11 @@
 -nostdsysteminc
 -fnew-alignment=<align>*/
 
-void display()
-{
-	asm(".align 1024"); // make sure we're at 1024
-	asm(".data pad 12288"); // then allocate us 64*64*3 global bytes
-}
+//void display()
+//{
+//	asm(".align 1024"); // make sure we're at 1024
+//	asm(".data pad 12288"); // then allocate us 64*64*3 global bytes
+//}
 
 /*
 void reverse(char str[], int length)
@@ -80,67 +80,70 @@ void srand(unsigned int seed)
 
 */
 
-void out(unsigned int port, unsigned char val)
+//void out(unsigned int port, unsigned char val)
+//{
+//	// https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
+//	// r = register, m = memory, o = offsetable memory, v = not-offsetable memory
+//	// i = immediate, g = register, memory, or immediate
+//	// X = any operand
+//	asm("out %0, %1"
+//		:                     // outputs
+//		: "X"(port), "X"(val) // inputs
+//		:                     // valid registers
+//		);
+//}
+//
+//int get()
+//{
+//	int ret;
+//	asm("in ptr32 [%0], 0"
+//		: "=X"(ret) // outputs
+//		:         // inputs
+//		:         // valid registers
+//	);
+//	return ret;
+//}
+
+short stdout_line = 0;
+void put(char c, short line)
 {
-	// https://gcc.gnu.org/onlinedocs/gcc/Simple-Constraints.html#Simple-Constraints
-	// r = register, m = memory, o = offsetable memory, v = not-offsetable memory
-	// i = immediate, g = register, memory, or immediate
-	// X = any operand
 	asm("out %0, %1"
-		:                     // outputs
-		: "X"(port), "X"(val) // inputs
-		:                     // valid registers
-		);
-}
-
-int get()
-{
-	int ret;
-	asm("in ptr32 [%0], 0"
-		: "=X"(ret) // outputs
-		:         // inputs
-		:         // valid registers
-	);
-	return ret;
-}
-
-void put(char c)
-{
-	asm("out 0, %0"
-		:        // outputs
-		: "X"(c) // inputs
-		:        // valid registers
+		:                          // outputs
+		: "X"(line), "X"(c) // inputs
+		:                          // valid registers
 		);
 }
 void puts(const char* str)
 {
-	while (*str != 0)
+	short line = stdout_line;
+	while (*str)
 	{
-		put(*str);
+		put(*str, line);
 		str++;
 	}
+	put('\n', line);
 }
-
-struct pixel
-{
-	unsigned char r, g, b;
-};
-
-int main()
-{
-	pixel* display = (pixel*)1024;
-
-	for (int y = 0; y < 64; y++)
-		for (int x = 0; x < 64; x++)
-		{
-			pixel& pix = display[y * 64 + x];
-			pix.r = x;
-			pix.g = 0;
-			pix.b = y;
-		}
-
-	char msg[] = "We have written everything to the display!";
-	puts(msg);
-
-	return 0;
-}
+//
+//struct pixel
+//{
+//	unsigned char r, g, b;
+//};
+//
+//int main()
+//{
+//	pixel* display = (pixel*)1024;
+//
+//	for (int y = 0; y < 64; y++)
+//		for (int x = 0; x < 64; x++)
+//		{
+//			pixel& pix = display[y * 64 + x];
+//			pix.r = x;
+//			pix.g = 0;
+//			pix.b = y;
+//		}
+//
+//	char msg[] = "We have written everything to the display!";
+//	puts(msg);
+//
+//	return 0;
+//}

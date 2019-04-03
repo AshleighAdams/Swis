@@ -119,9 +119,9 @@ namespace SwisTest
 
 			string asm = null;
 
-			//asm = IrCompileTest();
+			asm = IrCompileTest();
 			//asm = System.IO.File.ReadAllText("TestProgram/program.asm");
-			asm = System.IO.File.ReadAllText("TestProgram/interrupt-test.asm");
+			//asm = System.IO.File.ReadAllText("TestProgram/interrupt-test.asm");
 
 			ExecuteTest(asm);
 
