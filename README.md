@@ -91,7 +91,7 @@ along with one of the following addressing modes:
  4. `a + b + c * d`
 
 When subtracting a constant, i.e. `ebp - 4`, the subtracted constant is encoded as `ebp + -4`,
-this means operations such as `eax - ebx` are not possible—tho it may be encoded as `eax + 0 + ebx * -1`.
+this means operations such as `eax - ebx` are not possibleâ€”tho it may be encoded as `eax + 0 + ebx * -1`.
 
 Each of the address parts can specify a register or a constant (encoded as a signed int).
 If a constant can be encoded in 5 bits<sup>2a</sup>, 13 bits<sup>2b</sup>, or
