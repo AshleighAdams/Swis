@@ -33,9 +33,8 @@ namespace Swis
 		{
 			private static readonly Func<uint, uint, int> ReinterpretUInt32AsInt32 = (val, bits) =>
 			{
-				// todo use bits to signextend
 				Caster c; c.I32 = 0;
-				c.U32 = val;
+				c.U32 = Util.SignExtend(val, bits);
 				return c.I32;
 			};
 			public static readonly Expression<Func<uint, uint, int>> ReinterpretUInt32AsInt32Expression = (val, bits) => ReinterpretUInt32AsInt32(val, bits);
