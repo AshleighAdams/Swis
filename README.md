@@ -3,6 +3,8 @@
 Simple Wire Instruction Set, intended for an emulated CPU in a sandbox-style game.
 Includes a super-bad-but-gets-the-job-done IR to SwisASM compiler, assembler, interpreted CPU, and jitted CPU.
 
+[![](https://codescene.io/projects/6331/status.svg) Get more details at **codescene.io**.](https://codescene.io/projects/6331/jobs/latest-successful/results)
+
 ## Sample Code
 
 ```asm

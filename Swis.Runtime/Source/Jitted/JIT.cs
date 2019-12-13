@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
+using static Swis.JitExpressionHelpers;
+
 namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
@@ -141,7 +143,7 @@ namespace Swis
 					if (simulated_ip > this.JitCacheLast)
 						this.JitCacheLast = simulated_ip;
 
-					Expression<Action> λ = Expression.Lambda<Action>(Expression.Block(block_instructions));
+					var λ = Expression.Lambda<Action>(Expression.Block(block_instructions));
 					
 					//Console.WriteLine($"JIT: [{this.Reg1}] = {λ.GetDebugView()}");
 
@@ -176,39 +178,6 @@ namespace Swis
 			Opcode op = this.Memory.DecodeOpcode(ref ip);
 
 			bool sequential_not_gauranteed = false;
-
-			Func<uint, float> to_float = (val) =>
-			{
-				Caster c; c.F32 = 0;
-				c.U32 = val;
-				return c.F32;
-			};
-			Expression<Func<uint, float>> to_float_exp = (val) => to_float(val);
-
-			Func<uint, uint, int> to_signed = (val, bits) =>
-			{
-				// todo use bits to signextend
-				Caster c; c.I32 = 0;
-				c.U32 = val;
-				return c.I32;
-			};
-			Expression<Func<uint, uint, int>> to_signed_exp = (val, bits) => to_signed(val, bits);
-
-			Func<int, uint> to_unsigned_from_signed = (val) =>
-			{
-				Caster c; c.U32 = 0;
-				c.I32 = val;
-				return c.U32;
-			};
-			Expression<Func<int, uint>> to_unsigned_from_signed_exp = (val) => to_unsigned_from_signed(val);
-
-			Func<int, uint> to_unsigned_from_float = (val) =>
-			{
-				Caster c; c.U32 = 0;
-				c.I32 = val;
-				return c.U32;
-			};
-			Expression<Func<int, uint>> to_unsigned_from_float_exp = (val) => to_unsigned_from_float(val);
 
 			Expression exp = null;
 
@@ -811,10 +780,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp, 
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Add(
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -846,10 +815,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Subtract(
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -867,10 +836,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_signed_exp,
+						Expression.Invoke(ReinterpretInt32AsUInt32Expression,
 							Expression.Multiply(
-								Expression.Invoke(to_signed_exp, leftexp, Expression.Constant(left.ValueSize)),
-								Expression.Invoke(to_signed_exp, rightexp, Expression.Constant(right.ValueSize))
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
 							)
 						)
 					);
@@ -902,10 +871,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Multiply(
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -923,10 +892,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_signed_exp,
+						Expression.Invoke(ReinterpretInt32AsUInt32Expression,
 							Expression.Divide(
-								Expression.Invoke(to_signed_exp, leftexp, Expression.Constant(left.ValueSize)),
-								Expression.Invoke(to_signed_exp, rightexp, Expression.Constant(right.ValueSize))
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
 							)
 						)
 					);
@@ -958,10 +927,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Divide(
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -979,10 +948,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_signed_exp,
+						Expression.Invoke(ReinterpretInt32AsUInt32Expression,
 							Expression.Modulo(
-								Expression.Invoke(to_signed_exp, leftexp, Expression.Constant(left.ValueSize)),
-								Expression.Invoke(to_signed_exp, rightexp, Expression.Constant(right.ValueSize))
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
+								Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
 							)
 						)
 					);
@@ -1014,10 +983,10 @@ namespace Swis
 					Expression rightexp = JitOperand(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Modulo(
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -1166,9 +1135,9 @@ namespace Swis
 
 					Expression<Func<float, float>> sqrt = (val) => (float)Math.Sqrt(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(sqrt,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1187,10 +1156,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> log = (val, @base) => (float)Math.Log(val, @base);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(log,
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -1207,9 +1176,9 @@ namespace Swis
 
 					Expression<Func<float, float>> sin = (val) => (float)Math.Sin(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(sin,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1226,9 +1195,9 @@ namespace Swis
 
 					Expression<Func<float, float>> cos = (val) => (float)Math.Cos(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(cos,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1245,9 +1214,9 @@ namespace Swis
 
 					Expression<Func<float, float>> tan = (val) => (float)Math.Tan(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(tan,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1264,9 +1233,9 @@ namespace Swis
 
 					Expression<Func<float, float>> asin = (val) => (float)Math.Asin(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(asin,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1283,9 +1252,9 @@ namespace Swis
 
 					Expression<Func<float, float>> acos = (val) => (float)Math.Acos(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(acos,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1302,9 +1271,9 @@ namespace Swis
 
 					Expression<Func<float, float>> atan = (val) => (float)Math.Atan(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(atan,
-								Expression.Invoke(to_float_exp, leftexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
 							)
 						)
 					);
@@ -1323,10 +1292,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> atan2 = (l, r) => (float)Math.Log(l, r);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(atan2,
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
@@ -1345,10 +1314,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> pow = (l, r) => (float)Math.Pow(l, r);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(to_unsigned_from_float_exp,
+						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
 							Expression.Invoke(pow,
-								Expression.Invoke(to_float_exp, leftexp),
-								Expression.Invoke(to_float_exp, rightexp)
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
+								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
 							)
 						)
 					);
