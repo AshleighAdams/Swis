@@ -2,27 +2,35 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
 	{
+		internal static class ReinterpretCast<TSrc, TDst>
+			where TSrc : struct
+			where TDst : struct
+		{
+			[StructLayout(LayoutKind.Explicit)]
+			private struct UnionStruct
+			{
+				[FieldOffset(0)] public TSrc Src;
+				[FieldOffset(0)] public TDst Dst;
+			}
+
+			private static readonly Func<TSrc, TDst> Implementation = (val) =>
+			{
+				UnionStruct converter;
+				converter.Dst = default;
+				converter.Src = val;
+				return converter.Dst;
+			};
+			public static readonly Expression<Func<TSrc, TDst>> Expression = (val) => Implementation(val);
+		}
+
 		internal static class ReinterpretCastExpressionHelpers
 		{
-			private static readonly Func<uint, float> ReinterpretUIntAsFloat = (val) =>
-			{
-				Caster c; c.F32 = 0;
-				c.U32 = val;
-				return c.F32;
-			};
-			public static readonly Expression<Func<uint, float>> ReinterpretUInt32AsFloat32Expression = (val) => ReinterpretUIntAsFloat(val);
-			private static readonly Func<float, uint> ReinterpretFloat32AsUInt32 = (val) =>
-			{
-				Caster c; c.U32 = 0;
-				c.F32 = val;
-				return c.U32;
-			};
-			public static readonly Expression<Func<float, uint>> ReinterpretFloat32AsUInt32Expression = (val) => ReinterpretFloat32AsUInt32(val);
 			private static readonly Func<uint, uint, int> ReinterpretUInt32AsInt32 = (val, bits) =>
 			{
 				// todo use bits to signextend

@@ -732,10 +732,10 @@ namespace Swis
 					Expression rightexp = OperandExpression(ref right, false);
 
 					exp = Expression.Assign(dstexp, 
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Add(
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -767,10 +767,10 @@ namespace Swis
 					Expression rightexp = OperandExpression(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Subtract(
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -823,10 +823,10 @@ namespace Swis
 					Expression rightexp = OperandExpression(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Multiply(
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -879,10 +879,10 @@ namespace Swis
 					Expression rightexp = OperandExpression(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Divide(
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -935,10 +935,10 @@ namespace Swis
 					Expression rightexp = OperandExpression(ref right, false);
 
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Modulo(
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -1087,9 +1087,9 @@ namespace Swis
 
 					Expression<Func<float, float>> sqrt = (val) => (float)Math.Sqrt(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(sqrt,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1108,10 +1108,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> log = (val, @base) => (float)Math.Log(val, @base);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(log,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -1128,9 +1128,9 @@ namespace Swis
 
 					Expression<Func<float, float>> sin = (val) => (float)Math.Sin(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(sin,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1147,9 +1147,9 @@ namespace Swis
 
 					Expression<Func<float, float>> cos = (val) => (float)Math.Cos(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(cos,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1166,9 +1166,9 @@ namespace Swis
 
 					Expression<Func<float, float>> tan = (val) => (float)Math.Tan(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(tan,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1185,9 +1185,9 @@ namespace Swis
 
 					Expression<Func<float, float>> asin = (val) => (float)Math.Asin(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(asin,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1204,9 +1204,9 @@ namespace Swis
 
 					Expression<Func<float, float>> acos = (val) => (float)Math.Acos(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(acos,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1223,9 +1223,9 @@ namespace Swis
 
 					Expression<Func<float, float>> atan = (val) => (float)Math.Atan(val);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(atan,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
 							)
 						)
 					);
@@ -1244,10 +1244,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> atan2 = (l, r) => (float)Math.Log(l, r);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(atan2,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
@@ -1266,10 +1266,10 @@ namespace Swis
 
 					Expression<Func<float, float, float>> pow = (l, r) => (float)Math.Pow(l, r);
 					exp = Expression.Assign(dstexp,
-						Expression.Invoke(ReinterpretFloat32AsUInt32Expression,
+						Expression.Invoke(ReinterpretCast<float, uint>.Expression,
 							Expression.Invoke(pow,
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, leftexp),
-								Expression.Invoke(ReinterpretUInt32AsFloat32Expression, rightexp)
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
+								Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
 							)
 						)
 					);
