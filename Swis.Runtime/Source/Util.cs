@@ -21,8 +21,10 @@ namespace Swis
 
 		public static uint SignExtend(uint src, uint frombits)
 		{
-			if (frombits < 1 || frombits >= 32)
+			if (frombits <= 0 || frombits > Cpu.NativeSizeBits)
 				throw new Exception();
+			if (frombits == Cpu.NativeSizeBits)
+				return frombits;
 
 			uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
 			uint extbits = ~valbits;                  //                      11110000
