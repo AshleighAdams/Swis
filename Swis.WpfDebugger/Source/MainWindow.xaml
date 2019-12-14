@@ -169,7 +169,7 @@
 						<Path x:Name="BtnArrow" Margin="0" Width="7" Fill="#666" Stretch="Uniform" Data="F1 M 301.14,-189.041L 311.57,-189.041L 306.355,-182.942L 301.14,-189.041 Z" />
 						<Button.ContextMenu>
 							<ContextMenu>
-								<MenuItem Header="Auto Step" />
+								<MenuItem x:Name="Autostep" Header="Auto Step" Click="Autostep_Click" IsCheckable="True" />
 							</ContextMenu>
 						</Button.ContextMenu>
 					</Button>

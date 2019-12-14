@@ -42,7 +42,7 @@ namespace SwisTest
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
-				//Debugger = dbger,
+				Debugger = dbger,
 				LineWrite = (line, what) => Console.Write((char)what),
 				LineRead = (line) => line0_in,
 			};

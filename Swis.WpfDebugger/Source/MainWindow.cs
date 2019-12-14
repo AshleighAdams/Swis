@@ -143,16 +143,18 @@ namespace Swis.WpfDebugger
 
 		bool Connected { get; set; }
 		bool Running { get; set; }
-		
+		public bool Autostepping { get; private set; }
+
 		void UpdateState()
 		{
-			this.ContinueButton.IsEnabled = this.Connected && !this.Running;
-			this.PauseButton.IsEnabled = this.Connected && this.Running;
+			bool running = this.Running || this.Autostepping;
+			this.ContinueButton.IsEnabled = this.Connected && !running;
+			this.PauseButton.IsEnabled = this.Connected && running;
 			this.StopButton.IsEnabled = this.Connected;
 			this.ResetButton.IsEnabled = this.Connected;
-			this.StepInButton.IsEnabled = this.Connected && !this.Running;
-			this.StepOverButton.IsEnabled = this.Connected && !this.Running;
-			this.StepOutButton.IsEnabled = this.Connected && !this.Running;
+			this.StepInButton.IsEnabled = this.Connected && !running;
+			this.StepOverButton.IsEnabled = this.Connected && !running;
+			this.StepOutButton.IsEnabled = this.Connected && !running;
 
 			this.StatusBar.Background 
 				= this.Connected
@@ -350,6 +352,11 @@ namespace Swis.WpfDebugger
 						line.Goto();
 					}
 				}
+			}
+
+			if (this.Autostepping)
+			{
+				this.ConnectionWriter?.Invoke("step-into");
 			}
 		}
 		

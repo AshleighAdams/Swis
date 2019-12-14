@@ -137,8 +137,14 @@ namespace Swis.WpfDebugger
 			if (this.ContinueButton.IsEnabled)
 			{
 				this.Running = true;
+				this.Autostepping = this.Autostep.IsChecked;
+
 				this.UpdateState();
-				this.ConnectionWriter?.Invoke("continue");
+
+				if(this.Autostepping)
+					this.ConnectionWriter?.Invoke("step-into");
+				else
+					this.ConnectionWriter?.Invoke("continue");
 			}
 		}
 
@@ -147,7 +153,10 @@ namespace Swis.WpfDebugger
 		{
 			if (this.PauseButton.IsEnabled)
 			{
-				this.ConnectionWriter?.Invoke("pause");
+				if (this.Autostepping)
+					this.Autostepping = false;
+				else
+					this.ConnectionWriter?.Invoke("pause");
 			}
 		}
 
@@ -210,6 +219,10 @@ namespace Swis.WpfDebugger
 			(sender as Button).ContextMenu.PlacementTarget = (sender as Button);
 			(sender as Button).ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
 			(sender as Button).ContextMenu.IsOpen = true;
+		}
+
+		private void Autostep_Click(object sender, RoutedEventArgs e)
+		{
 		}
 	}
 }
