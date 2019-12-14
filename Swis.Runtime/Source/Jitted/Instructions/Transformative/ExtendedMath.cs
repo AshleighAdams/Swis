@@ -12,16 +12,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> sqrt = (val) => (float)Math.Sqrt(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(sqrt,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(sqrt, leftexp));
 		}
 
 		[CpuInstruction(Opcode.LogFloatRRR)]
@@ -31,18 +26,12 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
+			Expression rightexp = this.ReadOperandExpression<float>(ref right);
 
 			Expression<Func<float, float, float>> log = (val, @base) => (float)Math.Log(val, @base);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(log,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(log, leftexp, rightexp));
 		}
 
 		[CpuInstruction(Opcode.SinFloatRR)]
@@ -51,16 +40,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> sin = (val) => (float)Math.Sin(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(sin,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(sin, leftexp));
 		}
 
 		[CpuInstruction(Opcode.CosFloatRR)]
@@ -69,16 +53,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> cos = (val) => (float)Math.Cos(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(cos,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(cos, leftexp));
 		}
 
 		[CpuInstruction(Opcode.TanFloatRR)]
@@ -87,16 +66,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> tan = (val) => (float)Math.Tan(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(tan,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(tan, leftexp));
 		}
 
 		[CpuInstruction(Opcode.AsinFloatRR)]
@@ -105,16 +79,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> asin = (val) => (float)Math.Asin(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(asin,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(asin, leftexp));
 		}
 
 		[CpuInstruction(Opcode.AcosFloatRR)]
@@ -123,16 +92,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> acos = (val) => (float)Math.Acos(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(acos,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(acos, leftexp));
 		}
 
 		[CpuInstruction(Opcode.AtanFloatRR)]
@@ -141,16 +105,11 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 
 			Expression<Func<float, float>> atan = (val) => (float)Math.Atan(val);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(atan,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(atan, leftexp));
 		}
 
 		[CpuInstruction(Opcode.Atan2FloatRRR)]
@@ -160,18 +119,12 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
+			Expression rightexp = this.ReadOperandExpression<float>(ref right);
 
 			Expression<Func<float, float, float>> atan2 = (l, r) => (float)Math.Log(l, r);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(atan2,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(atan2, leftexp, rightexp));
 		}
 
 		[CpuInstruction(Opcode.PowFloatRRR)]
@@ -181,18 +134,12 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
+			Expression rightexp = this.ReadOperandExpression<float>(ref right);
 
 			Expression<Func<float, float, float>> pow = (l, r) => (float)Math.Pow(l, r);
-			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretCast<float, uint>.Expression,
-					Expression.Invoke(pow,
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, leftexp),
-						Expression.Invoke(ReinterpretCast<uint, float>.Expression, rightexp)
-					)
-				)
-			);
+			return this.WriteOperandExpression<float>(ref dst, ref sequential,
+				Expression.Invoke(pow, leftexp, rightexp));
 		}
 	}
 }

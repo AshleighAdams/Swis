@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -9,24 +10,25 @@ namespace Swis
 	public sealed partial class JittedCpu : Cpu
 	{
 		internal static class ReinterpretCast<TSrc, TDst>
-			where TSrc : struct
-			where TDst : struct
+			where TSrc : unmanaged
+			where TDst : unmanaged
 		{
-			[StructLayout(LayoutKind.Explicit)]
-			private struct UnionStruct
+			private static TDst Implementation(TSrc src)
 			{
-				[FieldOffset(0)] public TSrc Src;
-				[FieldOffset(0)] public TDst Dst;
+				unsafe
+				{
+					Debug.Assert(sizeof(TSrc) == sizeof(TDst));
+					return *(TDst*)(void*)&src;
+				}
 			}
 
-			private static readonly Func<TSrc, TDst> Implementation = (val) =>
+			private static readonly Expression<Func<TSrc, TDst>> ExpressionLambda = (val) => Implementation(val);
+			public static Expression @Expression(Expression expression) // ummm... expression?
 			{
-				UnionStruct converter;
-				converter.Dst = default;
-				converter.Src = val;
-				return converter.Dst;
-			};
-			public static readonly Expression<Func<TSrc, TDst>> Expression = (val) => Implementation(val);
+				if (typeof(TSrc) == typeof(TDst))
+					return expression;
+				return System.Linq.Expressions.Expression.Invoke(ExpressionLambda, expression);
+			}
 		}
 
 		private IndexExpression PointerExpression(Expression memloc, uint indirection_size)
@@ -34,7 +36,7 @@ namespace Swis
 			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JittedCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
 
 			PropertyInfo mem_indexer = (from p in mem.Type.GetDefaultMembers().OfType<PropertyInfo>()
-											// check return type
+										// check return type
 										where p.PropertyType == typeof(uint)
 										let q = p.GetIndexParameters()
 										// check params
@@ -85,28 +87,33 @@ namespace Swis
 			return Expression.Field(Expression.Constant(this), reg_field);
 		}
 
-		private Expression ReadRegisterExpression(NamedRegister reg, uint size, bool signed, Type as_type = null)
+		private Expression ReadRegisterExpression<T>(NamedRegister reg, uint size)
+			where T : unmanaged
 		{
 			Expression expr = LimitSizeExpression(this.ReadWriteRegisterExpression(reg), size);
-			if (signed)
-				expr = SignExtendExpression(expr, Expression.Constant(size, typeof(uint)));
-			if (as_type != null && as_type != typeof(uint))
-				expr = Expression.Convert(expr, as_type);
+
+			var t = typeof(T);
+			if (t == typeof(Int16) || t == typeof(Int32) || t == typeof(Int64))
+				expr = SignExtendExpression(expr, Expression.Constant(size));
+			if (t != typeof(uint))
+				expr = ReinterpretCast<uint, T>.Expression(expr);
 
 			return expr;
 		}
 
-		private Expression ReadOperandExpression(ref Operand arg)
+		private Expression AccessOperandExpression(ref Operand arg)
 		{
 			Expression jit_part(int regid, uint size, uint constant, bool signed = false)
 			{
 				Expression ret;
 				if (regid == -1)
 					return signed ?
-						Expression.Constant((int)Util.SignExtend(constant, size), typeof(int)) :
-						Expression.Constant(constant, typeof(uint));
+						Expression.Constant((int)Util.SignExtend(constant, size)) :
+						Expression.Constant(constant);
 				else
-					return this.ReadRegisterExpression((NamedRegister)regid, size, signed, signed ? typeof(int) : typeof(uint));
+					return signed ? 
+						this.ReadRegisterExpression<int>((NamedRegister)regid, size):
+						this.ReadRegisterExpression<uint>((NamedRegister)regid, size);
 			}
 
 			Expression inside;
@@ -154,30 +161,39 @@ namespace Swis
 		}
 
 
-		private Expression ReadOperandExpressionSigned(ref Operand arg)
+		private Expression ReadOperandExpression<T>(ref Operand arg)
+			where T : unmanaged
 		{
-			return Expression.Convert(
-				SignExtendExpression(
-					ReadOperandExpression(ref arg),
-					Expression.Constant((uint)arg.ValueSize, typeof(uint))
-				),
-				typeof(int)
-			);
+			var expr = this.AccessOperandExpression(ref arg);
+
+			var t = typeof(T);
+			if (t == typeof(Int16) || t == typeof(Int32) || t == typeof(Int64))
+				expr = SignExtendExpression(expr, Expression.Constant(arg.ValueSize));
+
+			return ReinterpretCast<uint, T>.Expression(expr);
 		}
 
-		private Expression WriteOperandExpression(ref Operand arg, ref bool sequential, Expression src)
+		private Expression WriteOperandExpression<T>(ref Operand arg, ref bool sequential, Expression src)
+			where T : unmanaged
 		{
+			Expression dstexpr;
 			if (!arg.Indirect)
 			{
 				if (arg.WriteAffectsFlow)
 					sequential = false;
 				if (arg.AddressingMode != 0)
 					throw new Exception();
-				return Expression.Assign(this.ReadWriteRegisterExpression((NamedRegister)arg.RegIdA), LimitSizeExpression(src, arg.SizeA));
+				dstexpr = this.ReadWriteRegisterExpression((NamedRegister)arg.RegIdA);
+			}
+			else
+			{
+				// will be a pointer type, so we can write to it and reuse logic
+				dstexpr = this.AccessOperandExpression(ref arg);
 			}
 
-			return Expression.Assign(this.ReadOperandExpression(ref arg), LimitSizeExpression(src, arg.IndirectionSize));
-
+			return Expression.Assign(dstexpr,
+				ReinterpretCast<T, uint>.Expression(LimitSizeExpression(src, arg.ValueSize))
+			);
 		}
 	}
 }

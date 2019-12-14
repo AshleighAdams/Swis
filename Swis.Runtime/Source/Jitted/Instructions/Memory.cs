@@ -11,16 +11,16 @@ namespace Swis
 			Operand dst = this.Memory.DecodeOperand(ref ip, null);
 			Operand src = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression srcexp = this.ReadOperandExpression(ref src);
+			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 
-			return this.WriteOperandExpression(ref dst, ref sequential, srcexp);
+			return this.WriteOperandExpression<uint>(ref dst, ref sequential, srcexp);
 		}
 
 		[CpuInstruction(Opcode.PushR)]
 		private Expression PushR(ref uint ip, ref bool sequential)
 		{
 			Operand src = this.Memory.DecodeOperand(ref ip, null);
-			Expression srcexp = this.ReadOperandExpression(ref src);
+			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 
 			Expression sp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
 			Expression ptr = this.PointerExpression(sp, src.ValueSize);
@@ -41,7 +41,7 @@ namespace Swis
 
 			return Expression.Block(
 				Expression.SubtractAssign(esp, Expression.Constant(dst.ValueSize / 8u)),
-				this.WriteOperandExpression(ref dst, ref sequential, ptr)
+				this.WriteOperandExpression<uint>(ref dst, ref sequential, ptr) // TODO: check this is uint
 			);
 		}
 	}

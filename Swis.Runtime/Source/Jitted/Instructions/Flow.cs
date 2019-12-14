@@ -11,7 +11,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 			Expression esp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
@@ -62,7 +62,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 
 			sequential = false;
 			return Expression.Assign(this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer), locexp);
@@ -74,8 +74,8 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
-			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
+			Expression leftexp = this.ReadOperandExpression<int>(ref left);
+			Expression rightexp = this.ReadOperandExpression<int>(ref right);
 
 			Expression flag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 
@@ -110,18 +110,12 @@ namespace Swis
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 			Operand ordered = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
-			Expression orderedexp = this.ReadOperandExpression(ref ordered);
+			Expression leftexp = this.ReadOperandExpression<float>(ref left);
+			Expression rightexp = this.ReadOperandExpression<float>(ref right);
+			Expression orderedexp = this.ReadOperandExpression<float>(ref ordered);
 
-			Action<uint, uint, uint> comparer = (uleft, uright, uordered) =>
+			Action<float, float, float> comparer = (fleft, fright, fordered) =>
 			{
-				Caster c; c.F32 = 0;
-				c.U32 = uleft;
-				float fleft = c.F32;
-				c.U32 = uright;
-				float fright = c.F32;
-
 				var iflags = (FlagsRegisterFlags)this.Reg5;
 				iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
 
@@ -135,7 +129,7 @@ namespace Swis
 				this.Reg5 = (uint)iflags;
 			};
 
-			Expression<Action<uint, uint, uint>> comparerexp = (l, r, o) => comparer(l, r, o);
+			Expression<Action<float, float, float>> comparerexp = (l, r, o) => comparer(l, r, o);
 
 			return Expression.Invoke(comparerexp, leftexp, rightexp, orderedexp);
 		}
@@ -146,8 +140,8 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
+			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
 
 			Expression flag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 
@@ -180,7 +174,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -199,7 +193,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -226,7 +220,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -245,7 +239,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -264,7 +258,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -283,7 +277,7 @@ namespace Swis
 		{
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
@@ -303,8 +297,8 @@ namespace Swis
 			Operand cnd = this.Memory.DecodeOperand(ref ip, null);
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression cndexp = this.ReadOperandExpression(ref cnd);
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression cndexp = this.ReadOperandExpression<uint>(ref cnd);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
 			sequential = false;
@@ -320,8 +314,8 @@ namespace Swis
 			Operand cnd = this.Memory.DecodeOperand(ref ip, null);
 			Operand loc = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression cndexp = this.ReadOperandExpression(ref cnd);
-			Expression locexp = this.ReadOperandExpression(ref loc);
+			Expression cndexp = this.ReadOperandExpression<uint>(ref cnd);
+			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eip = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);
 
 			sequential = false;
