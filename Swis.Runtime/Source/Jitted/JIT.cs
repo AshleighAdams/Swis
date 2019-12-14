@@ -26,6 +26,7 @@ namespace Swis
 		{
 			this.JitCache = new Dictionary<uint, (Action λ, uint cycles)>();
 			this.ClearJitCache(); // sets up default values
+			this.InitializeOpcodeTable();
 		}
 
 		public void ClearJitCache()
@@ -135,9 +136,18 @@ namespace Swis
 
 			switch (op)
 			{
+				default:
+					{
+						if (op < 0 || op > Opcode.MaxEnum)
+							throw new Exception();
+
+						var func = OpcodeTable[(int)op];
+						if (func == null)
+							throw new Exception();
+
+						exp = func(ref ip, ref sequential_not_gauranteed);
+					} break;
 			#region Misc
-			case Opcode.Nop:
-				break;
 			case Opcode.InterruptR:
 				Operand @int = this.Memory.DecodeOperand(ref ip, null);
 				Expression intexp = this.ReadOperandExpression(ref @int);
@@ -1185,7 +1195,6 @@ namespace Swis
 					break;
 				}
 			#endregion
-			default: throw new Exception($"JitCpu: instruction {op} not supported!");
 			}
 
 			var ipreg = this.ReadWriteRegisterExpression(NamedRegister.InstructionPointer);

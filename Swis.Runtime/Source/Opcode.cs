@@ -74,6 +74,8 @@ namespace Swis
 		AcosFloatRR = 171,
 		AtanFloatRR = 172,
 		Atan2FloatRRR = 173,
-		PowFloatRRR = 174
+		PowFloatRRR = 174,
+
+		MaxEnum
 	}
 }
