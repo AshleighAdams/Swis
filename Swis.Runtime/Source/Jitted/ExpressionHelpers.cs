@@ -153,10 +153,12 @@ namespace Swis
 				return inside;
 			return this.PointerExpression(inside, arg.IndirectionSize);
 		}
-		private Expression WriteOperandExpression(ref Operand arg, Expression src)
+		private Expression WriteOperandExpression(ref Operand arg, ref bool sequential, Expression src)
 		{
 			if (!arg.Indirect)
 			{
+				if(arg.WriteAffectsFlow)
+					sequential = false;
 				if (arg.AddressingMode != 0)
 					throw new Exception();
 				return Expression.Assign(this.ReadWriteRegisterExpression((NamedRegister)arg.RegIdA), LimitSizeExpression(src, arg.SizeA));

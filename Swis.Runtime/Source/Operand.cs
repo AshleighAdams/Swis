@@ -17,6 +17,11 @@ namespace Swis
 		public byte AddressingMode;
 		public byte Segment;
 
+		public bool WriteAffectsFlow
+		{
+			get => this.AddressingMode == 0 && this.RegIdA == (int)NamedRegister.InstructionPointer;
+		}
+
 		public bool Indirect
 		{
 			get

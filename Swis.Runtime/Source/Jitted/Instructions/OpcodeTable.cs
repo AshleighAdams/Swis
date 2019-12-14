@@ -18,7 +18,7 @@ namespace Swis
 			}
 		}
 
-		private delegate Expression OpcodeFunction(ref uint ip, ref bool sequential_not_gauranteed);
+		private delegate Expression OpcodeFunction(ref uint ip, ref bool sequential);
 		private OpcodeFunction[] OpcodeTable;
 
 		private void InitializeOpcodeTable()
