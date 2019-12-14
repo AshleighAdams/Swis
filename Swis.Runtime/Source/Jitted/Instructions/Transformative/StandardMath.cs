@@ -1,7 +1,5 @@
 ﻿using System.Linq.Expressions;
 
-using static Swis.JittedCpu.ReinterpretCastExpressionHelpers;
-
 #pragma warning disable IDE0051 // Remove unused private members
 namespace Swis
 {
@@ -80,15 +78,14 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+
+			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
 			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretInt32AsUInt32Expression,
-					Expression.Multiply(
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
-					)
+				Expression.Convert(
+					Expression.Multiply(leftexp, rightexp),
+					typeof(uint)
 				)
 			);
 		}
@@ -134,15 +131,13 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
 			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretInt32AsUInt32Expression,
-					Expression.Divide(
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
-					)
+				Expression.Convert(
+					Expression.Divide(leftexp, rightexp),
+					typeof(uint)
 				)
 			);
 		}
@@ -188,15 +183,13 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
 			return this.WriteOperandExpression(ref dst, ref sequential,
-				Expression.Invoke(ReinterpretInt32AsUInt32Expression,
-					Expression.Modulo(
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, leftexp, Expression.Constant(left.ValueSize)),
-						Expression.Invoke(ReinterpretUInt32AsInt32Expression, rightexp, Expression.Constant(right.ValueSize))
-					)
+				Expression.Convert(
+					Expression.Modulo(leftexp, rightexp),
+					typeof(uint)
 				)
 			);
 		}

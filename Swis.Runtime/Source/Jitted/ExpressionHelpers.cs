@@ -29,24 +29,6 @@ namespace Swis
 			public static readonly Expression<Func<TSrc, TDst>> Expression = (val) => Implementation(val);
 		}
 
-		internal static class ReinterpretCastExpressionHelpers
-		{
-			private static readonly Func<uint, uint, int> ReinterpretUInt32AsInt32 = (val, bits) =>
-			{
-				Caster c; c.I32 = 0;
-				c.U32 = Util.SignExtend(val, bits);
-				return c.I32;
-			};
-			public static readonly Expression<Func<uint, uint, int>> ReinterpretUInt32AsInt32Expression = (val, bits) => ReinterpretUInt32AsInt32(val, bits);
-			private static readonly Func<int, uint> ReinterpretInt32AsUInt32 = (val) =>
-			{
-				Caster c; c.U32 = 0;
-				c.I32 = val;
-				return c.U32;
-			};
-			public static readonly Expression<Func<int, uint>> ReinterpretInt32AsUInt32Expression = (val) => ReinterpretInt32AsUInt32(val);
-		}
-
 		private IndexExpression PointerExpression(Expression memloc, uint indirection_size)
 		{
 			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JittedCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
@@ -78,18 +60,18 @@ namespace Swis
 				expr
 			);
 		}
-		private Expression RaiseInterruptException(Expression codexpr, ref bool sequential)
+		private Expression RaiseInterruptExpression(Expression codexpr, ref bool sequential)
 		{
-#if DEBUG
-			throw new Exception();
-#endif
 			sequential = false;
 			Expression<Action<uint>> raise_interrupt = (code) => this.Interrupt(code);
 			return Expression.Invoke(raise_interrupt, codexpr);
 		}
-		private Expression RaiseInterruptException(Interrupts interrupt, ref bool sequential)
+		private Expression RaiseInterruptExpression(Interrupts interrupt, ref bool sequential)
 		{
-			return this.RaiseInterruptException(Expression.Constant((uint)interrupt, typeof(uint)), ref sequential);
+#if DEBUG
+			throw new Exception();
+#endif
+			return this.RaiseInterruptExpression(Expression.Constant((uint)interrupt, typeof(uint)), ref sequential);
 		}
 
 		private Expression ReadWriteRegisterExpression(NamedRegister reg)
@@ -166,6 +148,19 @@ namespace Swis
 				return inside;
 			return this.PointerExpression(inside, arg.IndirectionSize);
 		}
+
+
+		private Expression ReadOperandExpressionSigned(ref Operand arg)
+		{
+			return Expression.Convert(
+				SignExtendExpression(
+					ReadOperandExpression(ref arg),
+					Expression.Constant((uint)arg.ValueSize, typeof(uint))
+				),
+				typeof(int)
+			);
+		}
+
 		private Expression WriteOperandExpression(ref Operand arg, ref bool sequential, Expression src)
 		{
 			if (!arg.Indirect)

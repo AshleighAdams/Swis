@@ -74,17 +74,11 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
-			Action<uint, uint> comparer = (uleft, uright) =>
+			Action<int, int> comparer = (ileft, iright) =>
 			{
-				Caster c; c.I32 = 0;
-				c.U32 = uleft;
-				int ileft = c.I32;
-				c.U32 = uright;
-				int iright = c.I32;
-
 				var iflags = (FlagsRegisterFlags)this.Reg5;
 				iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
 
@@ -98,7 +92,7 @@ namespace Swis
 				this.Reg5 = (uint)iflags;
 			};
 
-			Expression<Action<uint, uint>> comparerexp = (l, r) => comparer(l, r);
+			Expression<Action<int, int>> comparerexp = (l, r) => comparer(l, r);
 
 			return Expression.Invoke(comparerexp, leftexp, rightexp);
 		}

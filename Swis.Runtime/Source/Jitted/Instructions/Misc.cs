@@ -19,9 +19,7 @@ namespace Swis
 			Operand @int = this.Memory.DecodeOperand(ref ip, null);
 			Expression intexp = this.ReadOperandExpression(ref @int);
 
-			Expression<Action<uint>> cpuinterrupt = intcode => this.Interrupt(intcode);
-			sequential = true;
-			return Expression.Invoke(cpuinterrupt, intexp);
+			return RaiseInterruptExpression(intexp, ref sequential);
 		}
 
 		[CpuInstruction(Opcode.InterruptReturn)]
@@ -170,7 +168,7 @@ namespace Swis
 
 			Expression instrexp = this.ReadOperandExpression(ref instr);
 
-			return this.RaiseInterruptException(Interrupts.InvalidOpcode, ref sequential);
+			return this.RaiseInterruptExpression(Interrupts.InvalidOpcode, ref sequential);
 		}
 	}
 }

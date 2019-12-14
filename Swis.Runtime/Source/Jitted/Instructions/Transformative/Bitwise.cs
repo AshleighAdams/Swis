@@ -14,9 +14,11 @@ namespace Swis
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
-			return this.WriteOperandExpression(ref dst, ref sequential, Expression.LeftShift(leftexp, Expression.Convert(rightexp, typeof(int))));
+			return this.WriteOperandExpression(ref dst, ref sequential,
+				Expression.LeftShift(leftexp, rightexp)
+			);
 		}
 
 		[CpuInstruction(Opcode.ShiftRightRRR)]
@@ -27,9 +29,11 @@ namespace Swis
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
-			return this.WriteOperandExpression(ref dst, ref sequential, Expression.RightShift(leftexp, Expression.Convert(rightexp, typeof(int))));
+			return this.WriteOperandExpression(ref dst, ref sequential,
+				Expression.RightShift(leftexp, rightexp)
+			);
 		}
 
 		[CpuInstruction(Opcode.ArithmaticShiftRightRRR)]
@@ -39,20 +43,13 @@ namespace Swis
 			Operand left = this.Memory.DecodeOperand(ref ip, null);
 			Operand right = this.Memory.DecodeOperand(ref ip, null);
 
-			Expression leftexp = this.ReadOperandExpression(ref left);
-			Expression rightexp = this.ReadOperandExpression(ref right);
+			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
+			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
-#if DEBUG
-			// TODO: this needs to sign extend the number of bits
-			throw new NotImplementedException();
-#endif
-			return this.WriteOperandExpression(ref dst, ref sequential, // TODO: check this
+			return this.WriteOperandExpression(ref dst, ref sequential,
 				Expression.Convert(
-					Expression.RightShift(
-						Expression.Convert(leftexp, typeof(int)),
-						Expression.Convert(rightexp, typeof(int))
-					),
-					typeof(int)
+					Expression.RightShift(leftexp, rightexp),
+					typeof(uint)
 				)
 			);
 		}

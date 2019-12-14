@@ -135,7 +135,7 @@ namespace Swis
 			{
 				var decoder = (op >= 0 || op < Opcode.MaxEnum) ? this.OpcodeDecodeTable[(int)op] : null;
 				if (decoder == null)
-					exp = this.RaiseInterruptException(Interrupts.InvalidOpcode, ref sequential);
+					exp = this.RaiseInterruptExpression(Interrupts.InvalidOpcode, ref sequential);
 				else
 					exp = decoder(ref ip, ref sequential);
 			}
