@@ -46,6 +46,10 @@ namespace Swis
 
 		private static Expression SignExtendExpression(Expression srcexp, Expression bitexp)
 		{
+			// optimize
+			if (bitexp is ConstantExpression @const && @const.Value is uint const_val && const_val == Cpu.NativeSizeBits)
+				return srcexp;
+
 			Expression<Func<uint, uint, uint>> sign_extend = (val, frombits) => Util.SignExtend(val, frombits);
 			return Expression.Invoke(sign_extend, srcexp, bitexp);
 		}
