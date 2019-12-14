@@ -147,46 +147,6 @@ namespace Swis
 
 						exp = func(ref ip, ref sequential);
 					} break;
-			#region Memory
-			case Opcode.MoveRR:
-				{
-					Operand dst = this.Memory.DecodeOperand(ref ip, null);
-					Operand src = this.Memory.DecodeOperand(ref ip, null);
-
-					Expression srcexp = this.ReadOperandExpression(ref src);
-
-					exp = this.WriteOperandExpression(ref dst, ref sequential, srcexp);
-					break;
-				}
-			case Opcode.PushR:
-				{
-					Operand src = this.Memory.DecodeOperand(ref ip, null);
-					Expression srcexp = this.ReadOperandExpression(ref src);
-
-					Expression sp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
-					Expression ptr = this.PointerExpression(sp, src.ValueSize);
-
-					exp = Expression.Block(
-						Expression.Assign(ptr, srcexp),
-						Expression.AddAssign(sp, Expression.Constant(src.ValueSize / 8u))
-					);
-					break;
-				}
-			case Opcode.PopR:
-				{
-					Operand dst = this.Memory.DecodeOperand(ref ip, null);
-
-					Expression esp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
-					Expression ptr = this.PointerExpression(esp, dst.ValueSize);
-
-					exp = Expression.Block(
-						Expression.SubtractAssign(esp, Expression.Constant(dst.ValueSize / 8u)),
-						this.WriteOperandExpression(ref dst, ref sequential, ptr)
-					);
-
-					break;
-				}
-			#endregion
 			#region Flow
 			case Opcode.CallR:
 				{
