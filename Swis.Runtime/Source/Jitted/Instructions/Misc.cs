@@ -33,7 +33,7 @@ namespace Swis
 
 			Expression esp_ptr = this.PointerExpression(esp, Cpu.NativeSizeBits);
 
-			sequential = true;
+			sequential = false;
 			return Expression.Block(
 				// clear mode
 				Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
@@ -125,7 +125,7 @@ namespace Swis
 		private Expression Halt(ref uint ip, ref bool sequential)
 		{
 			var pmregister = this.ReadWriteRegisterExpression(NamedRegister.ProtectedMode);
-			sequential = true;
+			sequential = false;
 			return Expression.OrAssign(pmregister, Expression.Constant((uint)ProtectedModeRegisterFlags.Halted));
 		}
 
