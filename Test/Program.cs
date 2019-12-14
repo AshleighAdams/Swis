@@ -20,8 +20,8 @@ namespace SwisTest
 
 		static void ExecuteTest(string asm)
 		{
-			int clocks = 10;
-			int delay = 100;
+			int clocks = 100;
+			int delay = 10;
 			(byte[] assembled, var dbg) = Assembler.Assemble(asm);
 
 			System.IO.File.WriteAllBytes("TestProgram/program.bin", assembled);
@@ -38,11 +38,11 @@ namespace SwisTest
 			catch { }
 
 			byte line0_in = 0;
-			var cpu = new InterpretedCpu
+			var cpu = new JittedCpu
 			{
 				Memory = new PointerMemoryController(assembled),
 				//Memory = new ByteArrayMemoryController(assembled),
-				Debugger = dbger,
+				//Debugger = dbger,
 				LineWrite = (line, what) => Console.Write((char)what),
 				LineRead = (line) => line0_in,
 			};
