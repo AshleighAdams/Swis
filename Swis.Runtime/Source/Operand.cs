@@ -48,13 +48,21 @@ namespace Swis
 			{
 				uint[] regs = this.Registers;
 
-				uint part_value(sbyte regid, byte size, uint @const)
+				uint part_value(sbyte regid, byte size, uint @const, bool signed = false)
 				{
 					if (regid == -1)
-						return @const;
+					{
+						return signed ?
+							Util.SignExtend(@const, size) :
+							@const;
+					}
 					else
-						// maybe sign extend
-						return (uint)(regs[regid] & (((ulong)1u << size) - 1)); //-V3106
+					{
+						var stripped = (uint)(regs[regid] & (((ulong)1u << size) - 1)); //-V3106
+						return signed ?
+							Util.SignExtend(stripped, size) :
+							stripped;
+					}
 				}
 
 				uint total = 0;
@@ -67,14 +75,14 @@ namespace Swis
 						+ part_value(this.RegIdB, this.SizeB, this.ConstB);
 				case 2:
 					return (uint)(
-						(int)part_value(this.RegIdC, this.SizeC, this.ConstC) * (int)part_value(this.RegIdD, this.SizeD, this.ConstD)
+						(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true) * (int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
 					);
 				case 3:
 					total = part_value(this.RegIdA, this.SizeA, this.ConstA);
 					total += part_value(this.RegIdB, this.SizeB, this.ConstB);
 					
-					return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC)
-						* (int)part_value(this.RegIdD, this.SizeD, this.ConstD));
+					return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
+						* (int)part_value(this.RegIdD, this.SizeD, this.ConstD, true));
 				default: throw new NotImplementedException();
 				}
 			}

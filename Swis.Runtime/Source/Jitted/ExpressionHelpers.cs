@@ -47,19 +47,6 @@ namespace Swis
 			public static readonly Expression<Func<int, uint>> ReinterpretInt32AsUInt32Expression = (val) => ReinterpretInt32AsUInt32(val);
 		}
 
-		private Expression RegisterExpression(NamedRegister reg, uint size, bool reading)
-		{
-			FieldInfo reg_field = typeof(JittedCpu).GetField($"Reg{(int)reg}", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-
-			if (reading && size != Cpu.NativeSizeBits)
-				return Expression.And( // TODO: sign extend it if signed
-					Expression.Constant((1u << (int)size) - 1, typeof(uint)), // ensure that we don't read/write too much from this register
-					Expression.Field(Expression.Constant(this), reg_field)
-				);
-			else
-				return Expression.Field(Expression.Constant(this), reg_field);
-		}
-
 		private IndexExpression PointerExpression(Expression memloc, uint indirection_size)
 		{
 			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JittedCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
@@ -75,52 +62,71 @@ namespace Swis
 			return Expression.Property(mem, mem_indexer, memloc, Expression.Constant(indirection_size, typeof(uint)));
 		}
 
-		private Expression OperandExpression(ref Operand arg, bool write)
+		private static Expression SignExtendExpression(Expression srcexp, Expression bitexp)
 		{
-			Expression jit_part(int regid, uint size, uint constant, bool within_indirection, bool signed = false)
+			Expression<Func<uint, uint, uint>> sign_extend = (val, frombits) => Util.SignExtend(val, frombits);
+			return Expression.Invoke(sign_extend, srcexp, bitexp);
+		}
+
+		private static Expression LimitSizeExpression(Expression expr, uint bits)
+		{
+			if (bits == Cpu.NativeSizeBits)
+				return expr;
+
+			return Expression.And(
+				Expression.Constant((1u << (int)bits) - 1, typeof(uint)), // ensure that we don't read/write too much from this register
+				expr
+			);
+		}
+
+		private Expression ReadWriteRegisterExpression(NamedRegister reg)
+		{
+			FieldInfo reg_field = typeof(JittedCpu).GetField($"Reg{(int)reg}", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+
+			return Expression.Field(Expression.Constant(this), reg_field);
+		}
+
+		private Expression ReadRegisterExpression(NamedRegister reg, uint size, bool signed, Type as_type = null)
+		{
+			Expression expr = LimitSizeExpression(this.ReadWriteRegisterExpression(reg), size);
+			if (signed)
+				expr = SignExtendExpression(expr, Expression.Constant(size, typeof(uint)));
+			if (as_type != null && as_type != typeof(uint))
+				expr = Expression.Convert(expr, as_type);
+
+			return expr;
+		}
+
+		private Expression ReadOperandExpression(ref Operand arg)
+		{
+			Expression jit_part(int regid, uint size, uint constant, bool signed = false)
 			{
+				Expression ret;
 				if (regid == -1)
-				{
-					if (!signed)
-						return Expression.Constant(constant, typeof(uint));
-					else
-					{
-						Caster c; c.I32 = 0;
-						c.U32 = constant;
-						return Expression.Constant(c.I32, typeof(int));
-					}
-				}
+					return signed ?
+						Expression.Constant((int)Util.SignExtend(constant, size), typeof(int)) :
+						Expression.Constant(constant, typeof(uint));
 				else
-				{
-					if (!signed)
-						return this.RegisterExpression((NamedRegister)regid, size, within_indirection || !write);
-					else if (within_indirection || !write)
-						return Expression.Convert(this.RegisterExpression((NamedRegister)regid, size, within_indirection || !write), typeof(int));
-					else
-						// TODO: only throw if invoked
-						throw new Exception("can't write to addressing mode calculation");
-				}
+					return this.ReadRegisterExpression((NamedRegister)regid, size, signed, signed ? typeof(int) : typeof(uint));
 			}
 
-			bool has_indirection = arg.Indirect;
-			Expression inside = null;
-
+			Expression inside;
 			switch (arg.AddressingMode)
 			{
 				case 0: // a
-					inside = jit_part(arg.RegIdA, arg.SizeA, arg.ConstA, has_indirection);
+					inside = jit_part(arg.RegIdA, arg.SizeA, arg.ConstA);
 					break;
 				case 1: // a + b
 					inside = Expression.Add(
-						jit_part(arg.RegIdA, arg.SizeA, arg.ConstA, has_indirection),
-						jit_part(arg.RegIdB, arg.SizeB, arg.ConstB, has_indirection)
+						jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
+						jit_part(arg.RegIdB, arg.SizeB, arg.ConstB)
 					);
 					break;
 				case 2: // c * d
 					inside = Expression.Convert(
 						Expression.Multiply(
-							jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, true),
-							jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, true)
+							jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, true),
+							jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, true)
 						),
 						typeof(uint)
 					);
@@ -128,13 +134,13 @@ namespace Swis
 				case 3: // a + b + c * d
 					inside = Expression.Add(
 						Expression.Add(
-							jit_part(arg.RegIdA, arg.SizeA, arg.ConstA, has_indirection),
-							jit_part(arg.RegIdB, arg.SizeB, arg.ConstB, has_indirection)
+							jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
+							jit_part(arg.RegIdB, arg.SizeB, arg.ConstB)
 						),
 						Expression.Convert(
 							Expression.Multiply(
-								jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, has_indirection, true),
-								jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, has_indirection, true)
+								jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, true),
+								jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, true)
 							),
 							typeof(uint)
 						)
@@ -143,9 +149,21 @@ namespace Swis
 				default: throw new Exception();
 			}
 
-			if (!has_indirection)
+			if (!arg.Indirect)
 				return inside;
 			return this.PointerExpression(inside, arg.IndirectionSize);
+		}
+		private Expression WriteOperandExpression(ref Operand arg, Expression src)
+		{
+			if (!arg.Indirect)
+			{
+				if (arg.AddressingMode != 0)
+					throw new Exception();
+				return Expression.Assign(this.ReadWriteRegisterExpression((NamedRegister)arg.RegIdA), LimitSizeExpression(src, arg.SizeA));
+			}
+
+			return Expression.Assign(this.ReadOperandExpression(ref arg), LimitSizeExpression(src, arg.IndirectionSize));
+
 		}
 	}
 }
