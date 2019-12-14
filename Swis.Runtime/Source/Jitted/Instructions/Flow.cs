@@ -77,24 +77,30 @@ namespace Swis
 			Expression leftexp = this.ReadOperandExpressionSigned(ref left);
 			Expression rightexp = this.ReadOperandExpressionSigned(ref right);
 
-			Action<int, int> comparer = (ileft, iright) =>
-			{
-				var iflags = (FlagsRegisterFlags)this.Reg5;
-				iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
+			Expression flag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 
-				if (ileft > iright) //-V3022
-					iflags |= FlagsRegisterFlags.Greater;
-				if (ileft < iright) //-V3022
-					iflags |= FlagsRegisterFlags.Less;
-				if (ileft == iright) //-V3022
-					iflags |= FlagsRegisterFlags.Equal;
+			return Expression.Block(
+				// flags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
+				Expression.AndAssign(flag,  Expression.Constant((uint)~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater), typeof(uint)) ),
 
-				this.Reg5 = (uint)iflags;
-			};
+				// if (ileft > iright) //-V3022
+				// iflags |= FlagsRegisterFlags.Greater;
+				Expression.IfThen(Expression.GreaterThan(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Greater, typeof(uint)))
+				),
 
-			Expression<Action<int, int>> comparerexp = (l, r) => comparer(l, r);
+				// if (ileft < iright) //-V3022
+				// 	iflags |= FlagsRegisterFlags.Less;
+				Expression.IfThen(Expression.LessThan(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Less, typeof(uint)))
+				),
 
-			return Expression.Invoke(comparerexp, leftexp, rightexp);
+				// if (ileft == iright) //-V3022
+				// 	iflags |= FlagsRegisterFlags.Equal;
+				Expression.IfThen(Expression.Equal(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Equal, typeof(uint)))
+				)
+			);
 		}
 
 		[CpuInstruction(Opcode.CompareFloatRRR)]
@@ -143,24 +149,30 @@ namespace Swis
 			Expression leftexp = this.ReadOperandExpression(ref left);
 			Expression rightexp = this.ReadOperandExpression(ref right);
 
-			Action<uint, uint> comparer = (uleft, uright) =>
-			{
-				var iflags = (FlagsRegisterFlags)this.Reg5;
-				iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
+			Expression flag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
 
-				if (uleft > uright)
-					iflags |= FlagsRegisterFlags.Greater;
-				if (uleft < uright)
-					iflags |= FlagsRegisterFlags.Less;
-				if (uleft == uright)
-					iflags |= FlagsRegisterFlags.Equal;
+			return Expression.Block(
+				// flags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
+				Expression.AndAssign(flag, Expression.Constant((uint)~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater), typeof(uint))),
 
-				this.Reg5 = (uint)iflags;
-			};
+				// if (ileft > iright) //-V3022
+				// iflags |= FlagsRegisterFlags.Greater;
+				Expression.IfThen(Expression.GreaterThan(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Greater, typeof(uint)))
+				),
 
-			Expression<Action<uint, uint>> comparerexp = (l, r) => comparer(l, r);
+				// if (ileft < iright) //-V3022
+				// 	iflags |= FlagsRegisterFlags.Less;
+				Expression.IfThen(Expression.LessThan(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Less, typeof(uint)))
+				),
 
-			return Expression.Invoke(comparerexp, leftexp, rightexp);
+				// if (ileft == iright) //-V3022
+				// 	iflags |= FlagsRegisterFlags.Equal;
+				Expression.IfThen(Expression.Equal(leftexp, rightexp),
+					Expression.OrAssign(flag, Expression.Constant((uint)FlagsRegisterFlags.Equal, typeof(uint)))
+				)
+			);
 		}
 
 		[CpuInstruction(Opcode.JumpEqualR)]
