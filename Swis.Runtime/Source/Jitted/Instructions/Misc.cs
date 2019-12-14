@@ -103,7 +103,6 @@ namespace Swis
 
 			var valbits = Expression.Variable(typeof(uint), "valbits");
 
-			sequential = dst.WriteAffectsFlow;
 			return Expression.Block(
 				new ParameterExpression[] { valbits },
 				// uint valbits = (1u << (int)frombits) - 1;
@@ -139,7 +138,6 @@ namespace Swis
 
 			Expression<Func<uint, uint>> readline = lineval => this.LineRead((UInt16)lineval);
 
-			sequential = dst.WriteAffectsFlow;
 			return this.WriteOperandExpression<uint>(ref dst, ref sequential,
 				Expression.Invoke(readline, lineexp));
 		}
