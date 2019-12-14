@@ -1,9 +1,24 @@
 ﻿using System;
-
+using System.Diagnostics;
+using ReinterpretMediumType = System.UInt32;
 namespace Swis
 {
 	public static class Util
 	{
+		public static TDst ReinterpretCast<TSrc, TDst>(TSrc src)
+				where TSrc : unmanaged
+				where TDst : unmanaged
+		{
+			unsafe
+			{
+				Debug.Assert(sizeof(TSrc) <= sizeof(uint));
+				Debug.Assert(sizeof(TDst) <= sizeof(uint));
+
+				ReinterpretMediumType medium = *(ReinterpretMediumType*)(void*)&src;
+				return *(TDst*)(void*)&medium;
+			}
+		}
+
 		public static int Pow(int a, int b)
 		{
 			int result = 1;

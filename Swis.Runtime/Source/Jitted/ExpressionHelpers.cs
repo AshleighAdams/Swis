@@ -1,34 +1,20 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
 	{
-		internal static class ReinterpretCast<TSrc, TDst>
-			where TSrc : unmanaged
-			where TDst : unmanaged
+		private static Expression ReinterpretCastExpression<TSrc, TDst>(Expression src)
+			   where TSrc : unmanaged
+			   where TDst : unmanaged
 		{
-			private static TDst Implementation(TSrc src)
-			{
-				unsafe
-				{
-					Debug.Assert(sizeof(TSrc) == sizeof(TDst));
-					return *(TDst*)(void*)&src;
-				}
-			}
-
-			private static readonly Expression<Func<TSrc, TDst>> ExpressionLambda = (val) => Implementation(val);
-			public static Expression @Expression(Expression expression) // ummm... expression?
-			{
-				if (typeof(TSrc) == typeof(TDst))
-					return expression;
-				return System.Linq.Expressions.Expression.Invoke(ExpressionLambda, expression);
-			}
+			if (typeof(TSrc) == typeof(TDst))
+				return src;
+			Expression<Func<TSrc, TDst>> lambda = (val) => Util.ReinterpretCast<TSrc, TDst>(val);
+			return Expression.Invoke(lambda, src);
 		}
 
 		private IndexExpression PointerExpression(Expression memloc, uint indirection_size)
@@ -96,7 +82,7 @@ namespace Swis
 			if (t == typeof(Int16) || t == typeof(Int32) || t == typeof(Int64))
 				expr = SignExtendExpression(expr, Expression.Constant(size));
 			if (t != typeof(uint))
-				expr = ReinterpretCast<uint, T>.Expression(expr);
+				expr = ReinterpretCastExpression<uint, T>(expr);
 
 			return expr;
 		}
@@ -170,7 +156,7 @@ namespace Swis
 			if (t == typeof(Int16) || t == typeof(Int32) || t == typeof(Int64))
 				expr = SignExtendExpression(expr, Expression.Constant(arg.ValueSize));
 
-			return ReinterpretCast<uint, T>.Expression(expr);
+			return ReinterpretCastExpression<uint, T>(expr);
 		}
 
 		private Expression WriteOperandExpression<T>(ref Operand arg, ref bool sequential, Expression src)
@@ -192,7 +178,7 @@ namespace Swis
 			}
 
 			return Expression.Assign(dstexpr,
-				ReinterpretCast<T, uint>.Expression(LimitSizeExpression(src, arg.ValueSize))
+				ReinterpretCastExpression<T, uint>(LimitSizeExpression(src, arg.ValueSize))
 			);
 		}
 	}
