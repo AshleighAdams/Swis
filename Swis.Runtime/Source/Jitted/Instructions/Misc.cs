@@ -162,10 +162,15 @@ namespace Swis
 			return Expression.Invoke(writeline, lineexp, lttrexp);
 		}
 
-		//[CpuInstruction(Opcode.______)]
-		//private Expression ________(ref uint ip, ref bool sequential)
-		//{
-		//}
+		[CpuInstruction(Opcode.ExtendR)]
+		private Expression ExtendR(ref uint ip, ref bool sequential)
+		{
+			Operand instr = this.Memory.DecodeOperand(ref ip, null);
+
+			Expression instrexp = this.ReadOperandExpression(ref instr);
+
+			return this.RaiseInterruptException(Interrupts.InvalidOpcode, ref sequential);
+		}
 	}
 }
 #pragma warning restore IDE0051 // Remove unused private members

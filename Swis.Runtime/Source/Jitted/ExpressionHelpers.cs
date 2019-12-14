@@ -78,6 +78,19 @@ namespace Swis
 				expr
 			);
 		}
+		private Expression RaiseInterruptException(Expression codexpr, ref bool sequential)
+		{
+#if DEBUG
+			throw new Exception();
+#endif
+			sequential = false;
+			Expression<Action<uint>> raise_interrupt = (code) => this.Interrupt(code);
+			return Expression.Invoke(raise_interrupt, codexpr);
+		}
+		private Expression RaiseInterruptException(Interrupts interrupt, ref bool sequential)
+		{
+			return this.RaiseInterruptException(Expression.Constant((uint)interrupt, typeof(uint)), ref sequential);
+		}
 
 		private Expression ReadWriteRegisterExpression(NamedRegister reg)
 		{
@@ -157,7 +170,7 @@ namespace Swis
 		{
 			if (!arg.Indirect)
 			{
-				if(arg.WriteAffectsFlow)
+				if (arg.WriteAffectsFlow)
 					sequential = false;
 				if (arg.AddressingMode != 0)
 					throw new Exception();

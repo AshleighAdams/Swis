@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Swis
+﻿namespace Swis
 {
 	public enum Opcode
 	{
@@ -76,6 +74,7 @@ namespace Swis
 		Atan2FloatRRR = 173,
 		PowFloatRRR = 174,
 
+		ExtendR = 255,
 		MaxEnum
 	}
 }

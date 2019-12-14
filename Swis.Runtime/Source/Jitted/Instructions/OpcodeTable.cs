@@ -19,11 +19,11 @@ namespace Swis
 		}
 
 		private delegate Expression OpcodeFunction(ref uint ip, ref bool sequential);
-		private OpcodeFunction[] OpcodeTable;
+		private OpcodeFunction[] OpcodeDecodeTable;
 
 		private void InitializeOpcodeTable()
 		{
-			this.OpcodeTable = new OpcodeFunction[(int)Opcode.MaxEnum];
+			this.OpcodeDecodeTable = new OpcodeFunction[(int)Opcode.MaxEnum];
 
 			var methods = this.GetType()
 				.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
@@ -35,12 +35,12 @@ namespace Swis
 				var attributes = method.GetCustomAttributes().OfType<CpuInstruction>();
 				foreach (var attrib in attributes)
 				{
-					if(attrib.Opcode < 0 || attrib.Opcode >= Opcode.MaxEnum)
+					if (attrib.Opcode < 0 || attrib.Opcode >= Opcode.MaxEnum)
 						throw new Exception($"Out of range opcode {(int)attrib.Opcode}");
-					if (this.OpcodeTable[(int)attrib.Opcode] != null)
+					if (this.OpcodeDecodeTable[(int)attrib.Opcode] != null)
 						throw new Exception($"Duplicate opcode for {attrib.Opcode}");
 
-					this.OpcodeTable[(int)attrib.Opcode] = @delegate;
+					this.OpcodeDecodeTable[(int)attrib.Opcode] = @delegate;
 				}
 			}
 		}

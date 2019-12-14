@@ -1,7 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-
-namespace Swis
+﻿namespace Swis
 {
 	public enum FlagsRegisterFlags
 	{
@@ -15,7 +12,7 @@ namespace Swis
 	public enum ProtectedModeRegisterFlags : uint
 	{
 		TrapMask = 0b00000000_00000000_00000000_00000011u,
-		Halted = 0b00000000_00000000_00000000_00000100u,
+		Halted   = 0b00000000_00000000_00000000_00000100u,
 	}
 
 	public enum NamedRegister : uint
@@ -37,7 +34,7 @@ namespace Swis
 		FSegment = 12,
 		GSegment = 13,
 		XtraSegment = 14,
-		
+
 		// general
 		A = 20, B = 21, C = 22, D = 23, E = 24, F = 25,
 		G = 26, H = 27, I = 28, J = 29, K = 30, L = 31,

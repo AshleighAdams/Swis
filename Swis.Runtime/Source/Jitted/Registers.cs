@@ -1,46 +1,40 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.InteropServices;
-
-namespace Swis
+﻿namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
 	{
-		uint Reg0;
+		private uint Reg0;
 		#region Other Registers
-		uint Reg1;
-		uint Reg2;
-		uint Reg3;
-		uint Reg4;
-		uint Reg5;
-		uint Reg6;
-		uint Reg7;
-		uint Reg8;
-		uint Reg9;
-		uint Reg10;
-		uint Reg11;
-		uint Reg12;
-		uint Reg13;
-		uint Reg14;
-		uint Reg15;
-		uint Reg16;
-		uint Reg17;
-		uint Reg18;
-		uint Reg19;
-		uint Reg20;
-		uint Reg21;
-		uint Reg22;
-		uint Reg23;
-		uint Reg24;
-		uint Reg25;
-		uint Reg26;
-		uint Reg27;
-		uint Reg28;
-		uint Reg29;
-		uint Reg30;
-		uint Reg31;
+		private uint Reg1;
+		private uint Reg2;
+		private uint Reg3;
+		private uint Reg4;
+		private uint Reg5;
+		private uint Reg6;
+		private uint Reg7;
+		private uint Reg8;
+		private uint Reg9;
+		private uint Reg10;
+		private uint Reg11;
+		private uint Reg12;
+		private uint Reg13;
+		private uint Reg14;
+		private uint Reg15;
+		private uint Reg16;
+		private uint Reg17;
+		private uint Reg18;
+		private uint Reg19;
+		private uint Reg20;
+		private uint Reg21;
+		private uint Reg22;
+		private uint Reg23;
+		private uint Reg24;
+		private uint Reg25;
+		private uint Reg26;
+		private uint Reg27;
+		private uint Reg28;
+		private uint Reg29;
+		private uint Reg30;
+		private uint Reg31;
 
 		public override uint[] Registers
 		{
