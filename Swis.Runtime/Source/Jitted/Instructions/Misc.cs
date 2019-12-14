@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 
 #pragma warning disable IDE0051 // Remove unused private members
+#pragma warning disable IDE0060 // Remove unused parameter
 namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
@@ -174,3 +175,4 @@ namespace Swis
 	}
 }
 #pragma warning restore IDE0051 // Remove unused private members
+#pragma warning restore IDE0060 // Remove unused parameter

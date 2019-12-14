@@ -70,24 +70,34 @@ namespace Swis
 					}
 				}
 
-				uint total = 0;
 				switch (this.AddressingMode)
 				{
-				case 0:
-					return part_value(this.RegIdA, this.SizeA, this.ConstA);
-				case 1:
-					return part_value(this.RegIdA, this.SizeA, this.ConstA)
-						+ part_value(this.RegIdB, this.SizeB, this.ConstB);
-				case 2:
-					return (uint)(
-						(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true) * (int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
-					);
-				case 3:
-					total = part_value(this.RegIdA, this.SizeA, this.ConstA);
-					total += part_value(this.RegIdB, this.SizeB, this.ConstB);
-					
-					return total + (uint)((int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
-						* (int)part_value(this.RegIdD, this.SizeD, this.ConstD, true));
+				case 0: // a
+						return
+						part_value(this.RegIdA, this.SizeA, this.ConstA);
+				case 1: // a + b
+					return
+						part_value(this.RegIdA, this.SizeA, this.ConstA)
+						+
+						part_value(this.RegIdB, this.SizeB, this.ConstB);
+				case 2: // c * d
+					return
+						(uint)(
+							(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
+							*
+							(int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
+						);
+				case 3: // a + b + (c * d)
+					return
+						part_value(this.RegIdA, this.SizeA, this.ConstA)
+						+
+						part_value(this.RegIdB, this.SizeB, this.ConstB)
+						+
+						(uint)(
+							(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
+							*
+							(int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
+						);
 				default: throw new NotImplementedException();
 				}
 			}

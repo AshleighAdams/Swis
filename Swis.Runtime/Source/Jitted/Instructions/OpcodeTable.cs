@@ -9,9 +9,9 @@ namespace Swis
 {
 	public sealed partial class JittedCpu : Cpu
 	{
-		public class CpuInstruction : Attribute
+		private sealed class CpuInstruction : Attribute
 		{
-			public Opcode Opcode;
+			readonly public Opcode Opcode;
 			public CpuInstruction(Opcode opcode)
 			{
 				this.Opcode = opcode;
