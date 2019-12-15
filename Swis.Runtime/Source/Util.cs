@@ -69,7 +69,7 @@ namespace Swis
 			return srcval | (extbits * sign);
 		}
 
-
+		[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 		public static string GetDebugView(this System.Linq.Expressions.Expression exp)
 		{
 			if (exp == null)
