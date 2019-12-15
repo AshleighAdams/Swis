@@ -288,3 +288,4 @@ __pycache__/
 *.xsd.cs
 Test/TestProgram/program.bin
 Test/TestProgram/program.dbg
+UnitTests/coverage.cobertura.xml
