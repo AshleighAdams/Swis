@@ -39,7 +39,7 @@ namespace Swis
 			if (frombits <= 0 || frombits > Cpu.NativeSizeBits)
 				throw new ArgumentOutOfRangeException(nameof(frombits));
 			if (frombits == Cpu.NativeSizeBits)
-				return frombits;
+				return src;
 
 			uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
 			uint extbits = ~valbits;                  //                      11110000

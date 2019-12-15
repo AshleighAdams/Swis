@@ -20,6 +20,7 @@ namespace UnitTests
 		[InlineData(0b00000000000000000010101010101010u, 6u,  0b11111111111111111111111111101010u)]
 		[InlineData(0b00000000000000000101010101010101u, 7u,  0b11111111111111111111111111010101u)]
 		[InlineData(0b00000000000000000010101010101010u, 7u,  0b00000000000000000000000000101010u)]
+		[InlineData(0xdeadbeefu, sizeof(uint) * 8u, 0xdeadbeefu)]
 		public void CheckKnown(uint value, uint from_bits, uint expected)
 		{
 			Util.SignExtend(value, from_bits).Should().Be(expected);
