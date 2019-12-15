@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -7,7 +6,7 @@
     <Version>0.0.2.2</Version>
     <Company />
     <Product>Swis Runtime</Product>
-	<Title>Swis Runtime</Title>
+    <Title>Swis Runtime</Title>
     <PackageProjectUrl>https://github.com/AshleighAdams/Swis</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AshleighAdams/Swis</RepositoryUrl>
     <NeutralLanguage>en</NeutralLanguage>
@@ -18,11 +17,9 @@
     <PackageLicenseUrl>https://github.com/AshleighAdams/Swis/blob/master/LICENSE</PackageLicenseUrl>
     <AssemblyVersion>0.0.2.2</AssemblyVersion>
     <FileVersion>0.0.2.2</FileVersion>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-	
   <ItemGroup>
     <PackageReference Include="System.Memory" Version="4.5.0-preview1-26216-02" />
   </ItemGroup>
-
 </Project>

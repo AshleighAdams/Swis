@@ -16,6 +16,7 @@ variables:
 
 steps:
   - task: DotNetCoreCLI@2
+    displayName: 'Restore'
     inputs:
       command: 'restore'
       projects: |
@@ -24,6 +25,7 @@ steps:
         UnitTests/UnitTests.csproj
       feedsToUse: 'select'
   - task: DotNetCoreCLI@2
+    displayName: 'Build'
     inputs:
       command: 'build'
       projects: |
@@ -31,6 +33,7 @@ steps:
         Swis.Development/Swis.Development.csproj
         UnitTests/UnitTests.csproj
   - task: DotNetCoreCLI@2
+    displayName: 'Test'
     inputs:
       command: 'test'
       projects: 'UnitTests/UnitTests.csproj'

@@ -1,22 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Swis.Development\Swis.Development.csproj" />
     <ProjectReference Include="..\Swis.Runtime\Swis.Runtime.csproj" />
   </ItemGroup>
-
 </Project>
