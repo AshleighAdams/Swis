@@ -19,19 +19,37 @@ namespace Swis
 			}
 		}
 
-		public static int Pow(int a, int b)
+		public static int Pow(int x, int pow)
 		{
-			int result = 1;
-			for (int i = 0; i < b; i++)
-				result *= a;
-			return result;
+			int sign = 1;
+			if (x < 0)
+			{
+				if((pow & 1) != 0 || pow == 0)
+					sign = -1;
+				x = -x;
+			}
+			
+			int ret = 1;
+			while (pow != 0)
+			{
+				if ((pow & 1) == 1)
+					ret *= x;
+				x *= x;
+				pow >>= 1;
+			}
+			return ret * sign;
 		}
-		public static uint Pow(uint a, uint b)
+		public static uint Pow(uint x, uint pow)
 		{
-			uint result = 1;
-			for (uint i = 0; i < b; i++)
-				result *= a;
-			return result;
+			uint ret = 1;
+			while (pow != 0)
+			{
+				if ((pow & 1) == 1)
+					ret *= x;
+				x *= x;
+				pow >>= 1;
+			}
+			return ret;
 		}
 
 		public static uint SignExtend(uint src, uint frombits)
