@@ -37,7 +37,7 @@ steps:
     inputs:
       command: 'test'
       projects: 'UnitTests/UnitTests.csproj'
-      arguments: '--logger trx -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura'
+      arguments: '--logger trx -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura -p:Include="[Swis.*]*" -p:Exclude="[*Tests]*" '
       testRunTitle: 'Test'
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish Coverage'
