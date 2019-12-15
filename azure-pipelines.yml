@@ -34,3 +34,5 @@ steps:
     inputs:
       command: 'test'
       projects: 'UnitTests/UnitTests.csproj'
+      arguments: '--collect "Code coverage"'
+      testRunTitle: 'Test'
