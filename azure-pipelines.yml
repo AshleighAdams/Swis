@@ -39,3 +39,9 @@ steps:
       projects: 'UnitTests/UnitTests.csproj'
       arguments: '--logger trx -p:CollectCoverage=true -p:CoverletOutputFormat=cobertura'
       testRunTitle: 'Test'
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Coverage'
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: 'UnitTests/coverage.cobertura.xml'
+      failIfCoverageEmpty: true
