@@ -37,7 +37,7 @@ namespace Swis
 		public static uint SignExtend(uint src, uint frombits)
 		{
 			if (frombits <= 0 || frombits > Cpu.NativeSizeBits)
-				throw new Exception();
+				throw new ArgumentOutOfRangeException(nameof(frombits));
 			if (frombits == Cpu.NativeSizeBits)
 				return frombits;
 
