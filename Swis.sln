@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2036
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29509.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Runtime", "Swis.Runtime\Swis.Runtime.csproj", "{306C1217-B205-4123-8B57-A413E49B4CA5}"
 EndProject
@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +40,10 @@ Global
 		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5582A013-FFB3-4296-A661-98C6CCAF1945}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
