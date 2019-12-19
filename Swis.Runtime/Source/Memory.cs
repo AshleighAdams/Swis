@@ -41,12 +41,12 @@ namespace Swis
 		{
 			get
 			{
-				if (x > this._Length) throw new IndexOutOfRangeException();
+				if (x >= this._Length) throw new IndexOutOfRangeException();
 				return *(this.Ptr + x);
 			}
 			set
 			{
-				if (x > this._Length) throw new IndexOutOfRangeException();
+				if (x >= this._Length) throw new IndexOutOfRangeException();
 				*(this.Ptr + x) = value;
 			}
 		}
@@ -55,7 +55,13 @@ namespace Swis
 		{
 			get
 			{
-				if (x > this._Length) throw new IndexOutOfRangeException();
+				try
+				{
+					if (checked(x + bits / 8u) > (ulong)this._Length)
+						throw new IndexOutOfRangeException();
+				}
+				catch (OverflowException) { throw new IndexOutOfRangeException(); }
+
 				switch (bits)
 				{
 				case 8: return *(Byte*)(this.Ptr + x);
@@ -66,7 +72,13 @@ namespace Swis
 			}
 			set
 			{
-				if (x > this._Length) throw new IndexOutOfRangeException();
+				try
+				{
+					if (checked(x + bits / 8u) > (ulong)this._Length)
+						throw new IndexOutOfRangeException();
+				}
+				catch (OverflowException) { throw new IndexOutOfRangeException(); }
+
 				switch (bits)
 				{
 				case 8: *(Byte*)(this.Ptr + x) = (byte)value; break;
