@@ -50,18 +50,113 @@ namespace UnitTests
 		const int ControlARegIdSize64 = 0b000000_11;
 
 		[Theory]
+		// special registers
 		[InlineData(
-			new byte[] { 
+			new byte[] {
 				MasterIndirectionSize0 | MasterAddressingModeA | MasterSegmentNone,
-				(int)NamedRegister.InstructionPointer << ControlARegIdShift | ControlARegIdSize32 },
-			2u, "e" + nameof(NamedRegister.InstructionPointer) + "")]
-		public void DecodeOperand(byte[] input, uint decode_size, string expected_asm)
+				(int)NamedRegister.InstructionPointer << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"e" + nameof(NamedRegister.InstructionPointer) + "")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.BasePointer << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"e" + nameof(NamedRegister.BasePointer) + "")]
+
+		// standard registers and sizes
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"e" + nameof(NamedRegister.A) + "x")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize16,
+			},
+			"" + nameof(NamedRegister.B) + "x")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.C << ControlARegIdShift | ControlARegIdSize8,
+			},
+			"" + nameof(NamedRegister.C) + "l")]
+
+		// addressing modes
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeAB | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"e" + nameof(NamedRegister.A) + "x + " + "e" + nameof(NamedRegister.B) + "x")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeAB | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize16,
+			},
+			"e" + nameof(NamedRegister.A) + "x + " + nameof(NamedRegister.B) + "x")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeCD | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize16,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"" + nameof(NamedRegister.A) + "x * e" + nameof(NamedRegister.B) + "x")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize0 | MasterAddressingModeABCD | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.C << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.D << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"e" + nameof(NamedRegister.A) + "x + e" + nameof(NamedRegister.B) + "x + e" + nameof(NamedRegister.C) + "x * e" + nameof(NamedRegister.D) + "x")]
+
+		// indirection
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize8 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"ptr8 [e" + nameof(NamedRegister.A) + "x]")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize16 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"ptr16 [e" + nameof(NamedRegister.A) + "x]")]
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize32 | MasterAddressingModeA | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"[e" + nameof(NamedRegister.A) + "x]")]
+
+		// segments
+		// TODO: unit tests for segments
+
+		//combined
+		[InlineData(
+			new byte[] {
+				MasterIndirectionSize16 | MasterAddressingModeABCD | MasterSegmentNone,
+				(int)NamedRegister.A << ControlARegIdShift | ControlARegIdSize32,
+				(int)NamedRegister.B << ControlARegIdShift | ControlARegIdSize16,
+				(int)NamedRegister.C << ControlARegIdShift | ControlARegIdSize8,
+				(int)NamedRegister.D << ControlARegIdShift | ControlARegIdSize32,
+			},
+			"ptr16 [e" + nameof(NamedRegister.A) + "x + " + nameof(NamedRegister.B) + "x + " + nameof(NamedRegister.C) + "l * e" + nameof(NamedRegister.D) + "x]")]
+
+		public void DecodeOperand(byte[] input, string expected_asm)
 		{
 			uint ip = 0u;
 			var memctrlr = new ByteArrayMemoryController(input);
 			
 			memctrlr.DecodeOperand(ref ip, null).ToString().Should().Be(expected_asm);
-			ip.Should().Be(decode_size);
+			ip.Should().Be((uint)input.Length);
 		}
 	}
 }
