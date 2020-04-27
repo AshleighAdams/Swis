@@ -110,14 +110,14 @@
     <None Include="Source\App.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Dirkster.AvalonDock">
+      <Version>4.10.0</Version>
+    </PackageReference>
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013">
+      <Version>4.10.0</Version>
+    </PackageReference>
     <PackageReference Include="estebano.ScintillaNET.WPF">
       <Version>2.6.0</Version>
-    </PackageReference>
-    <PackageReference Include="Extended.Wpf.Toolkit">
-      <Version>3.8.1</Version>
-    </PackageReference>
-    <PackageReference Include="Xceed.Wpf.AvalonDock.Themes.VS2013">
-      <Version>2.9.0.1</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

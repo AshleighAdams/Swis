@@ -6,8 +6,7 @@
         xmlns:local="clr-namespace:Swis.WpfDebugger"
         mc:Ignorable="d"
 		
-		xmlns:dock="http://schemas.xceed.com/wpf/xaml/avalondock"
-		xmlns:xceed="http://schemas.xceed.com/wpf/xaml/toolkit"
+		xmlns:dock="https://github.com/Dirkster99/AvalonDock"
 		
         Title="Swisual Debugger"
 		Width="525" 
