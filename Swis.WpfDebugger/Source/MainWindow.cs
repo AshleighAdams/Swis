@@ -110,7 +110,7 @@ namespace Swis.WpfDebugger
 				this._Dbg = value;
 				this.AssemblyEditor = this.CreateEditor("Assembly", this._Dbg.AssemblySource, "asm");
 
-				this.DocumentPane.Children.Add(new Xceed.Wpf.AvalonDock.Layout.LayoutDocument()
+				this.DocumentPane.Children.Add(new AvalonDock.Layout.LayoutDocument()
 				{
 					Title = "Disassembly",
 					ToolTip = "Disassembly",
@@ -651,7 +651,7 @@ namespace Swis.WpfDebugger
 				}
 			}
 			
-			this.DocumentPane.Children.Add(new Xceed.Wpf.AvalonDock.Layout.LayoutDocument()
+			this.DocumentPane.Children.Add(new AvalonDock.Layout.LayoutDocument()
 			{
 				Title = System.IO.Path.GetFileName(file),
 				ToolTip = file,
