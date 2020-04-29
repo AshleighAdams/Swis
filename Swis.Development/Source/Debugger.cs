@@ -34,7 +34,7 @@ namespace Swis
 			WriteQueue.Enqueue(data);
 		}
 
-		private void _IOThread() // TODO: make this async
+		private void IOThread() // TODO: make this async
 		{
 			while (Stream.CanRead || Stream.CanWrite)
 			{
@@ -101,7 +101,7 @@ namespace Swis
 			Flush = flush;
 
 			_Reader = new StreamReader(str);
-			new System.Threading.Thread(this._IOThread).Start();
+			new System.Threading.Thread(this.IOThread).Start();
 		}
 
 		private uint[]? _LastValues;

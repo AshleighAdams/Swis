@@ -269,14 +269,12 @@ namespace Swis
 
 				if (!output.Unit.IntelSyntax)
 				{
-					string strsz;
-					switch (inf.Size)
+					string strsz = inf.Size switch
 					{
-						case "ptr": strsz = ""; break;
-						case "1": strsz = "8"; break;
-						default: strsz = inf.Size; break;
-					}
-
+						"ptr" => "",
+						"1"   => "8",
+						_     => inf.Size,
+					};
 					asm = asm.Replace(kv.Key, $"t{inf.AllocatedRegister}{strsz}");
 				}
 				else

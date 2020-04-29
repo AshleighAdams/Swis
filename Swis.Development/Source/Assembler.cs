@@ -51,27 +51,27 @@ namespace Swis
 			{
 				size = 64;
 				if (reg.EndsWith("x"))
-					reg = reg.Substring(1, reg.Length - 2);
+					reg = reg[1..^1];
 				else
-					reg = reg.Substring(1);
+					reg = reg[1..];
 			}
 			else if (reg.StartsWith("e"))
 			{
 				size = 32;
 				if (reg.EndsWith("x"))
-					reg = reg.Substring(1, reg.Length - 2);
+					reg = reg[1..^1];
 				else
-					reg = reg.Substring(1);
+					reg = reg[1..];
 			}
 			else if (reg.EndsWith("x"))
 			{
 				size = 16;
-				reg = reg.Substring(0, reg.Length - 1);
+				reg = reg[0..^1];
 			}
 			else if (reg.EndsWith("l"))
 			{
 				size = 8;
-				reg = reg.Substring(0, reg.Length - 1);
+				reg = reg[0..^1];
 			}
 			else throw new Exception(reg);
 
@@ -235,26 +235,26 @@ namespace Swis
 
 			int read_nybble(char c)
 			{
-				switch (char.ToLowerInvariant(c))
+				return char.ToLowerInvariant(c) switch
 				{
-					case '0': return 0;
-					case '1': return 1;
-					case '2': return 2;
-					case '3': return 3;
-					case '4': return 4;
-					case '5': return 5;
-					case '6': return 6;
-					case '7': return 7;
-					case '8': return 8;
-					case '9': return 9;
-					case 'a': return 10;
-					case 'b': return 11;
-					case 'c': return 12;
-					case 'd': return 13;
-					case 'e': return 14;
-					case 'f': return 15;
-					default: throw new Exception($"{linenum}: data hex has an invalid nybble");
-				}
+					'0' => 0,
+					'1' => 1,
+					'2' => 2,
+					'3' => 3,
+					'4' => 4,
+					'5' => 5,
+					'6' => 6,
+					'7' => 7,
+					'8' => 8,
+					'9' => 9,
+					'a' => 10,
+					'b' => 11,
+					'c' => 12,
+					'd' => 13,
+					'e' => 14,
+					'f' => 15,
+					_ => throw new Exception($"{linenum}: data hex has an invalid nybble"),
+				};
 			}
 
 			string? source_function = null;
@@ -481,32 +481,32 @@ namespace Swis
 										indirection_size = (uint)Cpu.NativeSizeBits;
 									else
 									{
-										switch (match.indirection_size)
+										indirection_size = match.indirection_size switch
 										{
-											case "8": indirection_size = 8; break;
-											case "16": indirection_size = 16; break;
-											case "32": indirection_size = 32; break;
-											//case "64": indirection_size = 64; break;
-											default: throw new Exception($"invalid indirection size {match.indirection_size}");
-										}
+											"8"  => 8,
+											"16" => 16,
+											"32" => 32,
+											//"64" => 64,
+											_ => throw new Exception($"invalid indirection size {match.indirection_size}"),
+										};
 									}
 
 									uint first = (uint)NamedRegister.StackSegment - 1;
-									switch (((string)match.segment).ToLowerInvariant())
+									segmentid = ((string)match.segment).ToLowerInvariant() switch
 									{
-										case "": segmentid = 0; break;
-										case "ss": segmentid = (uint)NamedRegister.StackSegment - first; break;
-										case "cs": segmentid = (uint)NamedRegister.CodeSegment - first; break;
-										case "ds": segmentid = (uint)NamedRegister.DataSegment - first; break;
-										case "es": segmentid = (uint)NamedRegister.ExtraSegment - first; break;
-										case "fs": segmentid = (uint)NamedRegister.FSegment - first; break;
-										case "gs": segmentid = (uint)NamedRegister.GSegment - first; break;
-										case "xs": segmentid = (uint)NamedRegister.XtraSegment - first; break;
-										default: throw new Exception($"unknown segment: {match.segment}");
-									}
+										"" => 0,
+										"ss" => (uint)NamedRegister.StackSegment - first,
+										"cs" => (uint)NamedRegister.CodeSegment - first,
+										"ds" => (uint)NamedRegister.DataSegment - first,
+										"es" => (uint)NamedRegister.ExtraSegment - first,
+										"fs" => (uint)NamedRegister.FSegment - first,
+										"gs" => (uint)NamedRegister.GSegment - first,
+										"xs" => (uint)NamedRegister.XtraSegment - first,
+										_ => throw new Exception($"unknown segment: {match.segment}"),
+									};
 								}
 
-								void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string? const_placeholder)
+								static void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string? const_placeholder)
 								{
 									regid = 0;
 									regsz = 0;
@@ -661,16 +661,14 @@ namespace Swis
 										@const = @const >> 8;
 									}
 
-									uint enc_xtr;
-
-									switch (extra)
+									uint enc_xtr = extra switch
 									{
-										case 0: enc_xtr = 0; break;
-										case 1: enc_xtr = 1; break;
-										case 2: enc_xtr = 2; break;
-										case 4: enc_xtr = 3; break;
-										default: throw new Exception(extra.ToString());
-									}
+										0 => 0,
+										1 => 1,
+										2 => 2,
+										4 => 3,
+										_ => throw new Exception(extra.ToString()),
+									};
 
 									byte constbyte = (byte)(0
 										| ((1 & 0b1) << 7) // is_constant

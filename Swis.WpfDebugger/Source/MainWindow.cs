@@ -258,7 +258,7 @@ namespace Swis.WpfDebugger
 				{
 					n++;
 
-					string label = "";
+					string label;
 					var func = ip_to_func(at);
 					if (func != null)
 					{
@@ -386,58 +386,56 @@ namespace Swis.WpfDebugger
 						StatusBarLabel.Text = $"Connected to {cl.Client.RemoteEndPoint}";
 					});
 
-					using (StreamReader r = new StreamReader(cl.GetStream()))
+					using StreamReader r = new StreamReader(cl.GetStream());
+					while (true)
 					{
-						while (true)
-						{
-							string registers = r.ReadLine();
-							string stack = r.ReadLine();
-							string instruction = r.ReadLine();
+						string registers = r.ReadLine();
+						string stack = r.ReadLine();
+						string instruction = r.ReadLine();
 
-							Regex.Replace(registers, "([0-9]+): 0x([a-zA-Z0-9]+)",
-								delegate (Match m)
-								{
-									uint regid = uint.Parse(m.Groups[1].Value);
-									uint value = Convert.ToUInt32(m.Groups[2].Value, 16);
-									Registers[regid] = value;
-									return m.Value;
-								}
-							);
-
-							if (stack == "")
-							{ }
-							else if (stack == "=")
-							{ }
-							else
+						Regex.Replace(registers, "([0-9]+): 0x([a-zA-Z0-9]+)",
+							delegate (Match m)
 							{
-								Match m = Regex.Match(stack, @"([0-9]+)\+([0-9]+): (.+)");
-								StackBase = uint.Parse(m.Groups[1].Value);
-								int index = int.Parse(m.Groups[2].Value);
+								uint regid = uint.Parse(m.Groups[1].Value);
+								uint value = Convert.ToUInt32(m.Groups[2].Value, 16);
+								Registers[regid] = value;
+								return m.Value;
+							}
+						);
 
-								byte[] data = Convert.FromBase64String(m.Groups[3].Value);
+						if (string.IsNullOrEmpty(stack))
+						{ }
+						else if (stack == "=")
+						{ }
+						else
+						{
+							Match m = Regex.Match(stack, @"([0-9]+)\+([0-9]+): (.+)");
+							StackBase = uint.Parse(m.Groups[1].Value);
+							int index = int.Parse(m.Groups[2].Value);
 
-								if (index + data.Length >= StackData.Length)
-								{
-									int newsz = StackData.Length * 2;
-									while (newsz <= index + data.Length)
-										newsz *= 2;
-									byte[] newdat = new byte[newsz];
-									Buffer.BlockCopy(StackData, 0, newdat, 0, StackData.Length);
-									for (int i = StackData.Length; i < newdat.Length; i++)
-										newdat[i] = 0;
-									StackData = newdat;
-								}
+							byte[] data = Convert.FromBase64String(m.Groups[3].Value);
 
-								Buffer.BlockCopy(data, 0, StackData, index, data.Length);
+							if (index + data.Length >= StackData.Length)
+							{
+								int newsz = StackData.Length * 2;
+								while (newsz <= index + data.Length)
+									newsz *= 2;
+								byte[] newdat = new byte[newsz];
+								Buffer.BlockCopy(StackData, 0, newdat, 0, StackData.Length);
+								for (int i = StackData.Length; i < newdat.Length; i++)
+									newdat[i] = 0;
+								StackData = newdat;
 							}
 
-							byte[] instr = Convert.FromBase64String(instruction);
-
-							Dispatcher.Invoke(delegate ()
-							{
-								this.Clock(instr);
-							});
+							Buffer.BlockCopy(data, 0, StackData, index, data.Length);
 						}
+
+						byte[] instr = Convert.FromBase64String(instruction);
+
+						Dispatcher.Invoke(delegate ()
+						{
+							this.Clock(instr);
+						});
 					}
 				}
 				catch (IOException io) when (io.InnerException is SocketException && io.InnerException.Message.Contains("forcibly closed"))
@@ -447,7 +445,7 @@ namespace Swis.WpfDebugger
 				}
 				catch (Exception ex)
 				{
-					status_message = $"Exception: {ex.ToString()}";
+					status_message = $"Exception: {ex}";
 					status_color = Brushes.Crimson;
 				}
 				ConnectionWriter = null;

@@ -72,8 +72,8 @@ namespace Swis
 		[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 		public static string GetDebugView(this System.Linq.Expressions.Expression exp)
 		{
-			var propertyInfo = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-			return propertyInfo.GetValue(exp) as string ?? throw new Exception("DebugView() returned null!");
+			var property_info = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			return property_info.GetValue(exp) as string ?? throw new Exception("DebugView() returned null!");
 		}
 	}
 }

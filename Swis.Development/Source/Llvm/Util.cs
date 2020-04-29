@@ -52,12 +52,12 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (!type.StartsWith("{"))
 					throw new ArgumentException();
 
-				string stype = type.Substring(1, type.Length - 2); // trim the {}
+				string stype = type[1..^1]; // trim the {}
 
 				uint cur_size = 0;
 				dynamic[] fields = stype.PatternMatches("<type:type>", IrPatterns);
@@ -93,7 +93,7 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (type.StartsWith("{"))
 				{
@@ -130,7 +130,7 @@ namespace Swis
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (type.StartsWith("{"))
 				{
@@ -163,7 +163,7 @@ namespace Swis
 			{
 				if (type == "void")
 					return "0";
-				if (type[type.Length - 1] == '*')
+				if (type[^1] == '*')
 					return "ptr";
 
 				if (type[0] == '%')
@@ -219,8 +219,8 @@ namespace Swis
 
 			public string TypeDeref(string type)
 			{
-				if (type[type.Length - 1] == '*')
-					return type.Substring(0, type.Length - 1);
+				if (type[^1] == '*')
+					return type[0..^1];
 				throw new Exception("deref non ptr");
 			}
 		}
@@ -268,7 +268,7 @@ namespace Swis
 			// i16, %5, false = %5:16
 			public string ToOperand(string type, string operand, bool indirection = false)
 			{
-				string part = "";
+				string part;
 
 				string size = Unit.SizeOf(type);
 

@@ -80,10 +80,10 @@ namespace Swis
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
 		// todo: replace with interface by DI
-		public virtual Action<UInt16, byte> LineWrite { get; set; } = delegate (UInt16 _, byte __) { };
+		public virtual Action<UInt16, byte> LineWrite { get; set; } = delegate (UInt16 _, byte unused) { };
 		public virtual Func<UInt16, byte> LineRead { get; set; } = delegate (UInt16 _) { return 0; };
 		public abstract IReadWriteList<uint> Registers { get; }
-
+		
 		public abstract int Clock(int clocks = 1);
 		public abstract void Interrupt(uint code);
 		public abstract void Reset();
@@ -177,7 +177,7 @@ namespace Swis
 	{
 		private struct ListWrapper<T> : IReadWriteList<T>
 		{
-			private IList<T> Source;
+			private IList<T> Source { get; }
 			public ListWrapper(IList<T> source)
 			{
 				Source = source;
@@ -187,9 +187,9 @@ namespace Swis
 			int IReadWriteList<T>.Count { get => Source.Count; }
 		}
 
-		public uint[] InternalRegisters { get; } = new uint[(int)NamedRegister.L + 1];
+		public uint[] InternalRegisters = new uint[(int)NamedRegister.L + 1];
 		public override IReadWriteList<uint> Registers { get => new ListWrapper<uint>(InternalRegisters); }
-
+		
 		public InterpretedCpu(IMemoryController memory)
 		{
 			Memory = memory;

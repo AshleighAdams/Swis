@@ -39,14 +39,14 @@ namespace Swis
 			{
 				if (Indirect)
 					return IndirectionSize;
-				switch (AddressingMode)
+				return AddressingMode switch
 				{
-					case 0: return SizeA;
-					case 1: return (uint)Cpu.NativeSizeBits;
-					case 2: return (uint)Cpu.NativeSizeBits;
-					case 3: return (uint)Cpu.NativeSizeBits;
-					default: throw new NotImplementedException();
-				}
+					0 => SizeA,
+					1 => (uint)Cpu.NativeSizeBits,
+					2 => (uint)Cpu.NativeSizeBits,
+					3 => (uint)Cpu.NativeSizeBits,
+					_ => throw new NotImplementedException(),
+				};
 			}
 		}
 
@@ -74,44 +74,40 @@ namespace Swis
 					}
 				}
 
-				switch (AddressingMode)
+				return AddressingMode switch
 				{
-					case 0: // a
-						return
-						part_value(RegIdA, SizeA, ConstA);
-					case 1: // a + b
-						return
-							part_value(RegIdA, SizeA, ConstA)
-							+
-							part_value(RegIdB, SizeB, ConstB);
-					case 2: // c * d
-						return
-							(uint)(
-								(int)part_value(RegIdC, SizeC, ConstC, true)
-								*
-								(int)part_value(RegIdD, SizeD, ConstD, true)
-							);
-					case 3: // a + b + (c * d)
-						return
-							part_value(RegIdA, SizeA, ConstA)
-							+
-							part_value(RegIdB, SizeB, ConstB)
-							+
-							(uint)(
-								(int)part_value(RegIdC, SizeC, ConstC, true)
-								*
-								(int)part_value(RegIdD, SizeD, ConstD, true)
-							);
-					default: throw new NotImplementedException();
-				}
+					// a
+					0 => part_value(RegIdA, SizeA, ConstA),
+					// a + b
+					1 => 
+						part_value(RegIdA, SizeA, ConstA)
+						+
+						part_value(RegIdB, SizeB, ConstB),
+					// c * d
+					2 => (uint)(
+							(int)part_value(RegIdC, SizeC, ConstC, true)
+							*
+							(int)part_value(RegIdD, SizeD, ConstD, true)
+						),
+					// a + b + (c * d)
+					3 =>
+						part_value(RegIdA, SizeA, ConstA)
+						+
+						part_value(RegIdB, SizeB, ConstB)
+						+
+						(uint)(
+							(int)part_value(RegIdC, SizeC, ConstC, true)
+							*
+							(int)part_value(RegIdD, SizeD, ConstD, true)
+						),
+					_ => throw new NotImplementedException(),
+				};
 			}
 		}
 
 		public override string ToString()
 		{
-			string @base;
-
-			string do_part(sbyte regid, byte size, uint @const)
+			static string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
 				{
@@ -119,33 +115,25 @@ namespace Swis
 
 					if (regid >= (int)NamedRegister.A)
 					{
-						switch (size)
+						return size switch
 						{
-							case 8:
-								return $"{r}l";
-							case 16:
-								return $"{r}x";
-							case 32:
-								return $"e{r}x";
-							case 64:
-								return $"r{r}x";
-							default: return $"{r}sz{size}";
-						}
+							8  => $"{r}l",
+							16 => $"{r}x",
+							32 => $"e{r}x",
+							64 => $"r{r}x",
+							_  => $"{r}sz{size}",
+						};
 					}
 					else
 					{
-						switch (size)
+						return size switch
 						{
-							case 8:
-								return $"{r}l";
-							case 16:
-								return $"{r}";
-							case 32:
-								return $"e{r}";
-							case 64:
-								return $"r{r}";
-							default: return $"{r}sz{size}";
-						}
+							8  => $"{r}l",
+							16 => $"{r}",
+							32 => $"e{r}",
+							64 => $"r{r}",
+							_  => $"{r}sz{size}",
+						};
 					}
 				}
 				else
@@ -154,26 +142,14 @@ namespace Swis
 				}
 			}
 
-			switch (AddressingMode)
+			string @base = AddressingMode switch
 			{
-				case 0:
-					@base = $"{do_part(RegIdA, SizeA, ConstA)}";
-					break;
-				case 1:
-					@base = $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}";
-					break;
-				case 2:
-					@base = $"{do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}";
-					break;
-				case 3:
-					@base = $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}" +
-						$" + {do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}";
-					break;
-				default:
-					@base = "???";
-					break;
-			}
-
+				0 => $"{do_part(RegIdA, SizeA, ConstA)}",
+				1 => $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}",
+				2 => $"{do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}",
+				3 => $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}" + $" + {do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}",
+				_ => "???",
+			};
 			if (Indirect)
 			{
 				if (IndirectionSize == Cpu.NativeSizeBits)
@@ -236,16 +212,13 @@ namespace Swis
 					U32 = Value
 				};
 
-				switch (ValueSize)
+				return ValueSize switch
 				{
-					default: throw new Exception("invalid size");
-					case 32:
-						return c.I32;
-					case 16:
-						return c.I16A;
-					case 8:
-						return c.I8A;
-				}
+					32 => c.I32,
+					16 => c.I16A,
+					8  => c.I8A,
+					_  => throw new Exception("invalid size"),
+				};
 			}
 			set
 			{
@@ -306,15 +279,15 @@ namespace Swis
 			byte addressing_mode = (byte)((master & 0b0001_1000u) >> 3);
 			byte segment = (byte)((master & 0b0000_0111u) >> 0);
 
-			switch (indirection_size)
+			indirection_size = indirection_size switch
 			{
-				case 0: break;
-				case 1: indirection_size = 8; break;
-				case 2: indirection_size = 16; break;
-				case 3: indirection_size = 32; break;
-				//case 4: indirection_size = 64; break;
-				default: throw new Exception();
-			}
+				0 => 0,
+				1 => 8,
+				2 => 16,
+				3 => 32,
+				//4 => 64,
+				_ => throw new Exception(),
+			};
 
 			sbyte rida, ridb, ridc, ridd;
 			byte sza, szb, szc, szd;
@@ -364,14 +337,14 @@ namespace Swis
 					@const = 0;
 					regid = (sbyte)((control & 0b0111_1100u) >> 2);
 					uint szid = ((control & 0b0000_0011u) >> 0);
-					switch (szid)
+					size = szid switch
 					{
-						case 0: size = 8; break;
-						case 1: size = 16; break;
-						case 2: size = 32; break;
-						//case 3: size = 64; break;
-						default: throw new Exception();
-					}
+						0 => 8,
+						1 => 16,
+						2 => 32,
+						//3 => 64,
+						_ => throw new Exception(),
+					};
 					return;
 				}
 			}

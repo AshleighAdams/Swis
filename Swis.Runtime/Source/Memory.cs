@@ -62,13 +62,13 @@ namespace Swis
 				}
 				catch (OverflowException) { throw new IndexOutOfRangeException(); }
 
-				switch (bits)
+				return bits switch
 				{
-					case 8: return *(Byte*)(Ptr + x);
-					case 16: return *(UInt16*)(Ptr + x);
-					case 32: return *(UInt32*)(Ptr + x);
-					default: throw new Exception();
-				}
+					8  => *(Byte*)(Ptr + x),
+					16 => *(UInt16*)(Ptr + x),
+					32 => *(UInt32*)(Ptr + x),
+					_  => throw new Exception(),
+				};
 			}
 			set
 			{

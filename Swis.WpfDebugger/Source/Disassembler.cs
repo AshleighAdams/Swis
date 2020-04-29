@@ -6,7 +6,7 @@ namespace Swis.WpfDebugger
 {
 	public class DebugDisassembler
 	{
-		private ByteArrayMemoryController _Mem = new ByteArrayMemoryController(new byte[0]);
+		private ByteArrayMemoryController _Mem = new ByteArrayMemoryController(Array.Empty<byte>());
 
 		private class Instruction
 		{
@@ -137,9 +137,8 @@ namespace Swis.WpfDebugger
 		{
 			StringBuilder sb = new StringBuilder();
 
-			var ptr_to_asm =
-				DbgGuessed.PtrToAsm =
-					DbgGuessed.PtrToAsm ?? new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
+			var ptr_to_asm = DbgGuessed.PtrToAsm
+				??= new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
 
 			for (uint i = 0; i <= max_ip; i++)
 			{

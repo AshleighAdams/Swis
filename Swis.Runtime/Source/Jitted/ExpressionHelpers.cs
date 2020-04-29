@@ -102,45 +102,39 @@ namespace Swis
 						this.ReadRegisterExpression<uint>((NamedRegister)regid, size);
 			}
 
-			Expression inside;
-			switch (arg.AddressingMode)
+			Expression inside = arg.AddressingMode switch
 			{
-				case 0: // a
-					inside = jit_part(arg.RegIdA, arg.SizeA, arg.ConstA);
-					break;
-				case 1: // a + b
-					inside = Expression.Add(
+				// a
+				0 => jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
+				// a + b
+				1 => Expression.Add(
+					jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
+					jit_part(arg.RegIdB, arg.SizeB, arg.ConstB)
+				),
+				// c * d
+				2 => Expression.Convert(
+					Expression.Multiply(
+						jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, true),
+						jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, true)
+					),
+					typeof(uint)
+				),
+				// a + b + c * d
+				3 => Expression.Add(
+					Expression.Add(
 						jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
 						jit_part(arg.RegIdB, arg.SizeB, arg.ConstB)
-					);
-					break;
-				case 2: // c * d
-					inside = Expression.Convert(
+					),
+					Expression.Convert(
 						Expression.Multiply(
 							jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, true),
 							jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, true)
 						),
 						typeof(uint)
-					);
-					break;
-				case 3: // a + b + c * d
-					inside = Expression.Add(
-						Expression.Add(
-							jit_part(arg.RegIdA, arg.SizeA, arg.ConstA),
-							jit_part(arg.RegIdB, arg.SizeB, arg.ConstB)
-						),
-						Expression.Convert(
-							Expression.Multiply(
-								jit_part(arg.RegIdC, arg.SizeC, arg.ConstC, true),
-								jit_part(arg.RegIdD, arg.SizeD, arg.ConstD, true)
-							),
-							typeof(uint)
-						)
-					);
-					break;
-				default: throw new Exception();
-			}
-
+					)
+				),
+				_ => throw new Exception(),
+			};
 			if (!arg.Indirect)
 				return inside;
 			return this.PointerExpression(inside, arg.IndirectionSize);
