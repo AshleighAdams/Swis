@@ -9,7 +9,7 @@ namespace Swis
 		public static string Disassemble(this Operand self, DebugData dbg)
 		{
 			string @base;
-			
+
 			string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
@@ -20,30 +20,30 @@ namespace Swis
 					{
 						switch (size)
 						{
-						case 8:
-							return $"{r.Disassemble()}l";
-						case 16:
-							return $"{r.Disassemble()}x";
-						case 32:
-							return $"e{r.Disassemble()}x";
-						case 64:
-							return $"r{r.Disassemble()}x";
-						default: return $"{r.Disassemble()}sz{size}";
+							case 8:
+								return $"{r.Disassemble()}l";
+							case 16:
+								return $"{r.Disassemble()}x";
+							case 32:
+								return $"e{r.Disassemble()}x";
+							case 64:
+								return $"r{r.Disassemble()}x";
+							default: return $"{r.Disassemble()}sz{size}";
 						}
 					}
 					else
 					{
 						switch (size)
 						{
-						case 8:
-							return $"{r.Disassemble()}l";
-						case 16:
-							return $"{r.Disassemble()}";
-						case 32:
-							return $"e{r.Disassemble()}";
-						case 64:
-							return $"r{r.Disassemble()}";
-						default: return $"{r.Disassemble()}sz{size}";
+							case 8:
+								return $"{r.Disassemble()}l";
+							case 16:
+								return $"{r.Disassemble()}";
+							case 32:
+								return $"e{r.Disassemble()}";
+							case 64:
+								return $"r{r.Disassemble()}";
+							default: return $"{r.Disassemble()}sz{size}";
 						}
 					}
 				}
@@ -59,22 +59,22 @@ namespace Swis
 
 			switch (self.AddressingMode)
 			{
-			case 0:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)}";
-				break;
-			case 1:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}";
-				break;
-			case 2:
-				@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
-				break;
-			case 3:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" +
-					$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
-				break;
-			default:
-				@base = "???";
-				break;
+				case 0:
+					@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)}";
+					break;
+				case 1:
+					@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}";
+					break;
+				case 2:
+					@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
+					break;
+				case 3:
+					@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" +
+						$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
+					break;
+				default:
+					@base = "???";
+					break;
 			}
 
 			if (self.Indirect)

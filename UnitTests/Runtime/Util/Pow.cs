@@ -1,7 +1,6 @@
-﻿using System;
+﻿using FluentAssertions;
 using Swis;
 using Xunit;
-using FluentAssertions;
 
 namespace UnitTests
 {

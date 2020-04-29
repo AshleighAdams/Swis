@@ -7,7 +7,7 @@ namespace Swis
 {
 	public static partial class LlvmIrCompiler
 	{
-		static void RemoveNopJumps(MethodBuilder output)
+		private static void RemoveNopJumps(MethodBuilder output)
 		{
 			//jmp $x
 			//$x:
@@ -37,7 +37,7 @@ namespace Swis
 			output.Assembly.Append(asm);
 		}
 
-		class VarInfo
+		private class VarInfo
 		{
 			public List<(int from, int length)> FoundAt = new List<(int, int)>();
 			public int First = 0;
@@ -46,13 +46,13 @@ namespace Swis
 			public string Size = "";
 		}
 
-		class RegInfo
+		private class RegInfo
 		{
 			public List<(int from, int to)> Used = new List<(int from, int to)>();
 		}
 
 		// shaves off about 30% of the instructions
-		static void OptimizeMovs(MethodBuilder output)
+		private static void OptimizeMovs(MethodBuilder output)
 		{
 			// llvm instructions can't store/load and perform an operation together, so let's fix that
 			// mov %28:32, ptr32 [ebp - 20]
@@ -83,12 +83,12 @@ namespace Swis
 				string varname = m.Groups["reg"].Value;
 				MatchCollection simple = searchin.Matches(string.Format(simple_use, Regex.Escape(varname)));
 				MatchCollection total = asm.Matches(Regex.Escape(varname)); // this searches everything still
-				
+
 				if (simple.Count == 1 && total.Count == 2 && !have_simplified.TryGetValue(varname, out var _))
 				{
 					// we can probably replace it, but first let's check we haven't used that data chunk else where,
 					// ensuring that this being in a different order won't change the symantic meaning
-					
+
 					string data = m.Groups["data"].Value.Trim();
 
 					if (searchdown)
@@ -97,7 +97,7 @@ namespace Swis
 						searchin = searchin.Substring(simple[0].Index);
 
 					int shouldbefoundtimes = searchdown ? 0 : 1; // when searching up, we will contain the source
-					
+
 					if (
 						// otherwise, if we access this more than once, the data might have changed.
 						// also make sure there was not a call or a jump between us, as they could have unknowable changes to that memory,
@@ -110,13 +110,13 @@ namespace Swis
 						// only the base pointer register is garunteed to not be clobbered
 						// so if the instruction isn't right after, make sure that it only
 						// whitelisted registers (bp) that aren't garunteed to clobber.
-						if(distance_instructions > 1)
+						if (distance_instructions > 1)
 							foreach (dynamic regfound in registers_using)
 							{
 								string reg = regfound.reg.ToLowerInvariant();
 								if (reg == "ptr" || reg == "ptrptr" || reg == "bp" || reg == "ebp" || reg == "ebpx" || reg == "bpx" || reg == "bpl")
 									continue;
-								
+
 								return m.Value;
 							}
 
@@ -162,12 +162,12 @@ namespace Swis
 						asm = asm.Replace(what, with);
 				} while (replaced);
 			}
-			
+
 			output.Assembly.Clear();
 			output.Assembly.Append(asm);
 		}
 
-		static void AllocateRegisters(MethodBuilder output)
+		private static void AllocateRegisters(MethodBuilder output)
 		{
 			string asm = output.Assembly.ToString();
 
@@ -212,7 +212,7 @@ namespace Swis
 
 			// take only the operands, and reverse them, placing the destinations at the end.
 			// this way we can have code like this:
-			
+
 			// %add0 = add 0, 1
 			// $add1 = add %add0, 2
 
@@ -226,7 +226,7 @@ namespace Swis
 				foreach (string line in lines)
 				{
 					MatchCollection matches = line.Matches(ssa_regex);
-					for (int i = matches.Count; i --> 0;)
+					for (int i = matches.Count; i-- > 0;)
 						ssa_inverse.Append($" {matches[i].Value} ");
 					ssa_inverse.AppendLine();
 				}
@@ -272,9 +272,9 @@ namespace Swis
 					string strsz;
 					switch (inf.Size)
 					{
-					case "ptr": strsz = ""; break;
-					case "1": strsz = "8"; break;
-					default: strsz = inf.Size; break;
+						case "ptr": strsz = ""; break;
+						case "1": strsz = "8"; break;
+						default: strsz = inf.Size; break;
 					}
 
 					asm = asm.Replace(kv.Key, $"t{inf.AllocatedRegister}{strsz}");
@@ -285,14 +285,14 @@ namespace Swis
 					string alc = inf.AllocatedRegister ?? "AllocatedRegister is null";
 					switch (inf.Size)
 					{
-					case "8": reg = $"{alc}l"; break;
-					case "16": reg = $"{alc}x"; break;
-					case "32": reg = $"e{alc}x"; break;
-					case "64": reg = $"r{alc}x"; break;
+						case "8": reg = $"{alc}l"; break;
+						case "16": reg = $"{alc}x"; break;
+						case "32": reg = $"e{alc}x"; break;
+						case "64": reg = $"r{alc}x"; break;
 
-					case "ptr": goto case "32";
-					case "1": goto case "8";
-					default: throw new NotImplementedException();
+						case "ptr": goto case "32";
+						case "1": goto case "8";
+						default: throw new NotImplementedException();
 					}
 
 					asm = asm.Replace(kv.Key, reg);

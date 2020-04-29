@@ -24,11 +24,11 @@ namespace Swis
 			int sign = 1;
 			if (x < 0)
 			{
-				if((pow & 1) != 0 || pow == 0)
+				if ((pow & 1) != 0 || pow == 0)
 					sign = -1;
 				x = -x;
 			}
-			
+
 			int ret = 1;
 			while (pow != 0)
 			{

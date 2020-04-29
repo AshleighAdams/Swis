@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 
 #pragma warning disable IDE0051 // Remove unused private members
@@ -13,11 +12,11 @@ namespace Swis
 		{
 			return Expression.Block();
 		}
-		
+
 		[CpuInstruction(Opcode.InterruptR)]
 		private Expression InterruptR(ref uint ip, ref bool sequential)
 		{
-			Operand @int = this.Memory.DecodeOperand(ref ip, null);
+			Operand @int = Memory.DecodeOperand(ref ip, null);
 			Expression intexp = this.ReadOperandExpression<uint>(ref @int);
 
 			return this.RaiseInterruptExpression(intexp, ref sequential);
@@ -81,9 +80,9 @@ namespace Swis
 		[CpuInstruction(Opcode.SignExtendRRR)]
 		private Expression SignExtendRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand src = this.Memory.DecodeOperand(ref ip, null);
-			Operand bit = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand src = Memory.DecodeOperand(ref ip, null);
+			Operand bit = Memory.DecodeOperand(ref ip, null);
 
 			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 			Expression bitexp = this.ReadOperandExpression<uint>(ref bit);
@@ -94,9 +93,9 @@ namespace Swis
 		[CpuInstruction(Opcode.ZeroExtendRRR)]
 		private Expression ZeroExtendRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand src = this.Memory.DecodeOperand(ref ip, null);
-			Operand bit = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand src = Memory.DecodeOperand(ref ip, null);
+			Operand bit = Memory.DecodeOperand(ref ip, null);
 
 			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 			Expression bitexp = this.ReadOperandExpression<uint>(ref bit);
@@ -131,12 +130,12 @@ namespace Swis
 		[CpuInstruction(Opcode.InRR)]
 		private Expression InRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand line = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand line = Memory.DecodeOperand(ref ip, null);
 
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 
-			Expression<Func<uint, uint>> readline = lineval => this.LineRead((UInt16)lineval);
+			Expression<Func<uint, uint>> readline = lineval => LineRead((UInt16)lineval);
 
 			return this.WriteOperandExpression<uint>(ref dst, ref sequential,
 				Expression.Invoke(readline, lineexp));
@@ -145,13 +144,13 @@ namespace Swis
 		[CpuInstruction(Opcode.OutRR)]
 		private Expression OutRR(ref uint ip, ref bool sequential)
 		{
-			Operand line = this.Memory.DecodeOperand(ref ip, null);
-			Operand lttr = this.Memory.DecodeOperand(ref ip, null);
+			Operand line = Memory.DecodeOperand(ref ip, null);
+			Operand lttr = Memory.DecodeOperand(ref ip, null);
 
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 			Expression lttrexp = this.ReadOperandExpression<uint>(ref lttr);
 
-			Expression<Action<uint, uint>> writeline = (lineval, charval) => this.LineWrite((UInt16)lineval, (byte)charval);
+			Expression<Action<uint, uint>> writeline = (lineval, charval) => LineWrite((UInt16)lineval, (byte)charval);
 
 			return Expression.Invoke(writeline, lineexp, lttrexp);
 		}
@@ -159,7 +158,7 @@ namespace Swis
 		[CpuInstruction(Opcode.ExtendR)]
 		private Expression ExtendR(ref uint ip, ref bool sequential)
 		{
-			Operand instr = this.Memory.DecodeOperand(ref ip, null);
+			Operand instr = Memory.DecodeOperand(ref ip, null);
 
 			Expression instrexp = this.ReadOperandExpression<uint>(ref instr);
 

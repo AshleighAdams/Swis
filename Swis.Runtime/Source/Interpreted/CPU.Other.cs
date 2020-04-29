@@ -7,44 +7,44 @@ namespace Swis
 		//ref Register StackRegister = null;
 		public override ref uint TimeStampCounter
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.TimeStampCounter]; }
+			get { return ref InternalRegisters[(int)NamedRegister.TimeStampCounter]; }
 		}
 
 		public override ref uint InstructionPointer
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.InstructionPointer]; }
+			get { return ref InternalRegisters[(int)NamedRegister.InstructionPointer]; }
 		}
 
 		public override ref uint StackPointer
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.StackPointer]; }
+			get { return ref InternalRegisters[(int)NamedRegister.StackPointer]; }
 		}
 
 		public override ref uint BasePointer
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.BasePointer]; }
+			get { return ref InternalRegisters[(int)NamedRegister.BasePointer]; }
 		}
 
 		public override ref uint Flags
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.Flag]; }
+			get { return ref InternalRegisters[(int)NamedRegister.Flag]; }
 		}
 
 		public override ref uint ProtectedMode
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.ProtectedMode]; }
+			get { return ref InternalRegisters[(int)NamedRegister.ProtectedMode]; }
 		}
 
 		public override ref uint ProtectedInterrupt
 		{
-			get { return ref this.InternalRegisters[(int)NamedRegister.ProtectedInterrupt]; }
+			get { return ref InternalRegisters[(int)NamedRegister.ProtectedInterrupt]; }
 		}
 
 		public override void Interrupt(uint code)
 		{
-			this.InterruptQueue.Enqueue(code);
+			InterruptQueue.Enqueue(code);
 		}
 
-		ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
+		private ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
 	}
 }

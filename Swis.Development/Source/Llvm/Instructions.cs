@@ -40,7 +40,7 @@ namespace Swis
 			string dsttype = args.dsttype;
 			string src = args.src;
 			string srctype = args.srctype;
-			
+
 			output.Emit($"mov {output.ToOperand(dsttype, dst)}, {output.ToOperand(srctype, src)}; inttoptr");
 			return true;
 		}
@@ -54,7 +54,7 @@ namespace Swis
 			string indexersstr = args.indexers;
 
 			dynamic[] indexers = indexersstr.PatternMatches("(inrange )?<type:type> <operand:index>", IrPatterns);
-			
+
 			List<string> dynamic_offsets_operands = new List<string>();
 
 			string base_type = indexers[0].type;
@@ -62,7 +62,7 @@ namespace Swis
 
 			string type = base_type;
 			int static_offset = 0;
-			
+
 			for (int i = 1; i < indexers.Length; i++)
 			{
 				dynamic indexer = indexers[i];
@@ -212,7 +212,7 @@ namespace Swis
 				$"{output.ToOperand(args.src_type, args.src)}");
 			return true;
 		}
-		
+
 		[IrInstruction("load", "<operand:dst> = load <type:dst_type>, <type:src_type> <operand:src>(, align <numeric:align>)?")]
 		private static bool Load(MethodBuilder output, dynamic args)
 		{
@@ -226,13 +226,13 @@ namespace Swis
 
 		#region Flow
 
-		static string Targetify(MethodBuilder output, string type, string where)
+		private static string Targetify(MethodBuilder output, string type, string where)
 		{
 			if (string.IsNullOrWhiteSpace(type)) // is it a label?
 				return $"${output.Id}_label_{where}";
 			return output.ToOperand(type, where);
 		}
-		
+
 		[IrInstruction("ret", "ret void")]
 		private static bool RetVoid(MethodBuilder output, dynamic args)
 		{
@@ -258,37 +258,37 @@ namespace Swis
 			{
 				switch (m)
 				{
-				case "oeq": return ("f", "ne", ", 1");
-				case "ueq": return ("f", "ne", ", 0");
-				case "one": return ("f", "e",  ", 1");
-				case "une": return ("f", "e",  ", 0");
-				case "olt": return ("f", "ge", ", 1");
-				case "ult": return ("f", "ge", ", 0");
-				case "ole": return ("f", "g",  ", 1");
-				case "ule": return ("f", "g",  ", 0");
-				case "ogt": return ("f", "le", ", 1");
-				case "ugt": return ("f", "le", ", 0");
-				case "oge": return ("f", "l",  ", 1");
-				case "uge": return ("f", "l",  ", 0");
-				default: throw new NotImplementedException(m);
+					case "oeq": return ("f", "ne", ", 1");
+					case "ueq": return ("f", "ne", ", 0");
+					case "one": return ("f", "e", ", 1");
+					case "une": return ("f", "e", ", 0");
+					case "olt": return ("f", "ge", ", 1");
+					case "ult": return ("f", "ge", ", 0");
+					case "ole": return ("f", "g", ", 1");
+					case "ule": return ("f", "g", ", 0");
+					case "ogt": return ("f", "le", ", 1");
+					case "ugt": return ("f", "le", ", 0");
+					case "oge": return ("f", "l", ", 1");
+					case "uge": return ("f", "l", ", 0");
+					default: throw new NotImplementedException(m);
 				}
 			}
-			
+
 			(string postfix, string method, string thirdop) iricmp_to_asm_inverted(string m)
 			{
 				switch (m)
 				{
-				case "eq": return ("u", "ne", "");
-				case "ne": return ("u", "e", "");
-				case "slt": return ("", "ge", "");
-				case "ult": return ("u", "ge", "");
-				case "sle": return ("", "g", "");
-				case "ule": return ("u", "g", "");
-				case "sgt": return ("", "le", "");
-				case "ugt": return ("u", "le", "");
-				case "sge": return ("", "l", "");
-				case "uge": return ("u", "l", "");
-				default: throw new NotImplementedException(m);
+					case "eq": return ("u", "ne", "");
+					case "ne": return ("u", "e", "");
+					case "slt": return ("", "ge", "");
+					case "ult": return ("u", "ge", "");
+					case "sle": return ("", "g", "");
+					case "ule": return ("u", "g", "");
+					case "sgt": return ("", "le", "");
+					case "ugt": return ("u", "le", "");
+					case "sge": return ("", "l", "");
+					case "uge": return ("u", "l", "");
+					default: throw new NotImplementedException(m);
 				}
 			}
 
@@ -341,7 +341,7 @@ namespace Swis
 			// inverting it generally allows us to optimize a jump out later
 			output.Emit($"jz {output.ToOperand(args.cond_type, args.cond)}, {Targetify(output, args.onfalse_type, args.onfalse)}");
 			output.Emit($"jmp {Targetify(output, args.ontrue_type, args.ontrue)}");
-			
+
 			return true;
 		}
 
@@ -407,31 +407,31 @@ namespace Swis
 			for (int i = 0; i < arg_sizes.Length; i++)
 			{
 				uint argsz = arg_sizes[i];
-				
+
 				switch (argsz * 8)
 				{
-				case 8:
-				case 16:
-				case 32:
-					output.Emit($"mov ptr{argsz * 8} [{output.Unit.StackPointer} - {arg_sp[i]}], {output.ToOperand(args[i].type, args[i].src)} ; copy arg #{i + 1}");
-					break;
-				default:
-					// it *must* be a pointer type
-					uint arg_sp_offset_at = arg_sp[i];
-					//while (argsz > 0)
-					//{
-					//	if (argsz > 32)
-					//	{
-					//		
-					//		//output.Emit
-					//	}
-					//}
-					throw new NotImplementedException();
-					//break;
-					// break it down bit by bit
+					case 8:
+					case 16:
+					case 32:
+						output.Emit($"mov ptr{argsz * 8} [{output.Unit.StackPointer} - {arg_sp[i]}], {output.ToOperand(args[i].type, args[i].src)} ; copy arg #{i + 1}");
+						break;
+					default:
+						// it *must* be a pointer type
+						uint arg_sp_offset_at = arg_sp[i];
+						//while (argsz > 0)
+						//{
+						//	if (argsz > 32)
+						//	{
+						//		
+						//		//output.Emit
+						//	}
+						//}
+						throw new NotImplementedException();
+						//break;
+						// break it down bit by bit
 				}
 			}
-			
+
 			output.Emit($"call {output.ToOperand("void*", match.func)}");
 
 			if (ret_size > 0)
@@ -441,7 +441,7 @@ namespace Swis
 				output.Emit($"mov {output.ToOperand(match.ret_type, match.dst)}, ptr{ret_size * 8} [{output.Unit.StackPointer} - {ret_sp_offset}] ; copy return");
 			}
 
-			if(total_size > 0)
+			if (total_size > 0)
 				output.Emit($"sub {output.Unit.StackPointer}, {output.Unit.StackPointer}, {total_size} ; pop args and ret");
 			output.Emit("");
 

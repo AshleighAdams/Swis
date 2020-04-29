@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace Swis
 {
@@ -46,7 +44,7 @@ namespace Swis
 		private struct RegisterProxy : IReadWriteList<uint>
 		{
 			private readonly JittedCpu Source;
-			
+
 			public RegisterProxy(JittedCpu source)
 			{
 				Source = source;
@@ -99,16 +97,16 @@ namespace Swis
 				{
 					switch (index)
 					{
-						case 0:  Source.Reg0 = value; break;
-						case 1:  Source.Reg1 = value; break;
-						case 2:  Source.Reg2 = value; break;
-						case 3:  Source.Reg3 = value; break;
-						case 4:  Source.Reg4 = value; break;
-						case 5:  Source.Reg5 = value; break;
-						case 6:  Source.Reg6 = value; break;
-						case 7:  Source.Reg7 = value; break;
-						case 8:  Source.Reg8 = value; break;
-						case 9:  Source.Reg9 = value; break;
+						case 0: Source.Reg0 = value; break;
+						case 1: Source.Reg1 = value; break;
+						case 2: Source.Reg2 = value; break;
+						case 3: Source.Reg3 = value; break;
+						case 4: Source.Reg4 = value; break;
+						case 5: Source.Reg5 = value; break;
+						case 6: Source.Reg6 = value; break;
+						case 7: Source.Reg7 = value; break;
+						case 8: Source.Reg8 = value; break;
+						case 9: Source.Reg9 = value; break;
 						case 10: Source.Reg10 = value; break;
 						case 11: Source.Reg11 = value; break;
 						case 12: Source.Reg12 = value; break;
@@ -143,47 +141,47 @@ namespace Swis
 		#region NamedRegisterAccessors
 		public override ref uint TimeStampCounter
 		{
-			get { return ref this.Reg0; }
+			get { return ref Reg0; }
 		}
 
 		public override ref uint InstructionPointer
 		{
-			get { return ref this.Reg1; }
+			get { return ref Reg1; }
 		}
 
 		public override ref uint StackPointer
 		{
-			get { return ref this.Reg2; }
+			get { return ref Reg2; }
 		}
 
 		public override ref uint BasePointer
 		{
-			get { return ref this.Reg4; }
+			get { return ref Reg4; }
 		}
 
 		public override ref uint Flags
 		{
-			get { return ref this.Reg5; }
+			get { return ref Reg5; }
 		}
 
 		public override ref uint ProtectedMode
 		{
-			get { return ref this.Reg6; }
+			get { return ref Reg6; }
 		}
 
 		public override ref uint ProtectedInterrupt
 		{
-			get { return ref this.Reg7; }
+			get { return ref Reg7; }
 		}
 		#endregion
 
 		public override void Reset()
 		{
-			this.Reg0 = this.Reg1 = this.Reg2 = this.Reg3 = this.Reg4 = this.Reg5 = this.Reg6 = this.Reg7
-				= this.Reg8 = this.Reg9 = this.Reg10 = this.Reg11 = this.Reg12 = this.Reg13 = this.Reg14 = this.Reg15
-				= this.Reg16 = this.Reg17 = this.Reg18 = this.Reg19 = this.Reg20 = this.Reg21 = this.Reg22 = this.Reg23
-				= this.Reg24 = this.Reg25 = this.Reg26 = this.Reg27 = this.Reg28 = this.Reg29 = this.Reg30 = this.Reg31 = 0;
-			this.CycleBank = 0;
+			Reg0 = Reg1 = Reg2 = Reg3 = Reg4 = Reg5 = Reg6 = Reg7
+				= Reg8 = Reg9 = Reg10 = Reg11 = Reg12 = Reg13 = Reg14 = Reg15
+				= Reg16 = Reg17 = Reg18 = Reg19 = Reg20 = Reg21 = Reg22 = Reg23
+				= Reg24 = Reg25 = Reg26 = Reg27 = Reg28 = Reg29 = Reg30 = Reg31 = 0;
+			CycleBank = 0;
 		}
 	}
 }

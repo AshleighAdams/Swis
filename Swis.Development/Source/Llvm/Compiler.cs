@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.IO;
 
 namespace Swis
 {
@@ -21,10 +21,10 @@ namespace Swis
 			ProcessStartInfo info
 				= new ProcessStartInfo("clang++", $"-cc1 -x c++ -triple=i386 -S \"{tmp1}\" -emit-llvm -o \"{tmp2}\"");
 			//info.UseShellExecute = true;
-			
+
 			Process p = Process.Start(info);
 			p.WaitForExit();
-			
+
 			if (p.ExitCode != 0)
 				throw new Exception("clang failed");
 
@@ -72,27 +72,27 @@ namespace Swis
 				{
 					switch (global.type)
 					{
-					case "i64": all.AppendLine($"\t.data int64 {global.init}"); break;
-					case "i32": all.AppendLine($"\t.data int32 {global.init}"); break;
-					case "i16": all.AppendLine($"\t.data int16 {global.init}"); break;
-					case "i8": all.AppendLine($"\t.data int8 {global.init}"); break;
-					case "i1": all.AppendLine($"\t.data int8 {global.init}"); break;
+						case "i64": all.AppendLine($"\t.data int64 {global.init}"); break;
+						case "i32": all.AppendLine($"\t.data int32 {global.init}"); break;
+						case "i16": all.AppendLine($"\t.data int16 {global.init}"); break;
+						case "i8": all.AppendLine($"\t.data int8 {global.init}"); break;
+						case "i1": all.AppendLine($"\t.data int8 {global.init}"); break;
 
-					case "u64": all.AppendLine($"\t.data uint64 {global.init}"); break;
-					case "u32": all.AppendLine($"\t.data uint32 {global.init}"); break;
-					case "u16": all.AppendLine($"\t.data uint16 {global.init}"); break;
-					case "u8": all.AppendLine($"\t.data uint8 {global.init}"); break;
-					case "u1": all.AppendLine($"\t.data uint8 {global.init}"); break;
+						case "u64": all.AppendLine($"\t.data uint64 {global.init}"); break;
+						case "u32": all.AppendLine($"\t.data uint32 {global.init}"); break;
+						case "u16": all.AppendLine($"\t.data uint16 {global.init}"); break;
+						case "u8": all.AppendLine($"\t.data uint8 {global.init}"); break;
+						case "u1": all.AppendLine($"\t.data uint8 {global.init}"); break;
 
-					case "float": all.AppendLine($"\t.data float {global.init}"); break;
-					case string x when x.StartsWith("[") && x.EndsWith("i8]") && global.init.StartsWith("c\""):
-						string str = global.init;
-						
-						str = Regex.Replace(str, @"\\([a-zA-Z0-9]{2})", (Match m) => $@"\x{m.Groups[1].Value.ToLowerInvariant()}"); // @"\x$1"
-						str = str.Replace(@"\""", @"\x22");
+						case "float": all.AppendLine($"\t.data float {global.init}"); break;
+						case string x when x.StartsWith("[") && x.EndsWith("i8]") && global.init.StartsWith("c\""):
+							string str = global.init;
 
-						all.AppendLine($"\t.data ascii {str.Substring(1)}");
-						break;
+							str = Regex.Replace(str, @"\\([a-zA-Z0-9]{2})", (Match m) => $@"\x{m.Groups[1].Value.ToLowerInvariant()}"); // @"\x$1"
+							str = str.Replace(@"\""", @"\x22");
+
+							all.AppendLine($"\t.data ascii {str.Substring(1)}");
+							break;
 					}
 				}
 				else
@@ -104,7 +104,7 @@ namespace Swis
 			all.AppendLine();
 
 			string test = all.ToString();
-			
+
 			dynamic[] funcs = code.PatternMatches(
 				@"define( <linkage>)?( <preemptionspecifier>)?( <visibility>)?( <DLLStorageClass>)?" +
 				@"( <callingconvention>)?( <retattributes>)*" +
@@ -126,7 +126,7 @@ namespace Swis
 
 				builder.Emit($"${func.id}:");
 				builder.EmitPrefix = "\t";
-				
+
 				ExpandConstants(builder);
 				BuildMethodLocals(builder, func.ret_type, func.args_inside/*, optimize_args: false*/);
 				ReplacePhis(builder);
@@ -150,8 +150,8 @@ namespace Swis
 							{
 								dynamic? args = line.PatternMatch(var.pattern, IrPatterns);
 
-								if(args != null)
-									if((bool)var.func.Invoke(null, new object[] { builder, args }))
+								if (args != null)
+									if ((bool)var.func.Invoke(null, new object[] { builder, args }))
 									{
 										good = true;
 										break;
@@ -176,7 +176,7 @@ namespace Swis
 						throw new Exception();
 				}
 
-				if(unit.OptimizationLevel >= 1)
+				if (unit.OptimizationLevel >= 1)
 					RemoveNopJumps(builder);
 				if (unit.OptimizationLevel >= 2)
 					OptimizeMovs(builder);
@@ -186,20 +186,20 @@ namespace Swis
 			}
 
 			string bootloader = $"mov {unit.StackPointer}, $stack\n" +
-			                    $"mov {unit.BasePointer}, {unit.StackPointer}\n" +
-			                    $"add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes\n" +
-			                    $"call $@main\n" +
-			                    $"sub {unit.StackPointer}, {unit.StackPointer}, 12\n" +
-			                    $"halt\n\n";
-			string postcode =   $"\n.align 4\n" +
-			                    $"$stack:\n" +
-			                    $"	.data pad 1024\n";
-			
+								$"mov {unit.BasePointer}, {unit.StackPointer}\n" +
+								$"add {unit.StackPointer}, {unit.StackPointer}, 12 ; int(int, char*) ; add this just in case it's defined with the prototypes\n" +
+								$"call $@main\n" +
+								$"sub {unit.StackPointer}, {unit.StackPointer}, 12\n" +
+								$"halt\n\n";
+			string postcode = $"\n.align 4\n" +
+								$"$stack:\n" +
+								$"	.data pad 1024\n";
+
 
 			return bootloader + all.ToString() + LlvmIntrinsics + postcode;
 		}
 
-		const string LlvmIntrinsics = @"
+		private const string LlvmIntrinsics = @"
 
 $@llvm.memcpy.p0i8.p0i8.i32:
         .src func ""void llvm.memcpy.p0i8.p0i8.i32(i8* dst, i8* src, i32 len, i32 align, i8 isvolatile)""

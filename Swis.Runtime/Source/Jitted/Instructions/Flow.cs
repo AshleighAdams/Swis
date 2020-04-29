@@ -9,7 +9,7 @@ namespace Swis
 		[CpuInstruction(Opcode.CallR)]
 		private Expression CallR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 
@@ -60,7 +60,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpR)]
 		private Expression JumpR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 
@@ -71,8 +71,8 @@ namespace Swis
 		[CpuInstruction(Opcode.CompareRR)]
 		private Expression CompareRR(ref uint ip, ref bool sequential)
 		{
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<int>(ref left);
 			Expression rightexp = this.ReadOperandExpression<int>(ref right);
@@ -81,7 +81,7 @@ namespace Swis
 
 			return Expression.Block(
 				// flags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
-				Expression.AndAssign(flag,  Expression.Constant((uint)~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater), typeof(uint)) ),
+				Expression.AndAssign(flag, Expression.Constant((uint)~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater), typeof(uint))),
 
 				// if (ileft > iright) //-V3022
 				// iflags |= FlagsRegisterFlags.Greater;
@@ -106,9 +106,9 @@ namespace Swis
 		[CpuInstruction(Opcode.CompareFloatRRR)]
 		private Expression CompareFloatRRR(ref uint ip, ref bool sequential)
 		{
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
-			Operand ordered = this.Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
+			Operand ordered = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<float>(ref left);
 			Expression rightexp = this.ReadOperandExpression<float>(ref right);
@@ -116,7 +116,7 @@ namespace Swis
 
 			Action<float, float, float> comparer = (fleft, fright, fordered) =>
 			{
-				var iflags = (FlagsRegisterFlags)this.Reg5;
+				var iflags = (FlagsRegisterFlags)Reg5;
 				iflags &= ~(FlagsRegisterFlags.Equal | FlagsRegisterFlags.Less | FlagsRegisterFlags.Greater);
 
 				if (fleft > fright)
@@ -126,7 +126,7 @@ namespace Swis
 				if (fleft == fright) //-V3024
 					iflags |= FlagsRegisterFlags.Equal;
 
-				this.Reg5 = (uint)iflags;
+				Reg5 = (uint)iflags;
 			};
 
 			Expression<Action<float, float, float>> comparerexp = (l, r, o) => comparer(l, r, o);
@@ -137,8 +137,8 @@ namespace Swis
 		[CpuInstruction(Opcode.CompareUnsignedRR)]
 		private Expression CompareUnsignedRR(ref uint ip, ref bool sequential)
 		{
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -172,7 +172,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpEqualR)]
 		private Expression JumpEqualR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -191,7 +191,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpNotEqualR)]
 		private Expression JumpNotEqualR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -218,7 +218,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpGreaterR)]
 		private Expression JumpGreaterR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -237,7 +237,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpGreaterEqualR)]
 		private Expression JumpGreaterEqualR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -256,7 +256,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpLessR)]
 		private Expression JumpLessR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -275,7 +275,7 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpLessEqualR)]
 		private Expression JumpLessEqualR(ref uint ip, ref bool sequential)
 		{
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
 			Expression eflag = this.ReadWriteRegisterExpression(NamedRegister.Flag);
@@ -294,8 +294,8 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpZeroRR)]
 		private Expression JumpZeroRR(ref uint ip, ref bool sequential)
 		{
-			Operand cnd = this.Memory.DecodeOperand(ref ip, null);
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand cnd = Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression cndexp = this.ReadOperandExpression<uint>(ref cnd);
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);
@@ -311,8 +311,8 @@ namespace Swis
 		[CpuInstruction(Opcode.JumpNotZeroRR)]
 		private Expression JumpNotZeroRR(ref uint ip, ref bool sequential)
 		{
-			Operand cnd = this.Memory.DecodeOperand(ref ip, null);
-			Operand loc = this.Memory.DecodeOperand(ref ip, null);
+			Operand cnd = Memory.DecodeOperand(ref ip, null);
+			Operand loc = Memory.DecodeOperand(ref ip, null);
 
 			Expression cndexp = this.ReadOperandExpression<uint>(ref cnd);
 			Expression locexp = this.ReadOperandExpression<uint>(ref loc);

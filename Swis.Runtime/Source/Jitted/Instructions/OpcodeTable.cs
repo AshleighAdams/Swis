@@ -11,10 +11,10 @@ namespace Swis
 	{
 		private sealed class CpuInstruction : Attribute
 		{
-			readonly public Opcode Opcode;
+			public readonly Opcode Opcode;
 			public CpuInstruction(Opcode opcode)
 			{
-				this.Opcode = opcode;
+				Opcode = opcode;
 			}
 		}
 
@@ -35,10 +35,10 @@ namespace Swis
 				{
 					if (attrib.Opcode < 0 || attrib.Opcode >= Opcode.MaxEnum)
 						throw new Exception($"Out of range opcode {(int)attrib.Opcode}");
-					if (this.OpcodeDecodeTable[(int)attrib.Opcode] != null)
+					if (OpcodeDecodeTable[(int)attrib.Opcode] != null)
 						throw new Exception($"Duplicate opcode for {attrib.Opcode}");
 
-					this.OpcodeDecodeTable[(int)attrib.Opcode] = @delegate;
+					OpcodeDecodeTable[(int)attrib.Opcode] = @delegate;
 				}
 			}
 		}

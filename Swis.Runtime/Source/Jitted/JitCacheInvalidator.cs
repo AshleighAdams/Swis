@@ -5,45 +5,46 @@ namespace Swis
 
 	public sealed partial class JittedCpu
 	{
-		class JitCacheInvalidator : IMemoryController
+		private class JitCacheInvalidator : IMemoryController
 		{
 			public IMemoryController Parent { get; }
-			JittedCpu Cpu;
+
+			private JittedCpu Cpu;
 
 			public JitCacheInvalidator(JittedCpu cpu, IMemoryController parent)
 			{
-				this.Parent = parent;
-				this.Cpu = cpu;
+				Parent = parent;
+				Cpu = cpu;
 			}
 
-			public uint Length { get => this.Parent.Length; }
+			public uint Length { get => Parent.Length; }
 
 			public byte this[uint x]
 			{
-				get { return this.Parent[x]; }
+				get { return Parent[x]; }
 				set
 				{
 					// if we write in areas that have been jitted, clear the jit cache
-					if (x >= this.Cpu.JitCacheFirst && x <= this.Cpu.JitCacheLast)
-						this.Cpu.ClearJitCache();
-					this.Parent[x] = value;
+					if (x >= Cpu.JitCacheFirst && x <= Cpu.JitCacheLast)
+						Cpu.ClearJitCache();
+					Parent[x] = value;
 				}
 			}
 			public uint this[uint x, uint bits]
 			{
-				get { return this.Parent[x, bits]; }
+				get { return Parent[x, bits]; }
 				set
 				{
 					// if we write in areas that have been jitted, clear the jit cache
-					if (x >= this.Cpu.JitCacheFirst && x <= this.Cpu.JitCacheLast)
-						this.Cpu.ClearJitCache();
-					this.Parent[x, bits] = value;
+					if (x >= Cpu.JitCacheFirst && x <= Cpu.JitCacheLast)
+						Cpu.ClearJitCache();
+					Parent[x, bits] = value;
 				}
 			}
 
 			public Span<byte> Span(uint x, uint length)
 			{
-				return this.Parent.Span(x, length);
+				return Parent.Span(x, length);
 			}
 		}
 	}

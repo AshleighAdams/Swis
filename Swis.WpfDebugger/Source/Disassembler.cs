@@ -6,32 +6,32 @@ namespace Swis.WpfDebugger
 {
 	public class DebugDisassembler
 	{
-		ByteArrayMemoryController _Mem = new ByteArrayMemoryController(new byte[0]);
+		private ByteArrayMemoryController _Mem = new ByteArrayMemoryController(new byte[0]);
 
-		class Instruction
+		private class Instruction
 		{
 			public string Asm;
 			public byte[] Bin;
 			public (Opcode opcode, Operand[] operands) Decoded;
 		}
-		
+
 		public DebugData DbgGuessed; // used to guess at the disassembled code
-		Dictionary<uint, Instruction> Instructions;
-		Dictionary<uint, string> Labeled;
+		private Dictionary<uint, Instruction> Instructions;
+		private Dictionary<uint, string> Labeled;
 		public uint[] Registers;
 
-		(string str, (Opcode opcode, Operand[] operands) rep) Disassemble(byte[] data, out byte[] decoded)
+		private (string str, (Opcode opcode, Operand[] operands) rep) Disassemble(byte[] data, out byte[] decoded)
 		{
 			string ret;
 			uint ip = 0;
-			this._Mem.Memory = data;
+			_Mem.Memory = data;
 
-			(Opcode opcode, Operand[] operands) = this._Mem.DisassembleInstruction(ref ip);
+			(Opcode opcode, Operand[] operands) = _Mem.DisassembleInstruction(ref ip);
 			ret = opcode.Disassemble();
 			string pre = " ";
 			foreach (var operand in operands)
 			{
-				ret = $"{ret}{pre}{operand.Disassemble(this.DbgGuessed)}";
+				ret = $"{ret}{pre}{operand.Disassemble(DbgGuessed)}";
 				pre = ", ";
 			}
 
@@ -53,41 +53,41 @@ namespace Swis.WpfDebugger
 
 		public void Reset()
 		{
-			this.Instructions = new Dictionary<uint, Instruction>();
-			this.DbgGuessed = new DebugData()
+			Instructions = new Dictionary<uint, Instruction>();
+			DbgGuessed = new DebugData()
 			{
 				Labels = new Dictionary<string, uint>(),
 			};
-			this.Labeled = new Dictionary<uint, string>();
+			Labeled = new Dictionary<uint, string>();
 		}
 
-		uint last_ip = 0, expected_ip = 0, max_ip = 0;
-		bool avoid_label = true;
+		private uint last_ip = 0, expected_ip = 0, max_ip = 0;
+		private bool avoid_label = true;
 		public void Clock(uint ip, byte[] instruction)
 		{
-			if (ip != this.expected_ip && !this.Labeled.ContainsKey(ip) && !this.avoid_label)
+			if (ip != expected_ip && !Labeled.ContainsKey(ip) && !avoid_label)
 			{
 				string lbl = $"$indirect_0x{ip:X}";
-				this.Labeled[ip] = lbl;
-				this.DbgGuessed.Labels[lbl] = ip;
+				Labeled[ip] = lbl;
+				DbgGuessed.Labels[lbl] = ip;
 
 				// re-decompile all of our existing instructions
-				foreach (var kv in this.Instructions)
+				foreach (var kv in Instructions)
 					(kv.Value.Asm, kv.Value.Decoded) = this.Disassemble(kv.Value.Bin, out kv.Value.Bin);
 			}
 
-			Instruction ni = this.Instructions[ip] = new Instruction();
+			Instruction ni = Instructions[ip] = new Instruction();
 			(string asm, (Opcode opcode, Operand[] operands)) = this.Disassemble(instruction, out ni.Bin);
 			ni.Asm = asm;
 
 			{ // build the ptr to asm up
 			}
 
-			this.max_ip = Math.Max(this.max_ip, ip);
-			this.expected_ip = ip + (uint)ni.Bin.Length;
+			max_ip = Math.Max(max_ip, ip);
+			expected_ip = ip + (uint)ni.Bin.Length;
 
 			for (uint i = 1; i < ni.Bin.Length; i++)
-				if (this.Instructions.Remove(ip + i))
+				if (Instructions.Remove(ip + i))
 				{
 					Console.Error.WriteLine("warning: instruction changed: either the instruction pointer is unsynchronized or the machine code has been altered.");
 				}
@@ -95,8 +95,8 @@ namespace Swis.WpfDebugger
 			//avoid_label = false;
 			try
 			{
-				this.avoid_label = true;
-				
+				avoid_label = true;
+
 				// label the destination
 				if (opcode == Opcode.CallR || opcode >= Opcode.JumpR && opcode <= Opcode.JumpNotZeroRR)
 				{
@@ -107,9 +107,9 @@ namespace Swis.WpfDebugger
 					Operand dest = operands[index];
 					if (dest.Indirect)
 					{
-						this.avoid_label = false;
+						avoid_label = false;
 					}
-					else if(!this.Labeled.ContainsKey(dest.Value))
+					else if (!Labeled.ContainsKey(dest.Value))
 					{
 						string prefix;
 						if (opcode == Opcode.CallR)
@@ -120,8 +120,8 @@ namespace Swis.WpfDebugger
 							prefix = $"\t$end";
 
 						string lbl = $"{prefix}_0x{dest.Value:X}";
-						this.Labeled[dest.Value] = lbl;
-						this.DbgGuessed.Labels[lbl.Trim()] = dest.Value;
+						Labeled[dest.Value] = lbl;
+						DbgGuessed.Labels[lbl.Trim()] = dest.Value;
 
 						// to update the new label found
 						ni.Asm = this.Disassemble(ni.Bin, out ni.Bin).str;
@@ -132,21 +132,21 @@ namespace Swis.WpfDebugger
 			{
 			}
 		}
-		
+
 		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder();
 
 			var ptr_to_asm =
-				this.DbgGuessed.PtrToAsm = 
-					this.DbgGuessed.PtrToAsm ?? new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
+				DbgGuessed.PtrToAsm =
+					DbgGuessed.PtrToAsm ?? new Dictionary<uint, (string file, int from, int to, DebugData.AsmPtrType type)>();
 
-			for (uint i = 0; i <= this.max_ip; i++)
+			for (uint i = 0; i <= max_ip; i++)
 			{
 				bool first = true;
-				while (i <= this.max_ip)
+				while (i <= max_ip)
 				{
-					if (this.Instructions.TryGetValue(i, out var inst))
+					if (Instructions.TryGetValue(i, out var inst))
 					{
 						if (first)
 						{
@@ -155,7 +155,7 @@ namespace Swis.WpfDebugger
 							first = false;
 						}
 
-						if (this.Labeled.TryGetValue(i, out var lbl))
+						if (Labeled.TryGetValue(i, out var lbl))
 						{
 							if (i == 0)
 								sb.AppendLine();

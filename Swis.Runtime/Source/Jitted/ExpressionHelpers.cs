@@ -22,7 +22,7 @@ namespace Swis
 			MemberExpression mem = Expression.Field(Expression.Constant(this), typeof(JittedCpu).GetField("_Memory", BindingFlags.NonPublic | BindingFlags.Instance));
 
 			PropertyInfo mem_indexer = (from p in mem.Type.GetDefaultMembers().OfType<PropertyInfo>()
-										// check return type
+											// check return type
 										where p.PropertyType == typeof(uint)
 										let q = p.GetIndexParameters()
 										// check params
@@ -97,8 +97,8 @@ namespace Swis
 						Expression.Constant((int)Util.SignExtend(constant, size)) :
 						Expression.Constant(constant);
 				else
-					return signed ? 
-						this.ReadRegisterExpression<int>((NamedRegister)regid, size):
+					return signed ?
+						this.ReadRegisterExpression<int>((NamedRegister)regid, size) :
 						this.ReadRegisterExpression<uint>((NamedRegister)regid, size);
 			}
 

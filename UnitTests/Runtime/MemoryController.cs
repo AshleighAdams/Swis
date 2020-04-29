@@ -1,13 +1,13 @@
-﻿using System;
+﻿using FluentAssertions;
 using Swis;
+using System;
 using Xunit;
-using FluentAssertions;
 
 namespace UnitTests
 {
 	public class MemoryControllerTests
 	{
-		readonly byte[] Buffer = { 0x01, 0x00, 0x00, 0x00, 0x0a, 0x0b, 0xdd, 0xcc, 0xbb, 0xaa };
+		private readonly byte[] Buffer = { 0x01, 0x00, 0x00, 0x00, 0x0a, 0x0b, 0xdd, 0xcc, 0xbb, 0xaa };
 
 		[Theory]
 		[InlineData(0u, 8u, 0x1)]
@@ -18,12 +18,12 @@ namespace UnitTests
 		public void MemoryControllerRead(uint addr, uint bits, uint result)
 		{
 			{
-				var controller = new PointerMemoryController(this.Buffer);
+				var controller = new PointerMemoryController(Buffer);
 				controller[addr, bits].Should().Be(result);
 			}
 
 			{
-				var controller = new ByteArrayMemoryController(this.Buffer);
+				var controller = new ByteArrayMemoryController(Buffer);
 				controller[addr, bits].Should().Be(result);
 			}
 		}

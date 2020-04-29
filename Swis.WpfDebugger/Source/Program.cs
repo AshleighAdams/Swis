@@ -2,10 +2,10 @@
 
 namespace Swis.WpfDebugger
 {
-	static class Program
+	internal static class Program
 	{
 		[STAThread]
-		static void Main()
+		private static void Main()
 		{
 			var app = new App();
 			app.Run(new MainWindow());
