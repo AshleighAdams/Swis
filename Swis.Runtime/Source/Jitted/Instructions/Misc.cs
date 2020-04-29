@@ -1,18 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
 #pragma warning disable IDE0051 // Remove unused private members
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu
 	{
 		[CpuInstruction(Opcode.Nop)]
 		private Expression Nop(ref uint ip, ref bool sequential)
 		{
-			return null;
+			return Expression.Block();
 		}
-
+		
 		[CpuInstruction(Opcode.InterruptR)]
 		private Expression InterruptR(ref uint ip, ref bool sequential)
 		{
@@ -57,7 +58,6 @@ namespace Swis
 		private Expression SetInterrupt(ref uint ip, ref bool sequential)
 		{
 			Expression epi = this.ReadWriteRegisterExpression(NamedRegister.ProtectedInterrupt);
-			ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
 			return Expression.Block(
 				// clear mode
 				Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),

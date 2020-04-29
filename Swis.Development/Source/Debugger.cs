@@ -10,7 +10,7 @@ namespace Swis
 	public class RemoteDebugger : ExternalDebugger
 	{
 		protected NetworkStream Stream;
-		protected DebugData Dbg;
+		protected DebugData? Dbg;
 		protected bool Flush;
 
 		bool Paused = false;
@@ -22,7 +22,7 @@ namespace Swis
 		uint? StackBottom = null;
 		bool Step = false;
 
-		WeakReference<Cpu> Cpu = null; // for halt and reset
+		WeakReference<Cpu> Cpu = new WeakReference<Cpu>(null!); // for halt and reset
 
 		StreamReader _Reader;
 		ConcurrentQueue<string> ReadQueue = new ConcurrentQueue<string>();
@@ -34,11 +34,14 @@ namespace Swis
 			
 			this.WriteQueue.Enqueue(data);
 		}
-		void _IOThread()
+		void _IOThread() // TODO: make this async
 		{
 			while (this.Stream.CanRead || this.Stream.CanWrite)
 			{
 				bool idle = true;
+
+				if (this.Cpu is null)
+					break;
 
 				if (this.Stream.DataAvailable && this.ReadQueue.Count < 16)
 				{
@@ -91,7 +94,7 @@ namespace Swis
 			}
 		}
 
-		public RemoteDebugger(NetworkStream str, DebugData dbg = null, bool flush = true)
+		public RemoteDebugger(NetworkStream str, DebugData? dbg = null, bool flush = true)
 		{
 			this.Stream = str;
 			this.Dbg = dbg;
@@ -101,8 +104,8 @@ namespace Swis
 			new System.Threading.Thread(this._IOThread).Start();
 		}
 
-		uint[] _LastValues;
-		byte[] _LastStack;
+		uint[]? _LastValues;
+		byte[]? _LastStack;
 
 		const uint max_inst_len = 64; // so we can inspect the current instruction without needing to depend on Swis.Development
 		public override bool Clock(Cpu cpu)
@@ -174,20 +177,18 @@ namespace Swis
 			// if we stepped-into or hit a breakpoint, send debug info, then hold
 			if (this.Paused)
 			{
-				MemoryController memory = cpu.Memory;
-
-
+				IMemoryController memory = cpu.Memory;
+				
 				StringBuilder sb = new StringBuilder();
-				uint ip;
-
+				
 				var registers = cpu.Registers;
 				// write the registers
 				{
 					if (this._LastValues == null)
-						this._LastValues = new uint[registers.Length];
+						this._LastValues = new uint[registers.Count];
 
 					string pre = "";
-					for (int i = 0; i < registers.Length; i++)
+					for (int i = 0; i < registers.Count; i++)
 						if (this._LastValues[i] != registers[i])
 						{
 							this._LastValues[i] = registers[i];
@@ -269,6 +270,9 @@ namespace Swis
 	}
 
 	[Serializable]
+#pragma warning disable CA2235 // Mark all non-serializable fields
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+	// TODO: this?
 	public class DebugData
 	{
 		public bool AssemblySourceFile;
@@ -307,4 +311,6 @@ namespace Swis
 			return (DebugData)Newtonsoft.Json.JsonConvert.DeserializeObject<DebugData>(str);
 		}
 	}
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+#pragma warning restore CA2235 // Mark all non-serializable fields
 }

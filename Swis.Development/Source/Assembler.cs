@@ -208,7 +208,7 @@ namespace Swis
 				return asm_pos >= asm.Length;
 			}
 
-			(string line, int pos) read_line()
+			(string? line, int pos) read_line()
 			{
 				sb.Clear();
 
@@ -258,11 +258,11 @@ namespace Swis
 				}
 			}
 
-			string source_function = null;
+			string? source_function = null;
 
 			while (true)
 			{
-				(string line, int pos) = read_line();
+				(string? line, int pos) = read_line();
 				if (line == null)
 					break;
 
@@ -461,7 +461,7 @@ namespace Swis
 							uint regsz_a = 0, regsz_b = 0, regsz_c = 0, regsz_d = 0;
 							uint const_a = 0, const_b = 0, const_c = 0, const_d = 0;
 							uint constsz_a = 0, constsz_b = 0, constsz_c = 0, constsz_d = 0;
-							string const_placeholder_a = null, const_placeholder_b = null, const_placeholder_c = null, const_placeholder_d = null;
+							string? const_placeholder_a = null, const_placeholder_b = null, const_placeholder_c = null, const_placeholder_d = null;
 
 							uint addressing_mode = 0;
 							uint indirection_size = 0;
@@ -472,7 +472,7 @@ namespace Swis
 								string operanducmp = @"^ ((<alphanumeric:segment> :)? <forms:form> |(?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[) <forms:form> \]) $";
 
 								string operandpttn = pattern_compile_optional_whitespace(operanducmp);
-								dynamic match = oa.PatternMatch(operandpttn, named_patterns);
+								dynamic? match = oa.PatternMatch(operandpttn, named_patterns);
 								if (match == null)
 									throw new Exception($"Failed to parse operand: \"{oa}\"");
 
@@ -507,7 +507,7 @@ namespace Swis
 									}
 								}
 
-								void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string const_placeholder)
+								void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string? const_placeholder)
 								{
 									regid = 0;
 									regsz = 0;
@@ -516,11 +516,11 @@ namespace Swis
 									const_placeholder = null;
 
 									Caster c; c.U32 = 0;
-
+									
 									if (input.StartsWith("0x"))
 									{
 										throw new NotImplementedException();
-										return;
+										//return;
 									}
 									else if (char.IsDigit(input[0]) && input.EndsWith("f"))
 									{
@@ -621,7 +621,7 @@ namespace Swis
 							);
 							bin.Add(master);
 
-							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string const_placeholder)
+							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string? const_placeholder)
 							{
 								if (regsz == 0)
 								{

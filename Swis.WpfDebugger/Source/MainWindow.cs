@@ -207,7 +207,6 @@ namespace Swis.WpfDebugger
 			this.ListCallStacks.Clear();
 			this.ListLocals.Clear();
 			{
-				int i = 1;
 				uint at = this.Registers[(int)NamedRegister.InstructionPointer];
 				uint bp = this.Registers[(int)NamedRegister.BasePointer];
 				

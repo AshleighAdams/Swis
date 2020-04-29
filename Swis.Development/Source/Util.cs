@@ -35,7 +35,7 @@ namespace Swis
 		}
 
 		static int uniqueid = 0;
-		public static string PatternCompile(string pattern, Dictionary<string, string> named = null) // <> = sub-regex
+		public static string PatternCompile(string pattern, Dictionary<string, string>? named = null) // <> = sub-regex
 		{
 			SetupGlobalPatterns();
 			if (named == null)
@@ -82,7 +82,7 @@ namespace Swis
 		}
 
 
-		public static dynamic PatternMatch(this string self, string pattern, Dictionary<string, string> named)
+		public static dynamic? PatternMatch(this string self, string pattern, Dictionary<string, string> named)
 		{
 			if (!_RegexCache.TryGetValue(pattern, out Regex r))
 				_RegexCache[pattern] = r = new Regex(PatternCompile(pattern, named));
@@ -90,7 +90,7 @@ namespace Swis
 			return self.PatternMatch(r, named);
 		}
 
-		public static dynamic PatternMatch(this string self, Regex regex, Dictionary<string, string> named)
+		public static dynamic? PatternMatch(this string self, Regex regex, Dictionary<string, string> named)
 		{
 			Match m = regex.Match(self);
 

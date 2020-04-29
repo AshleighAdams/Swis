@@ -19,12 +19,10 @@ namespace Swis
 		}
 
 		private delegate Expression OpcodeFunction(ref uint ip, ref bool sequential);
-		private OpcodeFunction[] OpcodeDecodeTable;
+		private OpcodeFunction[] OpcodeDecodeTable = new OpcodeFunction[(int)Opcode.MaxEnum];
 
 		private void InitializeOpcodeTable()
 		{
-			this.OpcodeDecodeTable = new OpcodeFunction[(int)Opcode.MaxEnum];
-
 			var methods = this.GetType()
 				.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
 				.Where(m => m.GetCustomAttributes().OfType<CpuInstruction>().Any());

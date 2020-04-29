@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : Cpu, ICpu
 	{
-		private MemoryController _Memory;
-		public override MemoryController Memory
+		[NotNull] // TODO: remove this with DI
+		private JitCacheInvalidator _Memory;
+		public override IMemoryController Memory
 		{
-			get { return this._Memory; }
+			get { return this._Memory.Parent; }
 			set { this._Memory = new JitCacheInvalidator(this, value); }
 		}
 
@@ -20,14 +22,15 @@ namespace Swis
 		private uint _JitBlockSize = 16;
 		private uint JitCacheFirst;
 		private uint JitCacheLast; // track the jitted bounds so as to clear JIT instructions
-
-		public JittedCpu()
+		
+		public JittedCpu(IMemoryController memory)
 		{
+			this.Memory = memory;
 			this.JitCache = new Dictionary<uint, (Action λ, uint cycles)>();
 			this.ClearJitCache(); // sets up default values
 			this.InitializeOpcodeTable();
 		}
-
+		
 		public void ClearJitCache()
 		{
 			this.JitCacheFirst = uint.MaxValue;
@@ -35,7 +38,7 @@ namespace Swis
 			this.JitCache.Clear();
 		}
 
-		public override ExternalDebugger Debugger
+		public override ExternalDebugger? Debugger
 		{
 			get { return base.Debugger; }
 			set

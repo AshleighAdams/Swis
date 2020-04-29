@@ -5,20 +5,20 @@ namespace Swis
 
 	public sealed partial class JittedCpu
 	{
-		class JitCacheInvalidator : MemoryController
+		class JitCacheInvalidator : IMemoryController
 		{
-			MemoryController Parent;
+			public IMemoryController Parent { get; }
 			JittedCpu Cpu;
 
-			public JitCacheInvalidator(JittedCpu cpu, MemoryController parent)
+			public JitCacheInvalidator(JittedCpu cpu, IMemoryController parent)
 			{
 				this.Parent = parent;
 				this.Cpu = cpu;
 			}
 
-			public override uint Length { get { return this.Parent.Length; } }
+			public uint Length { get => this.Parent.Length; }
 
-			public override byte this[uint x]
+			public byte this[uint x]
 			{
 				get { return this.Parent[x]; }
 				set
@@ -29,7 +29,7 @@ namespace Swis
 					this.Parent[x] = value;
 				}
 			}
-			public override uint this[uint x, uint bits]
+			public uint this[uint x, uint bits]
 			{
 				get { return this.Parent[x, bits]; }
 				set
@@ -41,7 +41,7 @@ namespace Swis
 				}
 			}
 
-			public override Span<byte> Span(uint x, uint length)
+			public Span<byte> Span(uint x, uint length)
 			{
 				return this.Parent.Span(x, length);
 			}

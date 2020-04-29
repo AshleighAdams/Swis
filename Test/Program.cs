@@ -38,10 +38,9 @@ namespace SwisTest
 			catch { }
 
 			byte line0_in = 0;
-			var cpu = new JittedCpu
+			//Memory = ,
+			var cpu = new JittedCpu(new PointerMemoryController(assembled))
 			{
-				Memory = new PointerMemoryController(assembled),
-				//Memory = new ByteArrayMemoryController(assembled),
 				Debugger = dbger,
 				LineWrite = (line, what) => Console.Write((char)what),
 				LineRead = (line) => line0_in,
@@ -99,9 +98,8 @@ namespace SwisTest
 				mov edx, eex
 				jmp $start");
 			
-			JittedCpu jit = new JittedCpu()
+			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled))
 			{
-				Memory = new PointerMemoryController(assembled),
 				Debugger = new TestDebugger(),
 			};
 

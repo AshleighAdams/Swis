@@ -62,8 +62,9 @@ namespace Swis
 		{
 #if DEBUG
 			throw new Exception();
-#endif
+#else
 			return this.RaiseInterruptExpression(Expression.Constant((uint)interrupt, typeof(uint)), ref sequential);
+#endif
 		}
 
 		private Expression ReadWriteRegisterExpression(NamedRegister reg)
@@ -91,7 +92,6 @@ namespace Swis
 		{
 			Expression jit_part(int regid, uint size, uint constant, bool signed = false)
 			{
-				Expression ret;
 				if (regid == -1)
 					return signed ?
 						Expression.Constant((int)Util.SignExtend(constant, size)) :

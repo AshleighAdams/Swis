@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Swis
 {
@@ -6,8 +7,10 @@ namespace Swis
 	public struct Operand
 	{
 		//public Emulator Owner;
-		public MemoryController Memory;
-		public uint[] Registers;
+		[NotNull]
+		public IMemoryController Memory;
+		[NotNull]
+		public uint[]? Registers;
 		
 		public sbyte RegIdA, RegIdB, RegIdC, RegIdD;
 		public byte SizeA, SizeB, SizeC, SizeD;
@@ -46,12 +49,13 @@ namespace Swis
 				}
 			}
 		}
-
+		
+		// TODO: somehow only provide this for a normal Cpu, mmmaybe move to inside InterpretedCpu
 		UInt32 InsideValue
 		{
 			get
 			{
-				uint[] regs = this.Registers;
+				uint[] regs = this.Registers ?? throw new Exception("Reigsters is null");
 
 				uint part_value(sbyte regid, byte size, uint @const, bool signed = false)
 				{
@@ -211,6 +215,8 @@ namespace Swis
 						throw new Exception("TODO: can't write to a computed value, doesn't make sense");
 					}
 
+					if (this.Registers is null) // TODO: move outside of this struct, to InterpretedCpu
+						throw new Exception("Registers null");
 					this.Registers[this.RegIdA] = value;
 				}
 				else
@@ -284,14 +290,14 @@ namespace Swis
 
 	public static class CpuExtensions
 	{
-		public static Opcode DecodeOpcode(this MemoryController memory, ref uint ip)
+		public static Opcode DecodeOpcode(this IMemoryController memory, ref uint ip)
 		{
 			var ret = (Opcode)memory[ip];
 			ip++;
 			return ret;
 		}
 
-		public static Operand DecodeOperand(this MemoryController memory, ref uint ip, uint[] registers)
+		public static Operand DecodeOperand(this IMemoryController memory, ref uint ip, uint[]? registers)
 		{
 			byte master = memory[ip + 0];
 			ip += 1;

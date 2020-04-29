@@ -26,17 +26,20 @@ namespace Swis
 		{
 			public int OptimizationLevel = 0;
 			public bool IntelSyntax = true;
-			string[] _Registers = new string[] { "a", "b", "c", "d", "e", "f" };
-
 			public string StackPointer { get { return "esp"; } }
 			public string BasePointer { get { return "ebp"; } }
 			public string InstructionPointer { get { return "eip"; } }
-			public string[] Registers { get { return this._Registers; } }
+			public string[] Registers { get; } = new string[] { "a", "b", "c", "d", "e", "f" };
 
 			public class StructInfo
 			{
-				public uint Size;
-				public (string type, uint offset)[] Fields;
+				public uint Size { get; }
+				public IReadOnlyList<(string type, uint offset)> Fields { get; }
+				public StructInfo(uint size, IReadOnlyList<(string type, uint offset)> fields)
+				{
+					Size = size;
+					Fields = fields;
+				}
 			}
 
 			public Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
@@ -71,11 +74,7 @@ namespace Swis
 					cur_size += sz;// / 8;
 				}
 
-				return this.StructInfoCache[type] = new StructInfo
-				{
-					Size = cur_size,
-					Fields = compfields.ToArray(),
-				};
+				return StructInfoCache[type] = new StructInfo(cur_size, compfields);
 			}
 			
 
@@ -104,7 +103,7 @@ namespace Swis
 				}
 				else if (type.StartsWith("[")) // an array
 				{
-					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns) ?? "could not decode array pattern";
 					string subtype = arry.subtype;
 					uint stride = SizeOfAsIntBytes(arry.subtype);
 
@@ -139,7 +138,7 @@ namespace Swis
 				}
 				else if (type.StartsWith("[")) // an array
 				{
-					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns) ?? throw new Exception();
 					string subtype = arry.subtype;
 					uint stride = SizeOfAsIntBytes(arry.subtype);
 
@@ -181,7 +180,7 @@ namespace Swis
 
 				if (type[0] == '[')
 				{
-					dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns) ?? throw new Exception();
 					dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>", IrPatterns);
 
 					uint bits = SizeOfAsInt(arry.type);
@@ -231,11 +230,11 @@ namespace Swis
 			public TranslationUnit Unit;
 
 			public StringBuilder Assembly;
-			public string Id;
-			public (string type, int bits) Return;
-			public (string arg, string type)[] Arguments;
+			public string? Id;
+			public (string? type, int bits) Return;
+			public (string arg, string type)[]? Arguments;
 
-			public string Code;
+			public string? Code;
 
 			uint ssa = 0;
 			public string CreateSSARegister(string hint = "tmp")

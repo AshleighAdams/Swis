@@ -139,7 +139,7 @@ namespace Swis
 					if (string.IsNullOrWhiteSpace(line))
 						continue;
 
-					dynamic match;
+					dynamic? match;
 
 					if ((match = line.PatternMatch(@"^\s*(<operand> = )?<keyword:op>", IrPatterns)) != null)
 					{
@@ -148,7 +148,7 @@ namespace Swis
 							bool good = false;
 							foreach (var var in list)
 							{
-								dynamic args = line.PatternMatch(var.pattern, IrPatterns);
+								dynamic? args = line.PatternMatch(var.pattern, IrPatterns);
 
 								if(args != null)
 									if((bool)var.func.Invoke(null, new object[] { builder, args }))

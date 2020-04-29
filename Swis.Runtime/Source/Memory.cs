@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Swis
 {
-	public abstract class MemoryController
+	public interface IMemoryController
 	{
 		public abstract uint Length { get; }
 		public abstract byte this[uint x] { get; set; }
@@ -16,13 +16,13 @@ namespace Swis
 	}
 
 	// very slightly quicker, but memory is pinned and thus can't be moved.
-	public unsafe class PointerMemoryController : MemoryController
+	public unsafe class PointerMemoryController : IMemoryController
 	{
 		public byte* Ptr;
 		public byte[] Memory;
 		int _Length;
 		
-		public override uint Length { get { return (uint)this._Length; } }
+		public uint Length { get => (uint)this._Length; }
 
 		GCHandle MemoryHandle; // to pin it; call .Free() to unpin it
 		public PointerMemoryController(byte[] memory) // TODO: use Span<>
@@ -37,7 +37,7 @@ namespace Swis
 			//Marshal.UnsafeAddrOfPinnedArrayElement(this.Memory, 0);
 		}
 
-		public override byte this[uint x]
+		public byte this[uint x]
 		{
 			get
 			{
@@ -51,7 +51,7 @@ namespace Swis
 			}
 		}
 
-		public override uint this[uint x, uint bits]
+		public uint this[uint x, uint bits]
 		{
 			get
 			{
@@ -89,13 +89,13 @@ namespace Swis
 			}
 		}
 
-		public override Span<byte> Span(uint x, uint length)
+		public Span<byte> Span(uint x, uint length)
 		{
 			return new Span<byte>(this.Memory, (int)x, (int)length);
 		}
 	}
 
-	public class ByteArrayMemoryController : MemoryController // 25% slower than the pointer version, but guaranteed safe
+	public class ByteArrayMemoryController : IMemoryController // 25% slower than the pointer version, but guaranteed safe
 	{
 		public byte[] Memory;
 		public ByteArrayMemoryController(byte[] memory) // TODO: use Span<>
@@ -103,9 +103,9 @@ namespace Swis
 			this.Memory = (byte[])memory.Clone();
 		}
 
-		public override uint Length { get { return (uint)this.Memory.Length; } }
+		public uint Length { get  => (uint)this.Memory.Length; }
 
-		public override byte this[uint x]
+		public byte this[uint x]
 		{
 			get
 			{
@@ -117,7 +117,7 @@ namespace Swis
 			}
 		}
 		
-		public override uint this[uint x, uint bits]
+		public uint this[uint x, uint bits]
 		{
 			get
 			{
@@ -167,7 +167,7 @@ namespace Swis
 			}
 		}
 
-		public override Span<byte> Span(uint x, uint length)
+		public Span<byte> Span(uint x, uint length)
 		{
 			return new Span<byte>(this.Memory, (int)x, (int)length);
 		}

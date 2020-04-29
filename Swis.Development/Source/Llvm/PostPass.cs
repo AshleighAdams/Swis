@@ -42,7 +42,7 @@ namespace Swis
 			public List<(int from, int length)> FoundAt = new List<(int, int)>();
 			public int First = 0;
 			public int Last = 0;
-			public string AllocatedRegister = null;
+			public string? AllocatedRegister = null;
 			public string Size = "";
 		}
 
@@ -282,7 +282,7 @@ namespace Swis
 				else
 				{
 					string reg;
-					string alc = inf.AllocatedRegister;
+					string alc = inf.AllocatedRegister ?? "AllocatedRegister is null";
 					switch (inf.Size)
 					{
 					case "8": reg = $"{alc}l"; break;
