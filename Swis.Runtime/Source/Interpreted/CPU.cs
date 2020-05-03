@@ -37,9 +37,9 @@ namespace Swis
 		[FieldOffset(3)] public Byte ByteD;
 	}
 
-	public abstract class ExternalDebugger
+	public abstract class IExternalDebugger
 	{
-		public abstract bool Clock(Cpu cpu);
+		public abstract bool Clock(CpuBase cpu);
 	}
 
 	public interface IReadWriteList<T>
@@ -48,9 +48,20 @@ namespace Swis
 		int Count { get; }
 	}
 
+	public interface ILineIO
+	{
+		byte ReadLineValue(UInt16 line);
+		void WriteLineValue(UInt16 line, byte value);
+	}
+	
 	public interface ICpu
 	{
+		public static uint NativeSizeBits = 32;
+		public static uint NativeSizeBytes = NativeSizeBits / 8;
+		
 		IReadWriteList<uint> Registers { get; }
+		IMemoryController Memory { get; set; }
+		ILineIO LineIO { get; set; }
 		int Clock(int cycles = 1);
 		void Interrupt(uint code);
 		void Reset();
@@ -64,24 +75,20 @@ namespace Swis
 		ref uint ProtectedInterrupt { get; }
 
 		bool Halted { get; }
-
-		bool HandleInterrupts(IProducerConsumerCollection<uint> interrupt_queue);
 	}
 
-	public abstract class Cpu : ICpu
+	public abstract class CpuBase : ICpu
 	{
-		public static uint NativeSizeBits = 32;
-		public static uint NativeSizeBytes = NativeSizeBits / 8;
+		public CpuBase(IMemoryController memory, ILineIO line_io)
+		{
+			Memory = memory;
+			LineIO = line_io;
+		}
+		
 
-		public virtual ExternalDebugger? Debugger { get; set; }
-#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-		// TODO: use dependency injection to provide this, fixes nullable issues
+		public virtual IExternalDebugger? Debugger { get; set; }
 		public virtual IMemoryController Memory { get; set; }
-#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-
-		// todo: replace with interface by DI
-		public virtual Action<UInt16, byte> LineWrite { get; set; } = delegate (UInt16 _, byte unused) { };
-		public virtual Func<UInt16, byte> LineRead { get; set; } = delegate (UInt16 _) { return 0; };
+		public virtual ILineIO LineIO { get; set; }
 		public abstract IReadWriteList<uint> Registers { get; }
 		
 		public abstract int Clock(int clocks = 1);
@@ -98,7 +105,7 @@ namespace Swis
 
 		public virtual bool Halted { get { return (ProtectedMode & (uint)ProtectedModeRegisterFlags.Halted) != 0; } }
 
-		public virtual bool HandleInterrupts(IProducerConsumerCollection<uint> interrupt_queue)
+		protected virtual bool HandleInterrupts(IProducerConsumerCollection<uint> interrupt_queue)
 		{
 			if (interrupt_queue.Count == 0)
 				return false;
@@ -124,23 +131,23 @@ namespace Swis
 
 					uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
 					uint ivtn = @int > 255 ? 255 : @int;
-					uint addr = Memory[ivt + ivtn * Cpu.NativeSizeBytes, Cpu.NativeSizeBits];
+					uint addr = Memory[ivt + ivtn * ICpu.NativeSizeBytes, ICpu.NativeSizeBits];
 
 					// simulate call to the interrupt address if it's enabled
 					if (addr != 0)
 					{
 						pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
-						pi |= 0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
+						pi |=  0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
 
 						// push ip
-						Memory[sp, Cpu.NativeSizeBits] = ip;
-						sp += Cpu.NativeSizeBytes;
+						Memory[sp, ICpu.NativeSizeBits] = ip;
+						sp += ICpu.NativeSizeBytes;
 						// push bp
-						Memory[sp, Cpu.NativeSizeBits] = bp;
-						sp += Cpu.NativeSizeBytes;
+						Memory[sp, ICpu.NativeSizeBits] = bp;
+						sp += ICpu.NativeSizeBytes;
 						// push flags
-						Memory[sp, Cpu.NativeSizeBits] = Flags;
-						sp += Cpu.NativeSizeBytes;
+						Memory[sp, ICpu.NativeSizeBits] = Flags;
+						sp += ICpu.NativeSizeBytes;
 						// mov bp, sp
 						bp = sp;
 						// jmp loc
@@ -149,8 +156,8 @@ namespace Swis
 						if (ivtn == 255) // extended interrupt, push the interrupt code
 						{
 							// push @int
-							Memory[sp, Cpu.NativeSizeBits] = @int;
-							sp += Cpu.NativeSizeBytes;
+							Memory[sp, ICpu.NativeSizeBits] = @int;
+							sp += ICpu.NativeSizeBytes;
 						}
 						return false;
 					}
@@ -169,11 +176,9 @@ namespace Swis
 					}
 			}
 		}
-
-
 	}
 
-	public sealed partial class InterpretedCpu : Cpu, ICpu
+	public sealed partial class InterpretedCpu : CpuBase, ICpu
 	{
 		private struct ListWrapper<T> : IReadWriteList<T>
 		{
@@ -190,9 +195,9 @@ namespace Swis
 		public uint[] InternalRegisters = new uint[(int)NamedRegister.L + 1];
 		public override IReadWriteList<uint> Registers { get => new ListWrapper<uint>(InternalRegisters); }
 		
-		public InterpretedCpu(IMemoryController memory)
+		public InterpretedCpu(IMemoryController memory, ILineIO line_io) :
+			base(memory, line_io)
 		{
-			Memory = memory;
 		}
 
 		public override int Clock(int count = 1)
@@ -239,14 +244,14 @@ namespace Swis
 								// mov sp, bp
 								sp = bp;
 								// pop flags
-								sp -= Cpu.NativeSizeBytes;
-								flags = Memory[sp, Cpu.NativeSizeBits];
+								sp -= ICpu.NativeSizeBytes;
+								flags = Memory[sp, ICpu.NativeSizeBits];
 								// pop bp
-								sp -= Cpu.NativeSizeBytes;
-								bp = Memory[sp, Cpu.NativeSizeBits];
+								sp -= ICpu.NativeSizeBytes;
+								bp = Memory[sp, ICpu.NativeSizeBits];
 								// pop ip
-								sp -= Cpu.NativeSizeBytes;
-								ip = Memory[sp, Cpu.NativeSizeBits];
+								sp -= ICpu.NativeSizeBytes;
+								ip = Memory[sp, ICpu.NativeSizeBits];
 							}
 							break;
 						}
@@ -297,7 +302,7 @@ namespace Swis
 							Operand lttr = Memory.DecodeOperand(ref ip, InternalRegisters);
 							Operand line = Memory.DecodeOperand(ref ip, InternalRegisters);
 
-							lttr.Value = (uint)LineRead((UInt16)line.Value);
+							lttr.Value = LineIO.ReadLineValue((UInt16)line.Value);
 							break;
 						}
 					case Opcode.OutRR:
@@ -305,7 +310,7 @@ namespace Swis
 							Operand line = Memory.DecodeOperand(ref ip, InternalRegisters);
 							Operand lttr = Memory.DecodeOperand(ref ip, InternalRegisters);
 
-							LineWrite((UInt16)line.Value, (byte)lttr.Value);
+							LineIO.WriteLineValue((UInt16)line.Value, (byte)lttr.Value);
 							break;
 						}
 					#endregion
@@ -340,11 +345,11 @@ namespace Swis
 							Operand loc = Memory.DecodeOperand(ref ip, InternalRegisters);
 
 							// push ip
-							Memory[sp, Cpu.NativeSizeBits] = ip;
-							sp += Cpu.NativeSizeBytes;
+							Memory[sp, ICpu.NativeSizeBits] = ip;
+							sp += ICpu.NativeSizeBytes;
 							// push bp
-							Memory[sp, Cpu.NativeSizeBits] = bp;
-							sp += Cpu.NativeSizeBytes;
+							Memory[sp, ICpu.NativeSizeBits] = bp;
+							sp += ICpu.NativeSizeBytes;
 							// mov bp, sp
 							bp = sp;
 							// jmp loc
@@ -358,11 +363,11 @@ namespace Swis
 							// mov sp, bp
 							sp = bp;
 							// pop bp
-							sp -= Cpu.NativeSizeBytes;
-							bp = Memory[sp, Cpu.NativeSizeBits];
+							sp -= ICpu.NativeSizeBytes;
+							bp = Memory[sp, ICpu.NativeSizeBits];
 							// pop ip
-							sp -= Cpu.NativeSizeBytes;
-							ip = Memory[sp, Cpu.NativeSizeBits];
+							sp -= ICpu.NativeSizeBytes;
+							ip = Memory[sp, ICpu.NativeSizeBits];
 
 							break;
 						}

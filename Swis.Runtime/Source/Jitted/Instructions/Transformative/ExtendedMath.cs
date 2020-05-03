@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 #pragma warning disable IDE0051 // Remove unused private members
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		[CpuInstruction(Opcode.SqrtFloatRR)]
 		private Expression SqrtFloatRR(ref uint ip, ref bool sequential)

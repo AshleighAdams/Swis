@@ -1,5 +1,6 @@
 ﻿using Swis;
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -16,6 +17,21 @@ namespace SwisTest
 			return asm;
 		}
 
+		class SimpleLineIO : ILineIO
+		{
+			public byte StandardInput { get; set; }
+			
+			byte ILineIO.ReadLineValue(ushort line)
+			{
+				return StandardInput;
+			}
+			
+			void ILineIO.WriteLineValue(ushort line, byte value)
+			{
+				Console.Write((char)value);
+			}
+		}
+		
 		private static void ExecuteTest(string asm)
 		{
 			int clocks = 100;
@@ -35,20 +51,17 @@ namespace SwisTest
 			}
 			catch { }
 
-			byte line0_in = 0;
-			//Memory = ,
-			var cpu = new JittedCpu(new PointerMemoryController(assembled))
+			SimpleLineIO io = new SimpleLineIO();
+			var cpu = new JittedCpu(new PointerMemoryController(assembled), io)
 			{
 				Debugger = dbger,
-				LineWrite = (line, what) => Console.Write((char)what),
-				LineRead = (line) => line0_in,
 			};
-
+			
 			new Thread(delegate ()
 			{
 				while (true)
 				{
-					line0_in = (byte)Console.ReadKey(true).KeyChar;
+					io.StandardInput = (byte)Console.ReadKey(true).KeyChar;
 					cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0);
 				}
 			})
@@ -71,10 +84,10 @@ namespace SwisTest
 			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalMilliseconds:0.00} ms");
 		}
 
-		private class TestDebugger : ExternalDebugger
+		private class TestDebugger : IExternalDebugger
 		{
 			private bool @break = false;
-			public override bool Clock(Cpu cpu)
+			public override bool Clock(CpuBase cpu)
 			{
 				if (cpu.TimeStampCounter % 3 == 0 && @break)
 					return @break = false;
@@ -97,14 +110,14 @@ namespace SwisTest
 				mov edx, eex
 				jmp $start");
 
-			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled))
+			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled), new Util.NullLineIO())
 			{
 				Debugger = new TestDebugger(),
 			};
 
 			while (!jit.Halted)
 				jit.Clock(100);
-
+			
 			Console.WriteLine("done");
 			Console.ReadLine();
 		}

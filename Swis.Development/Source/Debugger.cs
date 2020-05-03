@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Swis
 {
-	public class RemoteDebugger : ExternalDebugger
+	public class RemoteDebugger : IExternalDebugger
 	{
 		protected NetworkStream Stream;
 		protected DebugData? Dbg;
@@ -20,7 +20,7 @@ namespace Swis
 		private uint? BasePtrEquals = null;
 		private uint? StackBottom = null;
 		private bool Step = false;
-		private WeakReference<Cpu> Cpu = new WeakReference<Cpu>(null!); // for halt and reset
+		private WeakReference<ICpu> Cpu = new WeakReference<ICpu>(null!); // for halt and reset
 
 		private StreamReader _Reader;
 		private ConcurrentQueue<string> ReadQueue = new ConcurrentQueue<string>();
@@ -107,10 +107,10 @@ namespace Swis
 		private uint[]? _LastValues;
 		private byte[]? _LastStack;
 		private const uint max_inst_len = 64; // so we can inspect the current instruction without needing to depend on Swis.Development
-		public override bool Clock(Cpu cpu)
+		public override bool Clock(CpuBase cpu)
 		{
 			if (Cpu == null)
-				Cpu = new WeakReference<Cpu>(cpu);
+				Cpu = new WeakReference<ICpu>(cpu);
 			if (StackBottom == null && cpu.StackPointer != 0)
 				StackBottom = cpu.StackPointer;
 

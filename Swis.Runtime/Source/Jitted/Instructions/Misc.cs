@@ -31,7 +31,7 @@ namespace Swis
 			Expression epm = this.ReadWriteRegisterExpression(NamedRegister.ProtectedMode);
 			Expression epi = this.ReadWriteRegisterExpression(NamedRegister.ProtectedInterrupt);
 
-			Expression esp_ptr = this.PointerExpression(esp, Cpu.NativeSizeBits);
+			Expression esp_ptr = this.PointerExpression(esp, ICpu.NativeSizeBits);
 
 			sequential = false;
 			return Expression.Block(
@@ -42,13 +42,13 @@ namespace Swis
 				// mov sp, bp
 				Expression.Assign(esp, ebp),
 				// pop pm
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(epm, esp_ptr),
 				// pop bp
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(ebp, esp_ptr),
 				// pop ip
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(eip, esp_ptr)
 			);
 		}
@@ -135,7 +135,7 @@ namespace Swis
 
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 
-			Expression<Func<uint, uint>> readline = lineval => LineRead((UInt16)lineval);
+			Expression<Func<uint, uint>> readline = lineval => LineIO.ReadLineValue((UInt16)lineval);
 
 			return this.WriteOperandExpression<uint>(ref dst, ref sequential,
 				Expression.Invoke(readline, lineexp));
@@ -150,7 +150,7 @@ namespace Swis
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 			Expression lttrexp = this.ReadOperandExpression<uint>(ref lttr);
 
-			Expression<Action<uint, uint>> writeline = (lineval, charval) => LineWrite((UInt16)lineval, (byte)charval);
+			Expression<Action<uint, uint>> writeline = (lineval, charval) => LineIO.WriteLineValue((UInt16)lineval, (byte)charval);
 
 			return Expression.Invoke(writeline, lineexp, lttrexp);
 		}

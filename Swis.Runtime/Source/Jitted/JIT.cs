@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu, ICpu
+	public sealed partial class JittedCpu : CpuBase, ICpu
 	{
 		[NotNull] // TODO: remove this with DI
 		private JitCacheInvalidator _Memory;
@@ -23,9 +23,9 @@ namespace Swis
 		private uint JitCacheFirst;
 		private uint JitCacheLast; // track the jitted bounds so as to clear JIT instructions
 
-		public JittedCpu(IMemoryController memory)
+		public JittedCpu(IMemoryController memory, ILineIO line_io) :
+			base(memory, line_io)
 		{
-			Memory = memory;
 			JitCache = new Dictionary<uint, (Action λ, uint cycles)>();
 			this.ClearJitCache(); // sets up default values
 			this.InitializeOpcodeTable();
@@ -38,7 +38,7 @@ namespace Swis
 			JitCache.Clear();
 		}
 
-		public override ExternalDebugger? Debugger
+		public override IExternalDebugger? Debugger
 		{
 			get { return base.Debugger; }
 			set

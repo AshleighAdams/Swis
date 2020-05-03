@@ -54,9 +54,9 @@ namespace Swis
 
 		public static uint SignExtend(uint src, uint frombits)
 		{
-			if (frombits <= 0 || frombits > Cpu.NativeSizeBits)
+			if (frombits <= 0 || frombits > ICpu.NativeSizeBits)
 				throw new ArgumentOutOfRangeException(nameof(frombits));
-			if (frombits == Cpu.NativeSizeBits)
+			if (frombits == ICpu.NativeSizeBits)
 				return src;
 
 			uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
@@ -74,6 +74,12 @@ namespace Swis
 		{
 			var property_info = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 			return property_info.GetValue(exp) as string ?? throw new Exception("DebugView() returned null!");
+		}
+
+		public class NullLineIO : ILineIO
+		{
+			byte ILineIO.ReadLineValue(ushort line) => 0;
+			void ILineIO.WriteLineValue(ushort line, byte value) { }
 		}
 	}
 }

@@ -478,7 +478,7 @@ namespace Swis
 								if (match.indirection != "")
 								{
 									if (match.indirection_size == "")
-										indirection_size = (uint)Cpu.NativeSizeBits;
+										indirection_size = (uint)ICpu.NativeSizeBits;
 									else
 									{
 										indirection_size = match.indirection_size switch

@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		private sealed class CpuInstruction : Attribute
 		{

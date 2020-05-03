@@ -3,7 +3,7 @@
 #pragma warning disable IDE0051 // Remove unused private members
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		[CpuInstruction(Opcode.MoveRR)]
 		private Expression MoveRR(ref uint ip, ref bool sequential)

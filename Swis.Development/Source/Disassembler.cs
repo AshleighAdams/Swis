@@ -58,7 +58,7 @@ namespace Swis
 
 			if (self.Indirect)
 			{
-				if (self.IndirectionSize == Cpu.NativeSizeBits)
+				if (self.IndirectionSize == ICpu.NativeSizeBits)
 					@base = $"[{@base}]";
 				else
 					@base = $"ptr{self.IndirectionSize} [{@base}]";

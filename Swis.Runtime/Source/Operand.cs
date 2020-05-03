@@ -42,9 +42,9 @@ namespace Swis
 				return AddressingMode switch
 				{
 					0 => SizeA,
-					1 => (uint)Cpu.NativeSizeBits,
-					2 => (uint)Cpu.NativeSizeBits,
-					3 => (uint)Cpu.NativeSizeBits,
+					1 => (uint)ICpu.NativeSizeBits,
+					2 => (uint)ICpu.NativeSizeBits,
+					3 => (uint)ICpu.NativeSizeBits,
 					_ => throw new NotImplementedException(),
 				};
 			}
@@ -152,7 +152,7 @@ namespace Swis
 			};
 			if (Indirect)
 			{
-				if (IndirectionSize == Cpu.NativeSizeBits)
+				if (IndirectionSize == ICpu.NativeSizeBits)
 					@base = $"[{@base}]";
 				else
 					@base = $"ptr{IndirectionSize} [{@base}]";

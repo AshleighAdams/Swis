@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 #pragma warning disable IDE0051 // Remove unused private members
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		[CpuInstruction(Opcode.CallR)]
 		private Expression CallR(ref uint ip, ref bool sequential)
@@ -17,16 +17,16 @@ namespace Swis
 			Expression esp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
 			Expression ebp = this.ReadWriteRegisterExpression(NamedRegister.BasePointer);
 
-			Expression esp_ptr = this.PointerExpression(esp, Cpu.NativeSizeBits);
+			Expression esp_ptr = this.PointerExpression(esp, ICpu.NativeSizeBits);
 
 			sequential = false;
 			return Expression.Block(
 				// push ip ; the retaddr
 				Expression.Assign(esp_ptr, eip),
-				Expression.AddAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.AddAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				// push bp
 				Expression.Assign(esp_ptr, ebp),
-				Expression.AddAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.AddAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				// mov bp, sp
 				Expression.Assign(ebp, esp),
 				// jmp loc
@@ -41,17 +41,17 @@ namespace Swis
 			Expression esp = this.ReadWriteRegisterExpression(NamedRegister.StackPointer);
 			Expression ebp = this.ReadWriteRegisterExpression(NamedRegister.BasePointer);
 
-			Expression esp_ptr = this.PointerExpression(esp, Cpu.NativeSizeBits);
+			Expression esp_ptr = this.PointerExpression(esp, ICpu.NativeSizeBits);
 
 			sequential = false;
 			return Expression.Block(
 				// mov sp, bp
 				Expression.Assign(esp, ebp),
 				// pop bp
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(ebp, esp_ptr),
 				// pop ip
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(eip, esp_ptr)
 			);
 

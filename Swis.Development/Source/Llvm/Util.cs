@@ -207,7 +207,7 @@ namespace Swis
 			{
 				string sz = this.SizeOf(type);
 				if (sz == "ptr")
-					return Cpu.NativeSizeBits;
+					return ICpu.NativeSizeBits;
 				return uint.Parse(sz);
 			}
 

@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		private static Expression ReinterpretCastExpression<TSrc, TDst>(Expression src)
 			   where TSrc : unmanaged
@@ -35,7 +35,7 @@ namespace Swis
 		private static Expression SignExtendExpression(Expression srcexp, Expression bitexp)
 		{
 			// optimize
-			if (bitexp is ConstantExpression @const && @const.Value is uint const_val && const_val == Cpu.NativeSizeBits)
+			if (bitexp is ConstantExpression @const && @const.Value is uint const_val && const_val == ICpu.NativeSizeBits)
 				return srcexp;
 
 			Expression<Func<uint, uint, uint>> sign_extend = (val, frombits) => Util.SignExtend(val, frombits);
@@ -44,7 +44,7 @@ namespace Swis
 
 		private static Expression LimitSizeExpression(Expression expr, uint bits)
 		{
-			if (bits == Cpu.NativeSizeBits)
+			if (bits == ICpu.NativeSizeBits)
 				return expr;
 
 			return Expression.And(

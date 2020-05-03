@@ -13,7 +13,7 @@ namespace Swis
 			if (output.Code is null)
 				throw new ArgumentException("Code is null", nameof(output));
 
-			int bp_offset = -(int)Cpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
+			int bp_offset = -(int)ICpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
 
 			List<string> src_locals = new List<string>();
 
