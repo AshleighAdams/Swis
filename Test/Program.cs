@@ -1,15 +1,14 @@
-﻿using System;
-
-using Swis;
-using System.Diagnostics;
+﻿using Swis;
+using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 
 namespace SwisTest
 {
-    class Program
-    {
-		static string IrCompileTest(string ir = null)
+	internal class Program
+	{
+		private static string IrCompileTest(string ir = null)
 		{
 			//ir = ir ?? System.IO.File.ReadAllText("TestProgram/program.ll");
 			ir = ir ?? LlvmIrCompiler.CompileCpp(System.IO.File.ReadAllText("TestProgram/program.cpp"));
@@ -18,7 +17,22 @@ namespace SwisTest
 			return asm;
 		}
 
-		static void ExecuteTest(string asm)
+		class SimpleLineIO : ILineIO
+		{
+			public byte StandardInput { get; set; }
+			
+			byte ILineIO.ReadLineValue(ushort line)
+			{
+				return StandardInput;
+			}
+			
+			void ILineIO.WriteLineValue(ushort line, byte value)
+			{
+				Console.Write((char)value);
+			}
+		}
+		
+		private static void ExecuteTest(string asm)
 		{
 			int clocks = 100;
 			int delay = 10;
@@ -26,7 +40,7 @@ namespace SwisTest
 
 			System.IO.File.WriteAllBytes("TestProgram/program.bin", assembled);
 			System.IO.File.WriteAllText("TestProgram/program.dbg", DebugData.Serialize(dbg));
-			
+
 			RemoteDebugger dbger = null;
 			try
 			{
@@ -37,21 +51,17 @@ namespace SwisTest
 			}
 			catch { }
 
-			byte line0_in = 0;
-			var cpu = new JittedCpu
+			SimpleLineIO io = new SimpleLineIO();
+			var cpu = new JittedCpu(new PointerMemoryController(assembled), io)
 			{
-				Memory = new PointerMemoryController(assembled),
-				//Memory = new ByteArrayMemoryController(assembled),
 				Debugger = dbger,
-				LineWrite = (line, what) => Console.Write((char)what),
-				LineRead = (line) => line0_in,
 			};
-
+			
 			new Thread(delegate ()
 			{
 				while (true)
 				{
-					line0_in = (byte)Console.ReadKey(true).KeyChar;
+					io.StandardInput = (byte)Console.ReadKey(true).KeyChar;
 					cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0);
 				}
 			})
@@ -74,17 +84,18 @@ namespace SwisTest
 			Console.WriteLine($"Executed {cpu.TimeStampCounter} instructions in {(end - start).TotalMilliseconds:0.00} ms");
 		}
 
-		private class TestDebugger : ExternalDebugger
+		private class TestDebugger : IExternalDebugger
 		{
-			bool @break = false;
-			public override bool Clock(Cpu cpu)
+			private bool @break = false;
+			public override bool Clock(CpuBase cpu)
 			{
-				if (cpu.TimeStampCounter % 3 == 0 && this.@break)
-					return this.@break = false;
-				return this.@break = true;
+				if (cpu.TimeStampCounter % 3 == 0 && @break)
+					return @break = false;
+				return @break = true;
 			}
 		}
-		static void TestJit()
+
+		private static void TestJit()
 		{
 			(byte[] assembled, var dbg) = Assembler.Assemble(
 				@"$start:
@@ -98,22 +109,21 @@ namespace SwisTest
 				mov ebx, ecx
 				mov edx, eex
 				jmp $start");
-			
-			JittedCpu jit = new JittedCpu()
+
+			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled), new NullLineIO())
 			{
-				Memory = new PointerMemoryController(assembled),
 				Debugger = new TestDebugger(),
 			};
 
 			while (!jit.Halted)
 				jit.Clock(100);
-
+			
 			Console.WriteLine("done");
 			Console.ReadLine();
 		}
 
-		static void Main(string[] args)
-        {
+		private static void Main(string[] args)
+		{
 			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 			System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
@@ -128,7 +138,7 @@ namespace SwisTest
 			Console.ReadLine();
 
 			//TestJit();
-			
+
 		}
-    }
+	}
 }

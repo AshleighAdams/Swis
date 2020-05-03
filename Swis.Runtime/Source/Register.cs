@@ -14,7 +14,7 @@
 		TrapMask = 0b00000000_00000000_00000000_00000011u,
 		Halted   = 0b00000000_00000000_00000000_00000100u,
 	}
-
+	
 	public enum NamedRegister : uint
 	{
 		TimeStampCounter = 0,

@@ -39,7 +39,7 @@ namespace Swis
 			{ "l", NamedRegister.L },
 		};
 
-		static (NamedRegister reg, uint size) ParseRegister(string reg)
+		private static (NamedRegister reg, uint size) ParseRegister(string reg)
 		{
 			uint size;
 
@@ -51,27 +51,27 @@ namespace Swis
 			{
 				size = 64;
 				if (reg.EndsWith("x"))
-					reg = reg.Substring(1, reg.Length - 2);
+					reg = reg[1..^1];
 				else
-					reg = reg.Substring(1);
+					reg = reg[1..];
 			}
 			else if (reg.StartsWith("e"))
 			{
 				size = 32;
 				if (reg.EndsWith("x"))
-					reg = reg.Substring(1, reg.Length - 2);
+					reg = reg[1..^1];
 				else
-					reg = reg.Substring(1);
+					reg = reg[1..];
 			}
 			else if (reg.EndsWith("x"))
 			{
 				size = 16;
-				reg = reg.Substring(0, reg.Length - 1);
+				reg = reg[0..^1];
 			}
 			else if (reg.EndsWith("l"))
 			{
 				size = 8;
-				reg = reg.Substring(0, reg.Length - 1);
+				reg = reg[0..^1];
 			}
 			else throw new Exception(reg);
 
@@ -149,8 +149,7 @@ namespace Swis
 			{ "atan2fRRR", Opcode.Atan2FloatRRR },
 			{ "powfRRR", Opcode.PowFloatRRR },
 		};
-
-		static char[] _Offset_chars = new char[] { '+', '-' };
+		private static char[] _Offset_chars = new char[] { '+', '-' };
 		public static (byte[] binary, DebugData dbg) Assemble(string asm)
 		{
 			Dictionary<string, string> named_patterns = new Dictionary<string, string>();
@@ -164,7 +163,7 @@ namespace Swis
 
 			named_patterns["register"] = pattern_compile_optional_whitespace(@"(?<name>[a-zA-Z]+)");
 			named_patterns["constant"] = pattern_compile_optional_whitespace(@"0x[a-fA-F0-9]+|\-?[0-9\.]+f|\-?[0-9]+|\$[a-zA-Z0-9._@]+");
-			named_patterns["rc"]       = pattern_compile_optional_whitespace(@"<register>|<constant>");
+			named_patterns["rc"] = pattern_compile_optional_whitespace(@"<register>|<constant>");
 
 			named_patterns["a"] = pattern_compile_optional_whitespace("<rc:a>");
 			named_patterns["b"] = pattern_compile_optional_whitespace("<rc:a> [+] <rc:b>");
@@ -173,7 +172,7 @@ namespace Swis
 				"<rc:a> [+] <rc:b> [+] <rc:c> [*] <rc:d>|" + // a + b + c * d
 				"<rc:a> [+] <rc:c> [*] <rc:d> [+] <rc:b>|" + // a + c * d + b
 				"<rc:c> [*] <rc:d> [+] <rc:a> [+] <rc:b>");  // c * d + a + b
-			// these must be transformed into the right d form
+															 // these must be transformed into the right d form
 			named_patterns["d1"] = pattern_compile_optional_whitespace("<rc:a> [+] <rc:b> [+] <rc:c>"); // a + b + c * 1
 			named_patterns["d2"] = pattern_compile_optional_whitespace( // to:  // a + 0 + c * d
 				"<rc:a> [+] <rc:c> [*] <rc:d>|" + // from: a + c * d
@@ -208,7 +207,7 @@ namespace Swis
 				return asm_pos >= asm.Length;
 			}
 
-			(string line, int pos) read_line()
+			(string? line, int pos) read_line()
 			{
 				sb.Clear();
 
@@ -236,33 +235,33 @@ namespace Swis
 
 			int read_nybble(char c)
 			{
-				switch (char.ToLowerInvariant(c))
+				return char.ToLowerInvariant(c) switch
 				{
-				case '0': return 0;
-				case '1': return 1;
-				case '2': return 2;
-				case '3': return 3;
-				case '4': return 4;
-				case '5': return 5;
-				case '6': return 6;
-				case '7': return 7;
-				case '8': return 8;
-				case '9': return 9;
-				case 'a': return 10;
-				case 'b': return 11;
-				case 'c': return 12;
-				case 'd': return 13;
-				case 'e': return 14;
-				case 'f': return 15;
-				default: throw new Exception($"{linenum}: data hex has an invalid nybble");
-				}
+					'0' => 0,
+					'1' => 1,
+					'2' => 2,
+					'3' => 3,
+					'4' => 4,
+					'5' => 5,
+					'6' => 6,
+					'7' => 7,
+					'8' => 8,
+					'9' => 9,
+					'a' => 10,
+					'b' => 11,
+					'c' => 12,
+					'd' => 13,
+					'e' => 14,
+					'f' => 15,
+					_ => throw new Exception($"{linenum}: data hex has an invalid nybble"),
+				};
 			}
 
-			string source_function = null;
+			string? source_function = null;
 
 			while (true)
 			{
-				(string line, int pos) = read_line();
+				(string? line, int pos) = read_line();
 				if (line == null)
 					break;
 
@@ -328,94 +327,94 @@ namespace Swis
 					Caster c; c.ByteA = c.ByteB = c.ByteC = c.ByteD = 0;
 					switch (type)
 					{
-					case "pad":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataPadding;
-						for (int i = 0, count = int.Parse(value); i < count; i++)
-							bin.Add(0);
-						break;
-					case "hex":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataHex;
-						value = value.Trim().ToLowerInvariant();
-						for (int n = 0; n < value.Length; n += 2)
-							bin.Add((byte)((read_nybble(value[n + 0]) << 4) | (read_nybble(value[n + 1]) << 0)));
-						break;
+						case "pad":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataPadding;
+							for (int i = 0, count = int.Parse(value); i < count; i++)
+								bin.Add(0);
+							break;
+						case "hex":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataHex;
+							value = value.Trim().ToLowerInvariant();
+							for (int n = 0; n < value.Length; n += 2)
+								bin.Add((byte)((read_nybble(value[n + 0]) << 4) | (read_nybble(value[n + 1]) << 0)));
+							break;
 
-					case "int32":
-					case "i32":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.I32 = Int32.Parse(value);
-						goto four_bytes;
-					case "int16":
-					case "i16":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.I32 = Int16.Parse(value);
-						goto two_bytes;
-					case "int8":
-					case "i8":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.I32 = SByte.Parse(value);
-						goto one_byte;
+						case "int32":
+						case "i32":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.I32 = Int32.Parse(value);
+							goto four_bytes;
+						case "int16":
+						case "i16":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.I32 = Int16.Parse(value);
+							goto two_bytes;
+						case "int8":
+						case "i8":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.I32 = SByte.Parse(value);
+							goto one_byte;
 
-					case "uint32":
-					case "u32":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.U32 = UInt32.Parse(value);
-						goto four_bytes;
-					case "uint16":
-					case "u16":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.U32 = UInt16.Parse(value);
-						goto two_bytes;
-					case "uint8":
-					case "u8":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
-						c.U32 = Byte.Parse(value);
-						goto one_byte;
+						case "uint32":
+						case "u32":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.U32 = UInt32.Parse(value);
+							goto four_bytes;
+						case "uint16":
+						case "u16":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.U32 = UInt16.Parse(value);
+							goto two_bytes;
+						case "uint8":
+						case "u8":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataSigned;
+							c.U32 = Byte.Parse(value);
+							goto one_byte;
 
-					case "float":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataFloat;
-						c.F32 = float.Parse(value);
-						goto four_bytes;
-					case "ascii":
-						dbginfo.Item4 = DebugData.AsmPtrType.DataString;
-						value = value.Trim();
-						for (int n = 1; n < value.Length - 1; n++)
-						{
-							char ltr = value[n];
-							if (ltr == '"' || ltr == '\'')
-								throw new Exception($"{linenum}: data string can't contain a (single) quote");
-							if (ltr == '\\')
+						case "float":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataFloat;
+							c.F32 = float.Parse(value);
+							goto four_bytes;
+						case "ascii":
+							dbginfo.Item4 = DebugData.AsmPtrType.DataString;
+							value = value.Trim();
+							for (int n = 1; n < value.Length - 1; n++)
 							{
-								if (value[n + 1] == 'x')
+								char ltr = value[n];
+								if (ltr == '"' || ltr == '\'')
+									throw new Exception($"{linenum}: data string can't contain a (single) quote");
+								if (ltr == '\\')
 								{
-									char a = value[n + 2];
-									char b = value[n + 3];
-									n += 3;
-									bin.Add((byte)((read_nybble(a) << 4) | (read_nybble(b) << 0)));
-									continue;
+									if (value[n + 1] == 'x')
+									{
+										char a = value[n + 2];
+										char b = value[n + 3];
+										n += 3;
+										bin.Add((byte)((read_nybble(a) << 4) | (read_nybble(b) << 0)));
+										continue;
+									}
+									throw new Exception($"{linenum}: data string error");
 								}
-								throw new Exception($"{linenum}: data string error");
+								bin.Add((byte)ltr);
 							}
-							bin.Add((byte)ltr);
-						}
-						break;
+							break;
 
 						one_byte:
-						bin.Add(c.ByteA);
-						break;
+							bin.Add(c.ByteA);
+							break;
 						two_bytes:
-						bin.Add(c.ByteA);
-						bin.Add(c.ByteB);
-						break;
+							bin.Add(c.ByteA);
+							bin.Add(c.ByteB);
+							break;
 						four_bytes:
-						bin.Add(c.ByteA);
-						bin.Add(c.ByteB);
-						bin.Add(c.ByteC);
-						bin.Add(c.ByteD);
-						break;
+							bin.Add(c.ByteA);
+							bin.Add(c.ByteB);
+							bin.Add(c.ByteC);
+							bin.Add(c.ByteD);
+							break;
 
-					default:
-						throw new Exception($"{linenum}: unknown data type: {type}");
+						default:
+							throw new Exception($"{linenum}: unknown data type: {type}");
 					}
 
 					dbg.PtrToAsm[binpos] = dbginfo;
@@ -461,7 +460,7 @@ namespace Swis
 							uint regsz_a = 0, regsz_b = 0, regsz_c = 0, regsz_d = 0;
 							uint const_a = 0, const_b = 0, const_c = 0, const_d = 0;
 							uint constsz_a = 0, constsz_b = 0, constsz_c = 0, constsz_d = 0;
-							string const_placeholder_a = null, const_placeholder_b = null, const_placeholder_c = null, const_placeholder_d = null;
+							string? const_placeholder_a = null, const_placeholder_b = null, const_placeholder_c = null, const_placeholder_d = null;
 
 							uint addressing_mode = 0;
 							uint indirection_size = 0;
@@ -472,42 +471,42 @@ namespace Swis
 								string operanducmp = @"^ ((<alphanumeric:segment> :)? <forms:form> |(?<indirection>(ptr<numeric:indirection_size>)? (<alphanumeric:segment> :)? \[) <forms:form> \]) $";
 
 								string operandpttn = pattern_compile_optional_whitespace(operanducmp);
-								dynamic match = oa.PatternMatch(operandpttn, named_patterns);
+								dynamic? match = oa.PatternMatch(operandpttn, named_patterns);
 								if (match == null)
 									throw new Exception($"Failed to parse operand: \"{oa}\"");
 
 								if (match.indirection != "")
 								{
 									if (match.indirection_size == "")
-										indirection_size = (uint)Cpu.NativeSizeBits;
+										indirection_size = (uint)ICpu.NativeSizeBits;
 									else
 									{
-										switch (match.indirection_size)
+										indirection_size = match.indirection_size switch
 										{
-										case "8": indirection_size = 8; break;
-										case "16": indirection_size = 16; break;
-										case "32": indirection_size = 32; break;
-										//case "64": indirection_size = 64; break;
-										default: throw new Exception($"invalid indirection size {match.indirection_size}");
-										}
+											"8"  => 8,
+											"16" => 16,
+											"32" => 32,
+											//"64" => 64,
+											_ => throw new Exception($"invalid indirection size {match.indirection_size}"),
+										};
 									}
 
 									uint first = (uint)NamedRegister.StackSegment - 1;
-									switch (((string)match.segment).ToLowerInvariant())
+									segmentid = ((string)match.segment).ToLowerInvariant() switch
 									{
-									case "": segmentid = 0; break;
-									case "ss": segmentid = (uint)NamedRegister.StackSegment - first; break;
-									case "cs": segmentid = (uint)NamedRegister.CodeSegment - first; break;
-									case "ds": segmentid = (uint)NamedRegister.DataSegment - first; break;
-									case "es": segmentid = (uint)NamedRegister.ExtraSegment - first; break;
-									case "fs": segmentid = (uint)NamedRegister.FSegment - first; break;
-									case "gs": segmentid = (uint)NamedRegister.GSegment - first; break;
-									case "xs": segmentid = (uint)NamedRegister.XtraSegment - first; break;
-									default: throw new Exception($"unknown segment: {match.segment}");
-									}
+										"" => 0,
+										"ss" => (uint)NamedRegister.StackSegment - first,
+										"cs" => (uint)NamedRegister.CodeSegment - first,
+										"ds" => (uint)NamedRegister.DataSegment - first,
+										"es" => (uint)NamedRegister.ExtraSegment - first,
+										"fs" => (uint)NamedRegister.FSegment - first,
+										"gs" => (uint)NamedRegister.GSegment - first,
+										"xs" => (uint)NamedRegister.XtraSegment - first,
+										_ => throw new Exception($"unknown segment: {match.segment}"),
+									};
 								}
 
-								void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string const_placeholder)
+								static void read_operand(string input, out uint regid, out uint regsz, out uint @const, out uint constsz, out string? const_placeholder)
 								{
 									regid = 0;
 									regsz = 0;
@@ -520,7 +519,7 @@ namespace Swis
 									if (input.StartsWith("0x"))
 									{
 										throw new NotImplementedException();
-										return;
+										//return;
 									}
 									else if (char.IsDigit(input[0]) && input.EndsWith("f"))
 									{
@@ -621,7 +620,7 @@ namespace Swis
 							);
 							bin.Add(master);
 
-							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string const_placeholder)
+							void seralize_operand_rcs(uint regid, uint regsz, uint @const, uint constsz, string? const_placeholder)
 							{
 								if (regsz == 0)
 								{
@@ -662,16 +661,14 @@ namespace Swis
 										@const = @const >> 8;
 									}
 
-									uint enc_xtr;
-
-									switch (extra)
+									uint enc_xtr = extra switch
 									{
-									case 0: enc_xtr = 0; break;
-									case 1: enc_xtr = 1; break;
-									case 2: enc_xtr = 2; break;
-									case 4: enc_xtr = 3; break;
-									default: throw new Exception(extra.ToString());
-									}
+										0 => 0,
+										1 => 1,
+										2 => 2,
+										4 => 3,
+										_ => throw new Exception(extra.ToString()),
+									};
 
 									byte constbyte = (byte)(0
 										| ((1 & 0b1) << 7) // is_constant
@@ -706,24 +703,24 @@ namespace Swis
 
 							switch (addressing_mode)
 							{
-							case 0:
-								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
-								break;
-							case 1:
-								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
-								seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
-								break;
-							case 2:
-								seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
-								seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
-								break;
-							case 3:
-								seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
-								seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
-								seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
-								seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
-								break;
-							default: throw new Exception($"bad addressing mode {addressing_mode}");
+								case 0:
+									seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+									break;
+								case 1:
+									seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+									seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
+									break;
+								case 2:
+									seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
+									seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
+									break;
+								case 3:
+									seralize_operand_rcs(regid_a, regsz_a, const_a, constsz_a, const_placeholder_a);
+									seralize_operand_rcs(regid_b, regsz_b, const_b, constsz_b, const_placeholder_b);
+									seralize_operand_rcs(regid_c, regsz_c, const_c, constsz_c, const_placeholder_c);
+									seralize_operand_rcs(regid_d, regsz_d, const_d, constsz_d, const_placeholder_d);
+									break;
+								default: throw new Exception($"bad addressing mode {addressing_mode}");
 							}
 
 							#region OLD

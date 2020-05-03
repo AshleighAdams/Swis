@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Swis
 {
@@ -6,9 +7,11 @@ namespace Swis
 	public struct Operand
 	{
 		//public Emulator Owner;
-		public MemoryController Memory;
-		public uint[] Registers;
-		
+		[NotNull]
+		public IMemoryController Memory;
+		[NotNull]
+		public uint[]? Registers;
+
 		public sbyte RegIdA, RegIdB, RegIdC, RegIdD;
 		public byte SizeA, SizeB, SizeC, SizeD;
 		public uint ConstA, ConstB, ConstC, ConstD;
@@ -19,14 +22,14 @@ namespace Swis
 
 		public bool WriteAffectsFlow
 		{
-			get => this.AddressingMode == 0 && this.RegIdA == (int)NamedRegister.InstructionPointer;
+			get => AddressingMode == 0 && RegIdA == (int)NamedRegister.InstructionPointer;
 		}
 
 		public bool Indirect
 		{
 			get
 			{
-				return this.IndirectionSize != 0;
+				return IndirectionSize != 0;
 			}
 		}
 
@@ -34,24 +37,25 @@ namespace Swis
 		{
 			get
 			{
-				if (this.Indirect)
-					return this.IndirectionSize;
-				switch (this.AddressingMode)
+				if (Indirect)
+					return IndirectionSize;
+				return AddressingMode switch
 				{
-				case 0: return this.SizeA;
-				case 1: return (uint)Cpu.NativeSizeBits;
-				case 2: return (uint)Cpu.NativeSizeBits;
-				case 3: return (uint)Cpu.NativeSizeBits;
-				default: throw new NotImplementedException();
-				}
+					0 => SizeA,
+					1 => (uint)ICpu.NativeSizeBits,
+					2 => (uint)ICpu.NativeSizeBits,
+					3 => (uint)ICpu.NativeSizeBits,
+					_ => throw new NotImplementedException(),
+				};
 			}
 		}
 
-		UInt32 InsideValue
+		// TODO: somehow only provide this for a normal Cpu, mmmaybe move to inside InterpretedCpu
+		private UInt32 InsideValue
 		{
 			get
 			{
-				uint[] regs = this.Registers;
+				uint[] regs = Registers ?? throw new Exception("Reigsters is null");
 
 				uint part_value(sbyte regid, byte size, uint @const, bool signed = false)
 				{
@@ -70,44 +74,40 @@ namespace Swis
 					}
 				}
 
-				switch (this.AddressingMode)
+				return AddressingMode switch
 				{
-				case 0: // a
-						return
-						part_value(this.RegIdA, this.SizeA, this.ConstA);
-				case 1: // a + b
-					return
-						part_value(this.RegIdA, this.SizeA, this.ConstA)
+					// a
+					0 => part_value(RegIdA, SizeA, ConstA),
+					// a + b
+					1 => 
+						part_value(RegIdA, SizeA, ConstA)
 						+
-						part_value(this.RegIdB, this.SizeB, this.ConstB);
-				case 2: // c * d
-					return
-						(uint)(
-							(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
+						part_value(RegIdB, SizeB, ConstB),
+					// c * d
+					2 => (uint)(
+							(int)part_value(RegIdC, SizeC, ConstC, true)
 							*
-							(int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
-						);
-				case 3: // a + b + (c * d)
-					return
-						part_value(this.RegIdA, this.SizeA, this.ConstA)
+							(int)part_value(RegIdD, SizeD, ConstD, true)
+						),
+					// a + b + (c * d)
+					3 =>
+						part_value(RegIdA, SizeA, ConstA)
 						+
-						part_value(this.RegIdB, this.SizeB, this.ConstB)
+						part_value(RegIdB, SizeB, ConstB)
 						+
 						(uint)(
-							(int)part_value(this.RegIdC, this.SizeC, this.ConstC, true)
+							(int)part_value(RegIdC, SizeC, ConstC, true)
 							*
-							(int)part_value(this.RegIdD, this.SizeD, this.ConstD, true)
-						);
-				default: throw new NotImplementedException();
-				}
+							(int)part_value(RegIdD, SizeD, ConstD, true)
+						),
+					_ => throw new NotImplementedException(),
+				};
 			}
 		}
 
 		public override string ToString()
 		{
-			string @base;
-
-			string do_part(sbyte regid, byte size, uint @const)
+			static string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
 				{
@@ -115,33 +115,25 @@ namespace Swis
 
 					if (regid >= (int)NamedRegister.A)
 					{
-						switch (size)
+						return size switch
 						{
-						case 8:
-							return $"{r}l";
-						case 16:
-							return $"{r}x";
-						case 32:
-							return $"e{r}x";
-						case 64:
-							return $"r{r}x";
-						default: return $"{r}sz{size}";
-						}
+							8  => $"{r}l",
+							16 => $"{r}x",
+							32 => $"e{r}x",
+							64 => $"r{r}x",
+							_  => $"{r}sz{size}",
+						};
 					}
 					else
 					{
-						switch (size)
+						return size switch
 						{
-						case 8:
-							return $"{r}l";
-						case 16:
-							return $"{r}";
-						case 32:
-							return $"e{r}";
-						case 64:
-							return $"r{r}";
-						default: return $"{r}sz{size}";
-						}
+							8  => $"{r}l",
+							16 => $"{r}",
+							32 => $"e{r}",
+							64 => $"r{r}",
+							_  => $"{r}sz{size}",
+						};
 					}
 				}
 				else
@@ -150,32 +142,20 @@ namespace Swis
 				}
 			}
 
-			switch (this.AddressingMode)
+			string @base = AddressingMode switch
 			{
-			case 0:
-				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)}";
-				break;
-			case 1:
-				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}";
-				break;
-			case 2:
-				@base = $"{do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD)}";
-				break;
-			case 3:
-				@base = $"{do_part(this.RegIdA, this.SizeA, this.ConstA)} + {do_part(this.RegIdB, this.SizeB, this.ConstB)}" +
-					$" + {do_part(this.RegIdC, this.SizeC, this.ConstC)} * {do_part(this.RegIdD, this.SizeD, this.ConstD)}";
-				break;
-			default:
-				@base = "???";
-				break;
-			}
-
-			if (this.Indirect)
+				0 => $"{do_part(RegIdA, SizeA, ConstA)}",
+				1 => $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}",
+				2 => $"{do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}",
+				3 => $"{do_part(RegIdA, SizeA, ConstA)} + {do_part(RegIdB, SizeB, ConstB)}" + $" + {do_part(RegIdC, SizeC, ConstC)} * {do_part(RegIdD, SizeD, ConstD)}",
+				_ => "???",
+			};
+			if (Indirect)
 			{
-				if (this.IndirectionSize == Cpu.NativeSizeBits)
+				if (IndirectionSize == ICpu.NativeSizeBits)
 					@base = $"[{@base}]";
 				else
-					@base = $"ptr{this.IndirectionSize} [{@base}]";
+					@base = $"ptr{IndirectionSize} [{@base}]";
 			}
 
 			return @base;
@@ -186,37 +166,39 @@ namespace Swis
 			get
 			{
 				// get the inside value
-				UInt32 inside = this.InsideValue;
+				UInt32 inside = InsideValue;
 
 				// indirection
 				{
-					if (!this.Indirect)
+					if (!Indirect)
 						return inside;
 
-					return this.Memory[inside, this.IndirectionSize];
+					return Memory[inside, IndirectionSize];
 				}
 			}
 			set
 			{
 				// either indirection or address_mode == 0
 				// cap it to the register memory size:
-				value = (uint)((ulong)value & ((1ul << (int)this.SizeA) - 1));
+				value = (uint)((ulong)value & ((1ul << (int)SizeA) - 1));
 
-				if (!this.Indirect)
+				if (!Indirect)
 				{
 					// change the register
-					if (this.AddressingMode != 0)
+					if (AddressingMode != 0)
 					{
 						// nonsensical, halt
 						throw new Exception("TODO: can't write to a computed value, doesn't make sense");
 					}
 
-					this.Registers[this.RegIdA] = value;
+					if (Registers is null) // TODO: move outside of this struct, to InterpretedCpu
+						throw new Exception("Registers null");
+					Registers[RegIdA] = value;
 				}
 				else
 				{
-					uint memloc = this.InsideValue;
-					this.Memory[memloc, this.IndirectionSize] = value;
+					uint memloc = InsideValue;
+					Memory[memloc, IndirectionSize] = value;
 				}
 			}
 		}
@@ -227,36 +209,33 @@ namespace Swis
 			{
 				Caster c = new Caster
 				{
-					U32 = this.Value
+					U32 = Value
 				};
 
-				switch (this.ValueSize)
+				return ValueSize switch
 				{
-				default: throw new Exception("invalid size");
-				case 32:
-					return c.I32;
-				case 16:
-					return c.I16A;
-				case 8:
-					return c.I8A;
-				}
+					32 => c.I32,
+					16 => c.I16A,
+					8  => c.I8A,
+					_  => throw new Exception("invalid size"),
+				};
 			}
 			set
 			{
 				Caster c = new Caster();
 
-				switch (this.ValueSize)
+				switch (ValueSize)
 				{
-				default: throw new Exception("invalid size");
-				case 32:
-					c.I32 = value; break;
-				case 16:
-					c.I16A = (Int16)value; break;
-				case 8:
-					c.I8A = (SByte)value; break;
+					default: throw new Exception("invalid size");
+					case 32:
+						c.I32 = value; break;
+					case 16:
+						c.I16A = (Int16)value; break;
+					case 8:
+						c.I8A = (SByte)value; break;
 				}
 
-				this.Value = c.U32;
+				Value = c.U32;
 			}
 		}
 
@@ -266,7 +245,7 @@ namespace Swis
 			{
 				Caster c = new Caster
 				{
-					U32 = this.Value
+					U32 = Value
 				};
 				return c.F32;
 			}
@@ -276,7 +255,7 @@ namespace Swis
 				{
 					F32 = value
 				};
-				this.Value = c.U32;
+				Value = c.U32;
 			}
 		}
 
@@ -284,14 +263,14 @@ namespace Swis
 
 	public static class CpuExtensions
 	{
-		public static Opcode DecodeOpcode(this MemoryController memory, ref uint ip)
+		public static Opcode DecodeOpcode(this IMemoryController memory, ref uint ip)
 		{
 			var ret = (Opcode)memory[ip];
 			ip++;
 			return ret;
 		}
 
-		public static Operand DecodeOperand(this MemoryController memory, ref uint ip, uint[] registers)
+		public static Operand DecodeOperand(this IMemoryController memory, ref uint ip, uint[]? registers)
 		{
 			byte master = memory[ip + 0];
 			ip += 1;
@@ -300,15 +279,15 @@ namespace Swis
 			byte addressing_mode = (byte)((master & 0b0001_1000u) >> 3);
 			byte segment = (byte)((master & 0b0000_0111u) >> 0);
 
-			switch (indirection_size)
+			indirection_size = indirection_size switch
 			{
-			case 0: break;
-			case 1: indirection_size = 8; break;
-			case 2: indirection_size = 16; break;
-			case 3: indirection_size = 32; break;
-			//case 4: indirection_size = 64; break;
-			default: throw new Exception();
-			}
+				0 => 0,
+				1 => 8,
+				2 => 16,
+				3 => 32,
+				//4 => 64,
+				_ => throw new Exception(),
+			};
 
 			sbyte rida, ridb, ridc, ridd;
 			byte sza, szb, szc, szd;
@@ -324,11 +303,11 @@ namespace Swis
 					uint extra_bytes = ((control & 0b0110_0000u) >> 5);
 					switch (extra_bytes)
 					{
-					case 0: goto default;
-					case 1: goto default;
-					case 2: goto default;
-					case 3: extra_bytes = 4; break;
-					default: break;
+						case 0: goto default;
+						case 1: goto default;
+						case 2: goto default;
+						case 3: extra_bytes = 4; break;
+						default: break;
 					}
 
 					uint total;
@@ -358,48 +337,48 @@ namespace Swis
 					@const = 0;
 					regid = (sbyte)((control & 0b0111_1100u) >> 2);
 					uint szid = ((control & 0b0000_0011u) >> 0);
-					switch (szid)
+					size = szid switch
 					{
-					case 0: size = 8; break;
-					case 1: size = 16; break;
-					case 2: size = 32; break;
-					//case 3: size = 64; break;
-					default: throw new Exception();
-					}
+						0 => 8,
+						1 => 16,
+						2 => 32,
+						//3 => 64,
+						_ => throw new Exception(),
+					};
 					return;
 				}
 			}
 
 			switch (addressing_mode)
 			{
-			case 0: // a
-				decode_part(out rida, out sza, out cona, ref ip);
-				ridb = ridc = ridd = -1;
-				szb = szc = szd = 0;
-				conb = conc = cond = 0;
-				break;
-			case 1: // a + b
-				decode_part(out rida, out sza, out cona, ref ip);
-				decode_part(out ridb, out szb, out conb, ref ip);
-				ridc = ridd = -1;
-				szc = szd = 0;
-				conc = cond = 0;
-				break;
-			case 2: // c * d
-				decode_part(out ridc, out szc, out conc, ref ip);
-				decode_part(out ridd, out szd, out cond, ref ip);
-				rida = ridb = -1;
-				sza = szb = 0;
-				cona = conb = 0;
-				break;
-			case 3: // a + b + c * d
-				decode_part(out rida, out sza, out cona, ref ip);
-				decode_part(out ridb, out szb, out conb, ref ip);
-				decode_part(out ridc, out szc, out conc, ref ip);
-				decode_part(out ridd, out szd, out cond, ref ip);
-				break;
-			default:
-				throw new Exception();
+				case 0: // a
+					decode_part(out rida, out sza, out cona, ref ip);
+					ridb = ridc = ridd = -1;
+					szb = szc = szd = 0;
+					conb = conc = cond = 0;
+					break;
+				case 1: // a + b
+					decode_part(out rida, out sza, out cona, ref ip);
+					decode_part(out ridb, out szb, out conb, ref ip);
+					ridc = ridd = -1;
+					szc = szd = 0;
+					conc = cond = 0;
+					break;
+				case 2: // c * d
+					decode_part(out ridc, out szc, out conc, ref ip);
+					decode_part(out ridd, out szd, out cond, ref ip);
+					rida = ridb = -1;
+					sza = szb = 0;
+					cona = conb = 0;
+					break;
+				case 3: // a + b + c * d
+					decode_part(out rida, out sza, out cona, ref ip);
+					decode_part(out ridb, out szb, out conb, ref ip);
+					decode_part(out ridc, out szc, out conc, ref ip);
+					decode_part(out ridd, out szd, out cond, ref ip);
+					break;
+				default:
+					throw new Exception();
 			}
 
 			return new Operand

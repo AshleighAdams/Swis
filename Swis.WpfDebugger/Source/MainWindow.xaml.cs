@@ -1,37 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.ObjectModel;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 
 
 namespace Swis.WpfDebugger
 {
-	
+
 	/// <summary>
 	/// Interaction logic for MainWindow.xaml
 	/// </summary>
 	public partial class MainWindow : Window
 	{
-		
+
 		public MainWindow()
 		{
-			InitializeComponent();
+			this.InitializeComponent();
 
 			{
-				this.ListRegisters.Clear();
+				ListRegisters.Clear();
 				for (int i = 0; i < 32; i++)
 				{
 					string name = ((NamedRegister)i).Disassemble();
@@ -44,7 +35,7 @@ namespace Swis.WpfDebugger
 					else
 						t = ListRegister.RegisterType.General;
 
-					this.ListRegisters.Add(new ListRegister()
+					ListRegisters.Add(new ListRegister()
 					{
 						Register = name,
 						Value = "0x0",
@@ -52,27 +43,27 @@ namespace Swis.WpfDebugger
 						Foreground = Brushes.Black,
 					});
 				}
-				this.RegistersListView.ItemsSource = this.ListRegisters;
+				RegistersListView.ItemsSource = ListRegisters;
 
-				CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(this.RegistersListView.ItemsSource);
+				CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(RegistersListView.ItemsSource);
 				PropertyGroupDescription groupdesc = new PropertyGroupDescription("Type");
 				view.GroupDescriptions.Add(groupdesc);
 			}
 
 			{
-				this.LocalsListView.ItemsSource = this.ListLocals;
+				LocalsListView.ItemsSource = ListLocals;
 
-				CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(this.LocalsListView.ItemsSource);
+				CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(LocalsListView.ItemsSource);
 				PropertyGroupDescription groupdesc = new PropertyGroupDescription("CallLevel");
 				view.GroupDescriptions.Add(groupdesc);
 			}
 
 			{
-				this.CallStackListView.ItemsSource = this.ListCallStacks;
+				CallStackListView.ItemsSource = ListCallStacks;
 			}
 
 			{
-				this.DisassemblyEditor = this.CreateEditor("Disassembly", "; disassembled instructions will be populated here as they're executed", "asm");
+				DisassemblyEditor = this.CreateEditor("Disassembly", "; disassembled instructions will be populated here as they're executed", "asm");
 			}
 
 			this.UpdateState();
@@ -97,7 +88,7 @@ namespace Swis.WpfDebugger
 			{
 				General, System, Unused,
 			}
-			
+
 			public string Register { get; set; }
 			public string Value { get; set; }
 			public RegisterType Type { get; set; }
@@ -125,7 +116,7 @@ namespace Swis.WpfDebugger
 			};
 
 			if (ofd.ShowDialog() == true)
-				this.DebugInfo = DebugData.Deserialize(System.IO.File.ReadAllText(ofd.FileName));
+				DebugInfo = DebugData.Deserialize(System.IO.File.ReadAllText(ofd.FileName));
 
 			//this.CreateEditor("Assembly", "", "asm");
 			//this.CreateEditor("Some/file.cpp", "", "cpp");
@@ -134,82 +125,82 @@ namespace Swis.WpfDebugger
 		public static RoutedCommand ContinueCommand = new RoutedCommand();
 		private void ContinueButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.ContinueButton.IsEnabled)
+			if (ContinueButton.IsEnabled)
 			{
-				this.Running = true;
-				this.Autostepping = this.Autostep.IsChecked;
+				Running = true;
+				Autostepping = Autostep.IsChecked;
 
 				this.UpdateState();
 
-				if(this.Autostepping)
-					this.ConnectionWriter?.Invoke("step-into");
+				if (Autostepping)
+					ConnectionWriter?.Invoke("step-into");
 				else
-					this.ConnectionWriter?.Invoke("continue");
+					ConnectionWriter?.Invoke("continue");
 			}
 		}
 
 		public static RoutedCommand PauseCommand = new RoutedCommand();
 		private void PauseButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.PauseButton.IsEnabled)
+			if (PauseButton.IsEnabled)
 			{
-				if (this.Autostepping)
-					this.Autostepping = false;
+				if (Autostepping)
+					Autostepping = false;
 				else
-					this.ConnectionWriter?.Invoke("pause");
+					ConnectionWriter?.Invoke("pause");
 			}
 		}
 
 		public static RoutedCommand StopCommand = new RoutedCommand();
 		private void StopButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.StopButton.IsEnabled)
+			if (StopButton.IsEnabled)
 			{
-				this.Running = false;
+				Running = false;
 				this.UpdateState();
-				this.ConnectionWriter?.Invoke("halt");
+				ConnectionWriter?.Invoke("halt");
 			}
 		}
 
 		public static RoutedCommand ResetCommand = new RoutedCommand();
 		private void ResetButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.ResetButton.IsEnabled)
+			if (ResetButton.IsEnabled)
 			{
-				this.Running = true;
+				Running = true;
 				this.UpdateState();
-				this.ConnectionWriter?.Invoke("reset");
+				ConnectionWriter?.Invoke("reset");
 			}
 		}
 
 		public static RoutedCommand StepInCommand = new RoutedCommand();
 		private void StepInButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.StepInButton.IsEnabled)
+			if (StepInButton.IsEnabled)
 			{
-				this.ConnectionWriter?.Invoke("step-into");
+				ConnectionWriter?.Invoke("step-into");
 			}
 		}
 
 		public static RoutedCommand StepOverCommand = new RoutedCommand();
 		private void StepOverButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.StepOverButton.IsEnabled)
+			if (StepOverButton.IsEnabled)
 			{
-				this.Running = true;
+				Running = true;
 				this.UpdateState();
-				this.ConnectionWriter?.Invoke("step-over");
+				ConnectionWriter?.Invoke("step-over");
 			}
 		}
 
 		public static RoutedCommand StepOutCommand = new RoutedCommand();
 		private void StepOutButton_Click(object sender, RoutedEventArgs e)
 		{
-			if (this.StepOutButton.IsEnabled)
+			if (StepOutButton.IsEnabled)
 			{
-				this.Running = true;
+				Running = true;
 				this.UpdateState();
-				this.ConnectionWriter?.Invoke("step-out");
+				ConnectionWriter?.Invoke("step-out");
 			}
 		}
 

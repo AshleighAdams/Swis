@@ -8,8 +8,6 @@ namespace Swis
 		// TODO: when c# supports it, make self a ref
 		public static string Disassemble(this Operand self, DebugData dbg)
 		{
-			string @base;
-			
 			string do_part(sbyte regid, byte size, uint @const)
 			{
 				if (regid > 0)
@@ -18,33 +16,25 @@ namespace Swis
 
 					if (regid >= (int)NamedRegister.A)
 					{
-						switch (size)
+						return size switch
 						{
-						case 8:
-							return $"{r.Disassemble()}l";
-						case 16:
-							return $"{r.Disassemble()}x";
-						case 32:
-							return $"e{r.Disassemble()}x";
-						case 64:
-							return $"r{r.Disassemble()}x";
-						default: return $"{r.Disassemble()}sz{size}";
-						}
+							8  => $"{r.Disassemble()}l",
+							16 => $"{r.Disassemble()}x",
+							32 => $"e{r.Disassemble()}x",
+							64 => $"r{r.Disassemble()}x",
+							_  => $"{r.Disassemble()}sz{size}",
+						};
 					}
 					else
 					{
-						switch (size)
+						return size switch
 						{
-						case 8:
-							return $"{r.Disassemble()}l";
-						case 16:
-							return $"{r.Disassemble()}";
-						case 32:
-							return $"e{r.Disassemble()}";
-						case 64:
-							return $"r{r.Disassemble()}";
-						default: return $"{r.Disassemble()}sz{size}";
-						}
+							8  => $"{r.Disassemble()}l",
+							16 => $"{r.Disassemble()}",
+							32 => $"e{r.Disassemble()}",
+							64 => $"r{r.Disassemble()}",
+							_  => $"{r.Disassemble()}sz{size}",
+						};
 					}
 				}
 				else
@@ -57,29 +47,18 @@ namespace Swis
 				}
 			}
 
-			switch (self.AddressingMode)
+			string @base = self.AddressingMode switch
 			{
-			case 0:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)}";
-				break;
-			case 1:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}";
-				break;
-			case 2:
-				@base = $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
-				break;
-			case 3:
-				@base = $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" +
-					$" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}";
-				break;
-			default:
-				@base = "???";
-				break;
-			}
+				0 => $"{do_part(self.RegIdA, self.SizeA, self.ConstA)}",
+				1 => $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}",
+				2 => $"{do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}",
+				3 => $"{do_part(self.RegIdA, self.SizeA, self.ConstA)} + {do_part(self.RegIdB, self.SizeB, self.ConstB)}" + $" + {do_part(self.RegIdC, self.SizeC, self.ConstC)} * {do_part(self.RegIdD, self.SizeD, self.ConstD)}",
+				_ => "???",
+			};
 
 			if (self.Indirect)
 			{
-				if (self.IndirectionSize == Cpu.NativeSizeBits)
+				if (self.IndirectionSize == ICpu.NativeSizeBits)
 					@base = $"[{@base}]";
 				else
 					@base = $"ptr{self.IndirectionSize} [{@base}]";
@@ -266,11 +245,11 @@ namespace Swis
 			{ Opcode.PowFloatRRR, 3 },
 		};
 
-		public static (Opcode, Operand[]) DisassembleInstruction(this MemoryController mem, ref uint ip, uint[] registers = null)
+		public static (Opcode, Operand[]) DisassembleInstruction(this IMemoryController mem, ref uint ip, uint[]? registers = null)
 		{
 			Opcode op = mem.DecodeOpcode(ref ip);
 			if (!OpcodeLengths.TryGetValue(op, out int args))
-				return (op, null);
+				return (op, Array.Empty<Operand>());
 
 			Operand[] operands = new Operand[args];
 			for (int i = 0; i < operands.Length; i++)

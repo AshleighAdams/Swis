@@ -1,4 +1,3 @@
-using System;
 using Swis;
 using Xunit;
 
@@ -46,7 +45,7 @@ namespace UnitTests
 
 			Caster c; c.U32 = 0;
 			c.I32 = value;
-			
+
 			Assert.Equal(c.U32, result);
 		}
 

@@ -7,17 +7,20 @@ namespace Swis
 {
 	public static partial class LlvmIrCompiler
 	{
-		static void BuildMethodLocals(MethodBuilder output,
+		private static void BuildMethodLocals(MethodBuilder output,
 			string return_type, string argslist, bool optimize_args = true)
 		{
-			int bp_offset = -(int)Cpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
+			if (output.Code is null)
+				throw new ArgumentException("Code is null", nameof(output));
+
+			int bp_offset = -(int)ICpu.NativeSizeBytes * 2; // -4 is base ptr, and -8 is ret addr
 
 			List<string> src_locals = new List<string>();
 
 			{ // args
 				dynamic[] args = argslist
 					.PatternMatches("<type:type>( <keyword:mods>)* <namedlocal:name>", IrPatterns);
-				output.Arguments = new(string, string)[args.Length];
+				output.Arguments = new (string, string)[args.Length];
 
 				for (int i = args.Length; i-- > 0;)
 				{
@@ -89,7 +92,7 @@ namespace Swis
 
 					// increase the bp offset by the size
 					bp_offset += (int)output.Unit.SizeOfAsIntBytes(alloca.Groups["type"].Value);
-					
+
 					return "";
 				});
 			}
@@ -97,7 +100,7 @@ namespace Swis
 			// set the func sig for debugging
 			{
 				StringBuilder sb = new StringBuilder();
-				sb.Append($"{output.Return.type} {output.Id.Trim('%', '@')}(");
+				sb.Append($"{output.Return.type} {output.Id!.Trim('%', '@')}(");
 				string pre = "";
 				foreach (var arg in output.Arguments)
 				{
@@ -115,9 +118,11 @@ namespace Swis
 			if (bp_offset > 0)
 				output.Emit($"add {output.Unit.StackPointer}, {output.Unit.StackPointer}, {bp_offset} ; alloca");
 		}
-		
-		static void ExpandConstants(MethodBuilder output)
+
+		private static void ExpandConstants(MethodBuilder output)
 		{
+			if (output.Code is null)
+				throw new ArgumentException("Code is null", nameof(output));
 			// https://llvm.org/docs/LangRef.html#constant-expressions
 
 			//convert things like:
@@ -132,7 +137,7 @@ namespace Swis
 
 			while (true)
 			{
-				Match m = output.Code.Match(rx);
+				Match m = output.Code.Match(rx) ?? throw new Exception("Code is null");
 				if (!m.Success)
 					break;
 
@@ -148,16 +153,16 @@ namespace Swis
 				output.Code = output.Code.Insert(m.Index, new_arg);
 
 				int i;
-				for (i = m.Index; i --> 0;)
+				for (i = m.Index; i-- > 0;)
 					if (output.Code[i] == '\n')
 						break;
 
 				output.Code = output.Code.Insert(i + 1, $"  {reg} = {op} {args}\n");
 			}
-			
+
 		}
 
-		static void SimplifyCompareBranches(MethodBuilder output)
+		private static void SimplifyCompareBranches(MethodBuilder output)
 		{
 			//%cmp = icmp eq i32 %1, 0
 			//br i1 %cmp, label %2, label %8
@@ -166,6 +171,9 @@ namespace Swis
 
 			//cmpbr i eq i32 %1, 0, label %2, label %8
 
+			if (output.Code is null)
+				throw new ArgumentException("Code is null", nameof(output));
+
 			string rx = LlvmUtil.PatternCompile(
 				@"<operand:dst> = (?<cmptype>i|u|f)?cmp <keyword:method> <type:type> <operand:left>, <operand:right>" +
 				@"\s*\n\s*" +
@@ -173,12 +181,12 @@ namespace Swis
 			);
 
 			output.Code = Regex.Replace(output.Code, rx,
-				delegate (Match m) 
+				delegate (Match m)
 				{
 					if (m.Groups["cond"].Value != m.Groups["dst"].Value) // only do it if it's the same jump
 						return m.Value;
 
-					bool used_before_or_after(string varname, string code, int from, int to)
+					static bool used_before_or_after(string varname, string code, int from, int to)
 					{
 						int pos = code.IndexOf(varname);
 						while (pos > 0)
@@ -195,7 +203,7 @@ namespace Swis
 					}
 
 					// if it's used anywhere else, don't
-					if(used_before_or_after(m.Groups["dst"].Value, output.Code, m.Index, m.Index + m.Length))
+					if (used_before_or_after(m.Groups["dst"].Value, output.Code, m.Index, m.Index + m.Length))
 						return m.Value;
 
 					string cmptype = m.Groups["cmptype"].Value;
@@ -209,10 +217,13 @@ namespace Swis
 				});
 		}
 
-		static void ReplacePhis(MethodBuilder output)
+		private static void ReplacePhis(MethodBuilder output)
 		{
 			//string prid_regex = $@"\[ (?<src>{local_regex}), %[0-9]+ \]";
 			//string phi_regex = $@"(?<dst>{local_regex}) = phi {type_regex} (?<sources>{prid_regex}(, {prid_regex})+)";
+
+			if (output.Code is null)
+				throw new ArgumentException("Code is null", nameof(output));
 
 			string phi_regexs = LlvmUtil.PatternCompile(@"<local:dst> = phi <type:type> (?<sources>\[ <local>, %<numeric> \](, \[ <local>, %<numeric> \])*)", IrPatterns);
 			MatchCollection phis = Regex.Matches(output.Code, phi_regexs);

@@ -16,9 +16,9 @@ namespace Swis
 			public bool Static { get; set; }  // can it be reduced at compile time?
 			public IrInstructionAttribute(string instruction, string pattern, bool is_static = false)
 			{
-				this.Instruction = instruction;
-				this.Pattern = pattern;
-				this.Static = is_static;
+				Instruction = instruction;
+				Pattern = pattern;
+				Static = is_static;
 			}
 		}
 
@@ -26,35 +26,38 @@ namespace Swis
 		{
 			public int OptimizationLevel = 0;
 			public bool IntelSyntax = true;
-			string[] _Registers = new string[] { "a", "b", "c", "d", "e", "f" };
-
 			public string StackPointer { get { return "esp"; } }
 			public string BasePointer { get { return "ebp"; } }
 			public string InstructionPointer { get { return "eip"; } }
-			public string[] Registers { get { return this._Registers; } }
+			public string[] Registers { get; } = new string[] { "a", "b", "c", "d", "e", "f" };
 
 			public class StructInfo
 			{
-				public uint Size;
-				public (string type, uint offset)[] Fields;
+				public uint Size { get; }
+				public IReadOnlyList<(string type, uint offset)> Fields { get; }
+				public StructInfo(uint size, IReadOnlyList<(string type, uint offset)> fields)
+				{
+					Size = size;
+					Fields = fields;
+				}
 			}
 
 			public Dictionary<string, string> NamedTypes = new Dictionary<string, string>();
-			Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
+			private Dictionary<string, StructInfo> StructInfoCache = new Dictionary<string, StructInfo>();
 
 			public StructInfo GetStructInfo(string type)
 			{
-				if (this.StructInfoCache.TryGetValue(type, out var ret))
+				if (StructInfoCache.TryGetValue(type, out var ret))
 					return ret;
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (!type.StartsWith("{"))
 					throw new ArgumentException();
 
-				string stype = type.Substring(1, type.Length - 2); // trim the {}
+				string stype = type[1..^1]; // trim the {}
 
 				uint cur_size = 0;
 				dynamic[] fields = stype.PatternMatches("<type:type>", IrPatterns);
@@ -71,40 +74,36 @@ namespace Swis
 					cur_size += sz;// / 8;
 				}
 
-				return this.StructInfoCache[type] = new StructInfo
-				{
-					Size = cur_size,
-					Fields = compfields.ToArray(),
-				};
+				return StructInfoCache[type] = new StructInfo(cur_size, compfields);
 			}
-			
+
 
 			// gets the offset of a type, and returns the type it has gotten
 			public (string type, int offset) StaticTypeIndex(string type, int index)
 			{
 				if (type.EndsWith("*"))
 				{
-					string deref = TypeDeref(type);
-					int offset = (int)(SizeOfAsIntBytes(deref)) * index;
+					string deref = this.TypeDeref(type);
+					int offset = (int)(this.SizeOfAsIntBytes(deref)) * index;
 					return (deref, offset);
 				}
 
 				if (type.StartsWith("%"))
-					type = this.NamedTypes[type];
+					type = NamedTypes[type];
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (type.StartsWith("{"))
 				{
-					StructInfo si = GetStructInfo(type);
+					StructInfo si = this.GetStructInfo(type);
 					(string a, uint b) = si.Fields[index];
 					return (a, (int)b);
 				}
 				else if (type.StartsWith("[")) // an array
 				{
-					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns) ?? "could not decode array pattern";
 					string subtype = arry.subtype;
 					uint stride = SizeOfAsIntBytes(arry.subtype);
 
@@ -118,8 +117,8 @@ namespace Swis
 			{
 				if (type.EndsWith("*"))
 				{
-					string deref = TypeDeref(type);
-					uint size = SizeOfAsIntBytes(deref);
+					string deref = this.TypeDeref(type);
+					uint size = this.SizeOfAsIntBytes(deref);
 					if (size == 1)
 						return (deref, $"{output.ToOperand(operand_type, operand)}");
 					else
@@ -127,11 +126,11 @@ namespace Swis
 				}
 
 				if (type.StartsWith("%"))
-					type = this.NamedTypes[type];
+					type = NamedTypes[type];
 
 				bool aligned = type.StartsWith("<");
 				if (aligned)
-					type = type.Substring(1, type.Length - 2); // chop the <> off
+					type = type[1..^1]; // chop the <> off
 
 				if (type.StartsWith("{"))
 				{
@@ -139,7 +138,7 @@ namespace Swis
 				}
 				else if (type.StartsWith("[")) // an array
 				{
-					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"\[<numeric:count> x <type:subtype>\]", IrPatterns) ?? throw new Exception();
 					string subtype = arry.subtype;
 					uint stride = SizeOfAsIntBytes(arry.subtype);
 
@@ -164,24 +163,24 @@ namespace Swis
 			{
 				if (type == "void")
 					return "0";
-				if (type[type.Length - 1] == '*')
+				if (type[^1] == '*')
 					return "ptr";
 
 				if (type[0] == '%')
-					type = this.NamedTypes[type];
+					type = NamedTypes[type];
 
 				if (type[0] == '@')
 					type = "u32";
 
 				if (type[0] == '{')
 				{
-					StructInfo info = GetStructInfo(type);
+					StructInfo info = this.GetStructInfo(type);
 					return $"{info.Size * 8}";
 				}
 
 				if (type[0] == '[')
 				{
-					dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns);
+					dynamic arry = type.PatternMatch(@"(?<sizes>(\[<numeric> x )*)<type:type>\]", IrPatterns) ?? throw new Exception();
 					dynamic[] sizes = ((string)arry.sizes).PatternMatches("<numeric:sz>", IrPatterns);
 
 					uint bits = SizeOfAsInt(arry.type);
@@ -206,22 +205,22 @@ namespace Swis
 			/// ptr info is lost during this
 			public uint SizeOfAsInt(string type)
 			{
-				string sz = SizeOf(type);
+				string sz = this.SizeOf(type);
 				if (sz == "ptr")
-					return Cpu.NativeSizeBits;
+					return ICpu.NativeSizeBits;
 				return uint.Parse(sz);
 			}
 
 			public uint SizeOfAsIntBytes(string type)
 			{
-				uint bits = SizeOfAsInt(type);
+				uint bits = this.SizeOfAsInt(type);
 				return (bits + 7) / 8;
 			}
 
 			public string TypeDeref(string type)
 			{
-				if (type[type.Length - 1] == '*')
-					return type.Substring(0, type.Length - 1);
+				if (type[^1] == '*')
+					return type[0..^1];
 				throw new Exception("deref non ptr");
 			}
 		}
@@ -231,35 +230,34 @@ namespace Swis
 			public TranslationUnit Unit;
 
 			public StringBuilder Assembly;
-			public string Id;
-			public (string type, int bits) Return;
-			public (string arg, string type)[] Arguments;
+			public string? Id;
+			public (string? type, int bits) Return;
+			public (string arg, string type)[]? Arguments;
 
-			public string Code;
-
-			uint ssa = 0;
+			public string? Code;
+			private uint ssa = 0;
 			public string CreateSSARegister(string hint = "tmp")
 			{
-				return $"%{hint}.{this.ssa++}";
+				return $"%{hint}.{ssa++}";
 			}
 
 			public Dictionary<string, string> ConstantLocals;
 			public MethodBuilder(TranslationUnit unit)
 			{
-				this.Unit = unit;
-				this.Assembly = new StringBuilder();
-				this.Return = (null, -1);
-				this.Arguments = null;
-				this.Code = null;
-				this.Id = null;
-				this.ConstantLocals = new Dictionary<string, string>();
+				Unit = unit;
+				Assembly = new StringBuilder();
+				Return = (null, -1);
+				Arguments = null;
+				Code = null;
+				Id = null;
+				ConstantLocals = new Dictionary<string, string>();
 			}
 
 			public string EmitPrefix = "";
 			public void Emit(string asm)
 			{
-				this.Assembly.Append(this.EmitPrefix);
-				this.Assembly.AppendLine(asm);
+				Assembly.Append(EmitPrefix);
+				Assembly.AppendLine(asm);
 			}
 
 
@@ -270,9 +268,9 @@ namespace Swis
 			// i16, %5, false = %5:16
 			public string ToOperand(string type, string operand, bool indirection = false)
 			{
-				string part = "";
+				string part;
 
-				string size = this.Unit.SizeOf(type);
+				string size = Unit.SizeOf(type);
 
 				if (operand[0] == '@')
 					part = $"${operand}";
@@ -283,14 +281,14 @@ namespace Swis
 					else
 						part = $"{operand}";
 				}
-				else if (this.ConstantLocals.TryGetValue(operand, out var cl))
+				else if (ConstantLocals.TryGetValue(operand, out var cl))
 					part = cl;
 				else // use a register
 					part = $"{operand}:{size}";
 
 				if (indirection)
 				{
-					uint bytes = this.Unit.SizeOfAsIntBytes(this.Unit.TypeDeref(type));
+					uint bytes = Unit.SizeOfAsIntBytes(Unit.TypeDeref(type));
 					part = $"ptr{bytes * 8} [{part}]";
 				}
 
@@ -298,22 +296,20 @@ namespace Swis
 			}
 		}
 
-		static bool _IsSetup = false;
-		static Dictionary<string, List<(Regex regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(Regex regex, MethodInfo func)>>();
-		static Dictionary<string, string> IrPatterns = new Dictionary<string, string>();
+		private static bool _IsSetup = false;
+		private static Dictionary<string, List<(Regex regex, MethodInfo func)>> IrInstructions = new Dictionary<string, List<(Regex regex, MethodInfo func)>>();
+		private static Dictionary<string, string> IrPatterns = new Dictionary<string, string>();
 
-		
-
-		static void Setup()
+		private static void Setup()
 		{
 			if (_IsSetup)
 				return;
 			_IsSetup = true;
-			
-			
 
-			IrPatterns["keyword"]    = LlvmUtil.PatternCompile(@"[a-z]+", IrPatterns);
-			IrPatterns["array"]      = LlvmUtil.PatternCompile(@"\[[0-9]+ x", IrPatterns);
+
+
+			IrPatterns["keyword"] = LlvmUtil.PatternCompile(@"[a-z]+", IrPatterns);
+			IrPatterns["array"] = LlvmUtil.PatternCompile(@"\[[0-9]+ x", IrPatterns);
 			/*
 			// recursive version, unwrapped manually 16 times, as .net does not support it
 			string rec_type = Regex.Replace(@"(
@@ -349,12 +345,12 @@ namespace Swis
 			*/
 			IrPatterns["type"] = LlvmUtil.PatternCompile(@"([uif]<numeric:size>|void|half|float|double|fp128|x86_fp80|ppc_fp128|.+( )*<parentheses>|<braces>|<brackets>|<angled>|\%[a-zA-Z0-9_.]+)\**", IrPatterns);
 
-			IrPatterns["const"]      = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?|true|false", IrPatterns);
-			IrPatterns["ident"]      = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["const"] = LlvmUtil.PatternCompile(@"-?[0-9\.]+f?|true|false", IrPatterns);
+			IrPatterns["ident"] = LlvmUtil.PatternCompile(@"[%@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
 			IrPatterns["namedlocal"] = LlvmUtil.PatternCompile(@"[%][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
-			IrPatterns["global"]     = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
-			IrPatterns["register"]   = LlvmUtil.PatternCompile(@"[%][0-9]+", IrPatterns);
-			IrPatterns["local"]      = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
+			IrPatterns["global"] = LlvmUtil.PatternCompile("[@][-a-zA-Z$._][-a-zA-Z$._0-9]*", IrPatterns);
+			IrPatterns["register"] = LlvmUtil.PatternCompile(@"[%][0-9]+", IrPatterns);
+			IrPatterns["local"] = LlvmUtil.PatternCompile(@"<namedlocal>|<register>", IrPatterns);
 			IrPatterns["operand"] = LlvmUtil.PatternCompile(@"<const>|<local>|<global>", IrPatterns);
 
 			IrPatterns["retattributes"] = IrPatterns["paramattributes"] = LlvmUtil.PatternCompile(
@@ -363,14 +359,14 @@ namespace Swis
 				@"dereferenceable\((0|1)\)|" +
 				@"dereferenceable_or_null\((0|1)\)|" +
 				"swiftself|swifterror", IrPatterns);
-			
+
 			IrPatterns["linkage"] = LlvmUtil.PatternCompile("private|internal|available_externally|linkonce|weak|common|appending|extern_weak|linkonce_odr|weak_odr|external", IrPatterns);
 			IrPatterns["preemptionspecifier"] = LlvmUtil.PatternCompile("dso_preemptable|dso_local", IrPatterns);
 			IrPatterns["visibility"] = LlvmUtil.PatternCompile("default|hidden|protected", IrPatterns);
 			IrPatterns["dllstorageclass"] = LlvmUtil.PatternCompile("dllimport|dllexport", IrPatterns);
 			IrPatterns["threadlocal"] = LlvmUtil.PatternCompile(@"thread_local\((localdynamic|initialexec|localexec)\)", IrPatterns);
 			IrPatterns["callingconvention"] = LlvmUtil.PatternCompile(@"ccc|fastcc|coldcc|webkit_jscc|anyregcc|preserve_mostcc|preserve_allcc|cxx_fast_tlscc|swiftcc|cc <numeric>", IrPatterns);
-			
+
 			IrPatterns["functionattributes"] = LlvmUtil.PatternCompile(
 				@"alignstack\(<numeric:align>\)|" +
 				@"allocsize\([^\)]+\)|" +
@@ -396,6 +392,6 @@ namespace Swis
 			}
 
 		}
-		
+
 	}
 }

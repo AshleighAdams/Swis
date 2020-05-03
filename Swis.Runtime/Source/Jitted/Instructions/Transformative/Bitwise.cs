@@ -1,17 +1,16 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 
 #pragma warning disable IDE0051 // Remove unused private members
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu : CpuBase
 	{
 		[CpuInstruction(Opcode.ShiftLeftRRR)]
 		private Expression ShiftLeftRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<int>(ref right);
@@ -24,9 +23,9 @@ namespace Swis
 		[CpuInstruction(Opcode.ShiftRightRRR)]
 		private Expression ShiftRightRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<int>(ref right);
@@ -39,9 +38,9 @@ namespace Swis
 		[CpuInstruction(Opcode.ArithmaticShiftRightRRR)]
 		private Expression ArithmaticShiftRightRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<int>(ref left);
 			Expression rightexp = this.ReadOperandExpression<int>(ref right);
@@ -53,9 +52,9 @@ namespace Swis
 		[CpuInstruction(Opcode.OrRRR)]
 		private Expression OrRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -67,9 +66,9 @@ namespace Swis
 		[CpuInstruction(Opcode.ExclusiveOrRRR)]
 		private Expression ExclusiveOrRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -81,9 +80,9 @@ namespace Swis
 		[CpuInstruction(Opcode.NotOrRRR)]
 		private Expression NotOrRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -95,9 +94,9 @@ namespace Swis
 		[CpuInstruction(Opcode.AndRRR)]
 		private Expression AndRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -109,9 +108,9 @@ namespace Swis
 		[CpuInstruction(Opcode.NotAndRRR)]
 		private Expression NotAndRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
-			Operand right = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
+			Operand right = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 			Expression rightexp = this.ReadOperandExpression<uint>(ref right);
@@ -123,8 +122,8 @@ namespace Swis
 		[CpuInstruction(Opcode.NotRR)]
 		private Expression NotRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand left = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand left = Memory.DecodeOperand(ref ip, null);
 
 			Expression leftexp = this.ReadOperandExpression<uint>(ref left);
 

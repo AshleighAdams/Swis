@@ -5,18 +5,18 @@ using System.Linq.Expressions;
 #pragma warning disable IDE0060 // Remove unused parameter
 namespace Swis
 {
-	public sealed partial class JittedCpu : Cpu
+	public sealed partial class JittedCpu
 	{
 		[CpuInstruction(Opcode.Nop)]
 		private Expression Nop(ref uint ip, ref bool sequential)
 		{
-			return null;
+			return Expression.Block();
 		}
 
 		[CpuInstruction(Opcode.InterruptR)]
 		private Expression InterruptR(ref uint ip, ref bool sequential)
 		{
-			Operand @int = this.Memory.DecodeOperand(ref ip, null);
+			Operand @int = Memory.DecodeOperand(ref ip, null);
 			Expression intexp = this.ReadOperandExpression<uint>(ref @int);
 
 			return this.RaiseInterruptExpression(intexp, ref sequential);
@@ -31,7 +31,7 @@ namespace Swis
 			Expression epm = this.ReadWriteRegisterExpression(NamedRegister.ProtectedMode);
 			Expression epi = this.ReadWriteRegisterExpression(NamedRegister.ProtectedInterrupt);
 
-			Expression esp_ptr = this.PointerExpression(esp, Cpu.NativeSizeBits);
+			Expression esp_ptr = this.PointerExpression(esp, ICpu.NativeSizeBits);
 
 			sequential = false;
 			return Expression.Block(
@@ -42,13 +42,13 @@ namespace Swis
 				// mov sp, bp
 				Expression.Assign(esp, ebp),
 				// pop pm
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(epm, esp_ptr),
 				// pop bp
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(ebp, esp_ptr),
 				// pop ip
-				Expression.SubtractAssign(esp, Expression.Constant(Cpu.NativeSizeBytes)),
+				Expression.SubtractAssign(esp, Expression.Constant(ICpu.NativeSizeBytes)),
 				Expression.Assign(eip, esp_ptr)
 			);
 		}
@@ -57,7 +57,6 @@ namespace Swis
 		private Expression SetInterrupt(ref uint ip, ref bool sequential)
 		{
 			Expression epi = this.ReadWriteRegisterExpression(NamedRegister.ProtectedInterrupt);
-			ref uint pi = ref this.Registers[(int)NamedRegister.ProtectedInterrupt];
 			return Expression.Block(
 				// clear mode
 				Expression.AndAssign(epi, Expression.Constant(~0b0000_0000__0000_0000__0000_0011__0000_0000u)),
@@ -81,9 +80,9 @@ namespace Swis
 		[CpuInstruction(Opcode.SignExtendRRR)]
 		private Expression SignExtendRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand src = this.Memory.DecodeOperand(ref ip, null);
-			Operand bit = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand src = Memory.DecodeOperand(ref ip, null);
+			Operand bit = Memory.DecodeOperand(ref ip, null);
 
 			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 			Expression bitexp = this.ReadOperandExpression<uint>(ref bit);
@@ -94,9 +93,9 @@ namespace Swis
 		[CpuInstruction(Opcode.ZeroExtendRRR)]
 		private Expression ZeroExtendRRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand src = this.Memory.DecodeOperand(ref ip, null);
-			Operand bit = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand src = Memory.DecodeOperand(ref ip, null);
+			Operand bit = Memory.DecodeOperand(ref ip, null);
 
 			Expression srcexp = this.ReadOperandExpression<uint>(ref src);
 			Expression bitexp = this.ReadOperandExpression<uint>(ref bit);
@@ -131,12 +130,12 @@ namespace Swis
 		[CpuInstruction(Opcode.InRR)]
 		private Expression InRR(ref uint ip, ref bool sequential)
 		{
-			Operand dst = this.Memory.DecodeOperand(ref ip, null);
-			Operand line = this.Memory.DecodeOperand(ref ip, null);
+			Operand dst = Memory.DecodeOperand(ref ip, null);
+			Operand line = Memory.DecodeOperand(ref ip, null);
 
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 
-			Expression<Func<uint, uint>> readline = lineval => this.LineRead((UInt16)lineval);
+			Expression<Func<uint, uint>> readline = lineval => LineIO.ReadLineValue((UInt16)lineval);
 
 			return this.WriteOperandExpression<uint>(ref dst, ref sequential,
 				Expression.Invoke(readline, lineexp));
@@ -145,13 +144,13 @@ namespace Swis
 		[CpuInstruction(Opcode.OutRR)]
 		private Expression OutRR(ref uint ip, ref bool sequential)
 		{
-			Operand line = this.Memory.DecodeOperand(ref ip, null);
-			Operand lttr = this.Memory.DecodeOperand(ref ip, null);
+			Operand line = Memory.DecodeOperand(ref ip, null);
+			Operand lttr = Memory.DecodeOperand(ref ip, null);
 
 			Expression lineexp = this.ReadOperandExpression<uint>(ref line);
 			Expression lttrexp = this.ReadOperandExpression<uint>(ref lttr);
 
-			Expression<Action<uint, uint>> writeline = (lineval, charval) => this.LineWrite((UInt16)lineval, (byte)charval);
+			Expression<Action<uint, uint>> writeline = (lineval, charval) => LineIO.WriteLineValue((UInt16)lineval, (byte)charval);
 
 			return Expression.Invoke(writeline, lineexp, lttrexp);
 		}
@@ -159,7 +158,7 @@ namespace Swis
 		[CpuInstruction(Opcode.ExtendR)]
 		private Expression ExtendR(ref uint ip, ref bool sequential)
 		{
-			Operand instr = this.Memory.DecodeOperand(ref ip, null);
+			Operand instr = Memory.DecodeOperand(ref ip, null);
 
 			Expression instrexp = this.ReadOperandExpression<uint>(ref instr);
 

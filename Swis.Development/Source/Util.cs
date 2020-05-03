@@ -11,31 +11,31 @@ namespace System.Runtime.CompilerServices
 
 namespace Swis
 {
-    public static class LlvmUtil
-    {
-		static Dictionary<string, Regex> _RegexCache = new Dictionary<string, Regex>();
-		static Dictionary<string, string> GlobalNamedPatterns = new Dictionary<string, string>();
+	public static class LlvmUtil
+	{
+		private static Dictionary<string, Regex> _RegexCache = new Dictionary<string, Regex>();
+		private static Dictionary<string, string> GlobalNamedPatterns = new Dictionary<string, string>();
+		private static bool GlobalPatternsSetup = false;
 
-		static bool GlobalPatternsSetup = false;
-		static void SetupGlobalPatterns()
+		private static void SetupGlobalPatterns()
 		{
 			if (GlobalPatternsSetup) return;
 			GlobalPatternsSetup = true;
 
 			GlobalNamedPatterns["parentheses"] = PatternCompile(@"\(\)|\((?<inside>(?:[^\(\)]|(?<__unique__>\()|(?<-__unique__>\)))+(?(__unique__)(?!)))\)", GlobalNamedPatterns);
-			GlobalNamedPatterns["braces"]      = PatternCompile(@"\{\}|\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}", GlobalNamedPatterns);
-			GlobalNamedPatterns["brackets"]    = PatternCompile(@"\[\]|\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]", GlobalNamedPatterns);
-			GlobalNamedPatterns["angled"]      = PatternCompile(@"\<\>|\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>", GlobalNamedPatterns);
-			GlobalNamedPatterns["string"]      = PatternCompile(@"""(?<inside>.+)(?<!\\)""", GlobalNamedPatterns);
+			GlobalNamedPatterns["braces"] = PatternCompile(@"\{\}|\{(?<inside>(?:[^\{\}]|(?<__unique__>\{)|(?<-__unique__>\}))+(?(__unique__)(?!)))\}", GlobalNamedPatterns);
+			GlobalNamedPatterns["brackets"] = PatternCompile(@"\[\]|\[(?<inside>(?:[^\[\]]|(?<__unique__>\[)|(?<-__unique__>\]))+(?(__unique__)(?!)))\]", GlobalNamedPatterns);
+			GlobalNamedPatterns["angled"] = PatternCompile(@"\<\>|\<(?<inside>(?:[^\<\>]|(?<__unique__>\<)|(?<-__unique__>\>))+(?(__unique__)(?!)))\>", GlobalNamedPatterns);
+			GlobalNamedPatterns["string"] = PatternCompile(@"""(?<inside>.+)(?<!\\)""", GlobalNamedPatterns);
 
-			GlobalNamedPatterns["alpha"]       = PatternCompile(@"[a-zA-Z]+", GlobalNamedPatterns);
-			GlobalNamedPatterns["numeric"]     = PatternCompile(@"[0-9]+", GlobalNamedPatterns);
-			GlobalNamedPatterns["alphanumeric"]= PatternCompile(@"[a-zA-Z0-9]+", GlobalNamedPatterns);
+			GlobalNamedPatterns["alpha"] = PatternCompile(@"[a-zA-Z]+", GlobalNamedPatterns);
+			GlobalNamedPatterns["numeric"] = PatternCompile(@"[0-9]+", GlobalNamedPatterns);
+			GlobalNamedPatterns["alphanumeric"] = PatternCompile(@"[a-zA-Z0-9]+", GlobalNamedPatterns);
 
 		}
 
-		static int uniqueid = 0;
-		public static string PatternCompile(string pattern, Dictionary<string, string> named = null) // <> = sub-regex
+		private static int uniqueid = 0;
+		public static string PatternCompile(string pattern, Dictionary<string, string>? named = null) // <> = sub-regex
 		{
 			SetupGlobalPatterns();
 			if (named == null)
@@ -82,7 +82,7 @@ namespace Swis
 		}
 
 
-		public static dynamic PatternMatch(this string self, string pattern, Dictionary<string, string> named)
+		public static dynamic? PatternMatch(this string self, string pattern, Dictionary<string, string> named)
 		{
 			if (!_RegexCache.TryGetValue(pattern, out Regex r))
 				_RegexCache[pattern] = r = new Regex(PatternCompile(pattern, named));
@@ -90,7 +90,7 @@ namespace Swis
 			return self.PatternMatch(r, named);
 		}
 
-		public static dynamic PatternMatch(this string self, Regex regex, Dictionary<string, string> named)
+		public static dynamic? PatternMatch(this string self, Regex regex, Dictionary<string, string> named)
 		{
 			Match m = regex.Match(self);
 

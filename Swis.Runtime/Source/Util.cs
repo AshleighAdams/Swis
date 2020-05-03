@@ -24,11 +24,11 @@ namespace Swis
 			int sign = 1;
 			if (x < 0)
 			{
-				if((pow & 1) != 0 || pow == 0)
+				if ((pow & 1) != 0 || pow == 0)
 					sign = -1;
 				x = -x;
 			}
-			
+
 			int ret = 1;
 			while (pow != 0)
 			{
@@ -54,9 +54,9 @@ namespace Swis
 
 		public static uint SignExtend(uint src, uint frombits)
 		{
-			if (frombits <= 0 || frombits > Cpu.NativeSizeBits)
+			if (frombits <= 0 || frombits > ICpu.NativeSizeBits)
 				throw new ArgumentOutOfRangeException(nameof(frombits));
-			if (frombits == Cpu.NativeSizeBits)
+			if (frombits == ICpu.NativeSizeBits)
 				return src;
 
 			uint valbits = (1u << (int)frombits) - 1; // ext 4bits to 8bits = 00001111
@@ -72,11 +72,14 @@ namespace Swis
 		[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 		public static string GetDebugView(this System.Linq.Expressions.Expression exp)
 		{
-			if (exp == null)
-				return null;
-
-			var propertyInfo = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-			return propertyInfo.GetValue(exp) as string;
+			var property_info = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			return property_info.GetValue(exp) as string ?? throw new Exception("DebugView() returned null!");
 		}
+	}
+	
+	public class NullLineIO : ILineIO
+	{
+		byte ILineIO.ReadLineValue(ushort line) => 0;
+		void ILineIO.WriteLineValue(ushort line, byte value) { }
 	}
 }

@@ -7,190 +7,190 @@ using System.Text;
 
 namespace Swis
 {
-	public class RemoteDebugger : ExternalDebugger
+	public class RemoteDebugger : IExternalDebugger
 	{
 		protected NetworkStream Stream;
-		protected DebugData Dbg;
+		protected DebugData? Dbg;
 		protected bool Flush;
+		private bool Paused = false;
+		private bool First = true;
+		private ConcurrentDictionary<uint, bool> Breakpoints = new ConcurrentDictionary<uint, bool>();
+		private uint? IpEquals = null;
+		private uint? BasePtrSmaller = null;
+		private uint? BasePtrEquals = null;
+		private uint? StackBottom = null;
+		private bool Step = false;
+		private WeakReference<ICpu> Cpu = new WeakReference<ICpu>(null!); // for halt and reset
 
-		bool Paused = false;
-		bool First = true;
-		ConcurrentDictionary<uint, bool> Breakpoints = new ConcurrentDictionary<uint, bool>();
-		uint? IpEquals = null;
-		uint? BasePtrSmaller = null;
-		uint? BasePtrEquals = null;
-		uint? StackBottom = null;
-		bool Step = false;
+		private StreamReader _Reader;
+		private ConcurrentQueue<string> ReadQueue = new ConcurrentQueue<string>();
+		private ConcurrentQueue<byte[]> WriteQueue = new ConcurrentQueue<byte[]>();
 
-		WeakReference<Cpu> Cpu = null; // for halt and reset
-
-		StreamReader _Reader;
-		ConcurrentQueue<string> ReadQueue = new ConcurrentQueue<string>();
-		ConcurrentQueue<byte[]> WriteQueue = new ConcurrentQueue<byte[]>();
-		void WriteLine(string line)
+		private void WriteLine(string line)
 		{
 			line += "\r\n";
 			byte[] data = Encoding.ASCII.GetBytes(line);
-			
-			this.WriteQueue.Enqueue(data);
+
+			WriteQueue.Enqueue(data);
 		}
-		void _IOThread()
+
+		private void IOThread() // TODO: make this async
 		{
-			while (this.Stream.CanRead || this.Stream.CanWrite)
+			while (Stream.CanRead || Stream.CanWrite)
 			{
 				bool idle = true;
 
-				if (this.Stream.DataAvailable && this.ReadQueue.Count < 16)
+				if (Cpu is null)
+					break;
+
+				if (Stream.DataAvailable && ReadQueue.Count < 16)
 				{
 					idle = false;
-					string line = this._Reader.ReadLine();
+					string line = _Reader.ReadLine();
 
 					if (line.StartsWith("break "))
 					{
-						this.Breakpoints.Clear();
+						Breakpoints.Clear();
 						string[] split = line.Split(' ');
 						for (int i = 1; i < split.Length; i++)
 							if (uint.TryParse(split[i], out uint bp))
-								this.Breakpoints[bp] = true;
+								Breakpoints[bp] = true;
 					}
 					else if (line == "pause")
 					{
-						if (!this.Paused)
-							this.Step = true;
+						if (!Paused)
+							Step = true;
 					}
 					else if (line == "halt")
 					{
-						if (this.Cpu.TryGetTarget(out var cpu))
+						if (Cpu.TryGetTarget(out var cpu))
 							cpu.ProtectedMode |= (uint)ProtectedModeRegisterFlags.Halted;
-						this.Paused = false;
-						this.First = true;
+						Paused = false;
+						First = true;
 					}
 					else if (line == "reset")
 					{
-						if (this.Cpu.TryGetTarget(out var cpu))
+						if (Cpu.TryGetTarget(out var cpu))
 							cpu.Reset();
-						this.Paused = false;
-						this.First = true;
+						Paused = false;
+						First = true;
 					}
-					else if (this.Paused) // ignore step-over, step into, and continue unless we're paused
-						this.ReadQueue.Enqueue(line);
+					else if (Paused) // ignore step-over, step into, and continue unless we're paused
+						ReadQueue.Enqueue(line);
 				}
 
-				if (this.WriteQueue.TryDequeue(out byte[] tosend))
+				if (WriteQueue.TryDequeue(out byte[] tosend))
 				{
 					idle = false;
-					this.Stream.WriteTimeout = 10;
-					this.Stream.Write(tosend, 0, tosend.Length);
+					Stream.WriteTimeout = 10;
+					Stream.Write(tosend, 0, tosend.Length);
 
-					if (this.Flush)
-						this.Stream.Flush();
+					if (Flush)
+						Stream.Flush();
 				}
-				
-				if(idle)
+
+				if (idle)
 					System.Threading.Thread.Sleep(33);
 			}
 		}
 
-		public RemoteDebugger(NetworkStream str, DebugData dbg = null, bool flush = true)
+		public RemoteDebugger(NetworkStream str, DebugData? dbg = null, bool flush = true)
 		{
-			this.Stream = str;
-			this.Dbg = dbg;
-			this.Flush = flush;
+			Stream = str;
+			Dbg = dbg;
+			Flush = flush;
 
-			this._Reader = new StreamReader(str);
-			new System.Threading.Thread(this._IOThread).Start();
+			_Reader = new StreamReader(str);
+			new System.Threading.Thread(this.IOThread).Start();
 		}
 
-		uint[] _LastValues;
-		byte[] _LastStack;
-
-		const uint max_inst_len = 64; // so we can inspect the current instruction without needing to depend on Swis.Development
-		public override bool Clock(Cpu cpu)
+		private uint[]? _LastValues;
+		private byte[]? _LastStack;
+		private const uint max_inst_len = 64; // so we can inspect the current instruction without needing to depend on Swis.Development
+		public override bool Clock(CpuBase cpu)
 		{
-			if (this.Cpu == null)
-				this.Cpu = new WeakReference<Cpu>(cpu);
-			if (this.StackBottom == null && cpu.StackPointer != 0)
-				this.StackBottom = cpu.StackPointer;
+			if (Cpu == null)
+				Cpu = new WeakReference<ICpu>(cpu);
+			if (StackBottom == null && cpu.StackPointer != 0)
+				StackBottom = cpu.StackPointer;
 
 			// if we're paused, wait for instruction
 			bool step = false;
-			if (this.Paused)
+			if (Paused)
 			{
-				if (!this.ReadQueue.TryDequeue(out string line))
+				if (!ReadQueue.TryDequeue(out string line))
 					return false;
 
 				if (line == "continue")
-					this.Paused = false;
+					Paused = false;
 				else if (line == "step-into")
 				{
-					this.Paused = false;
-					this.Step = true;
+					Paused = false;
+					Step = true;
 					return true;
 				}
 				else if (line == "step-over")
 				{
 					// this is basically run until bp <= currentbp
 
-					this.BasePtrSmaller = cpu.BasePointer;
-					this.BasePtrEquals = cpu.BasePointer;
-					this.Paused = false;
+					BasePtrSmaller = cpu.BasePointer;
+					BasePtrEquals = cpu.BasePointer;
+					Paused = false;
 					return true; // execute self
 				}
 				else if (line == "step-out")
 				{
-					this.BasePtrSmaller = cpu.BasePointer;
-					this.Paused = false;
+					BasePtrSmaller = cpu.BasePointer;
+					Paused = false;
 				}
 				else
 					return false;
 			}
 
 			// if we're not paused, check for breakpoints
-			if (!this.Paused)
+			if (!Paused)
 			{
 				uint eip = cpu.InstructionPointer;
 
-				if (this.First)
+				if (First)
 				{
-					this.First = false;
-					this.Paused = true;
+					First = false;
+					Paused = true;
 				}
-				else if (this.Step)
+				else if (Step)
 				{
-					this.Step = false;
-					this.Paused = true;
+					Step = false;
+					Paused = true;
 				}
 				else if (
-					(this.Breakpoints.ContainsKey(eip)) ||
-					(this.IpEquals != null && this.IpEquals.Value == eip) ||
-					(this.BasePtrEquals != null && cpu.BasePointer == this.BasePtrEquals.Value) ||
-					(this.BasePtrSmaller != null && cpu.BasePointer < this.BasePtrSmaller.Value))
+					(Breakpoints.ContainsKey(eip)) ||
+					(IpEquals != null && IpEquals.Value == eip) ||
+					(BasePtrEquals != null && cpu.BasePointer == BasePtrEquals.Value) ||
+					(BasePtrSmaller != null && cpu.BasePointer < BasePtrSmaller.Value))
 				{
-					this.IpEquals = this.BasePtrEquals = this.BasePtrSmaller = null;
-					this.Paused = true;
+					IpEquals = BasePtrEquals = BasePtrSmaller = null;
+					Paused = true;
 				}
 			}
 
 			// if we stepped-into or hit a breakpoint, send debug info, then hold
-			if (this.Paused)
+			if (Paused)
 			{
-				MemoryController memory = cpu.Memory;
-
+				IMemoryController memory = cpu.Memory;
 
 				StringBuilder sb = new StringBuilder();
-				uint ip;
 
 				var registers = cpu.Registers;
 				// write the registers
 				{
-					if (this._LastValues == null)
-						this._LastValues = new uint[registers.Length];
+					if (_LastValues == null)
+						_LastValues = new uint[registers.Count];
 
 					string pre = "";
-					for (int i = 0; i < registers.Length; i++)
-						if (this._LastValues[i] != registers[i])
+					for (int i = 0; i < registers.Count; i++)
+						if (_LastValues[i] != registers[i])
 						{
-							this._LastValues[i] = registers[i];
+							_LastValues[i] = registers[i];
 							sb.Append($"{pre}{i}: 0x{registers[i].ToString("X").ToLower()}");
 							pre = " ";
 						}
@@ -200,26 +200,26 @@ namespace Swis
 				}
 				// write the stack
 				{
-					if (this.StackBottom == null)
+					if (StackBottom == null)
 						this.WriteLine(""); // stack not yet set up
 					else
 					{
-						if (this._LastStack == null)
-							this._LastStack = new byte[128];
+						if (_LastStack == null)
+							_LastStack = new byte[128];
 
-						uint sbtm = this.StackBottom.Value;
+						uint sbtm = StackBottom.Value;
 						uint sptr = cpu.StackPointer - sbtm;
 
-						if (sptr >= this._LastStack.Length)
+						if (sptr >= _LastStack.Length)
 						{
-							int newsz = this._LastStack.Length * 2;
+							int newsz = _LastStack.Length * 2;
 							while (newsz <= sptr)
 								newsz *= 2;
 							byte[] newls = new byte[newsz];
-							Buffer.BlockCopy(this._LastStack, 0, newls, 0, this._LastStack.Length);
-							for (int i = this._LastStack.Length; i < newls.Length; i++)
+							Buffer.BlockCopy(_LastStack, 0, newls, 0, _LastStack.Length);
+							for (int i = _LastStack.Length; i < newls.Length; i++)
 								newls[i] = 0;
-							this._LastStack = newls;
+							_LastStack = newls;
 						}
 
 						int index = -1;
@@ -228,25 +228,25 @@ namespace Swis
 						for (int i = 0; i < sptr; i++)
 						{
 							byte mem = cpu.Memory[sbtm + (uint)i];
-							if (this._LastStack[i] != mem)
+							if (_LastStack[i] != mem)
 							{
 								if (index == -1)
 									index = i;
 								length = (i - index) + 1;
-								this._LastStack[i] = mem;
+								_LastStack[i] = mem;
 							}
 						}
 
 						if (length != 0)
 						{
-							string base64 = Convert.ToBase64String(this._LastStack, index, length, Base64FormattingOptions.None);
+							string base64 = Convert.ToBase64String(_LastStack, index, length, Base64FormattingOptions.None);
 							this.WriteLine($"{sbtm}+{index}: {base64}");
 						}
 						else
 							this.WriteLine($"=");
 					}
 				}
-				
+
 				// write the instruction
 				{
 					uint len = Math.Min(64, memory.Length - cpu.InstructionPointer);
@@ -258,7 +258,7 @@ namespace Swis
 						arr[i] = span[i];
 
 					string base64 = Convert.ToBase64String(arr, Base64FormattingOptions.None);
-					
+
 					this.WriteLine($"{base64}");
 				}
 				return step;
@@ -269,6 +269,9 @@ namespace Swis
 	}
 
 	[Serializable]
+#pragma warning disable CA2235 // Mark all non-serializable fields
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+	// TODO: this?
 	public class DebugData
 	{
 		public bool AssemblySourceFile;
@@ -307,4 +310,6 @@ namespace Swis
 			return (DebugData)Newtonsoft.Json.JsonConvert.DeserializeObject<DebugData>(str);
 		}
 	}
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+#pragma warning restore CA2235 // Mark all non-serializable fields
 }
