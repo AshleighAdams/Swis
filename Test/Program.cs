@@ -110,7 +110,7 @@ namespace SwisTest
 				mov edx, eex
 				jmp $start");
 
-			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled), new Util.NullLineIO())
+			JittedCpu jit = new JittedCpu(new PointerMemoryController(assembled), new NullLineIO())
 			{
 				Debugger = new TestDebugger(),
 			};

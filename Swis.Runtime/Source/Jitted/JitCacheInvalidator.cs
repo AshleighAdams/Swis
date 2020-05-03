@@ -11,7 +11,7 @@ namespace Swis
 
 			private JittedCpu Cpu;
 
-			public JitCacheInvalidator(JittedCpu cpu, IMemoryController parent)
+			public JitCacheInvalidator(IMemoryController parent, JittedCpu cpu)
 			{
 				Parent = parent;
 				Cpu = cpu;

@@ -75,11 +75,11 @@ namespace Swis
 			var property_info = typeof(System.Linq.Expressions.Expression).GetProperty("DebugView", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 			return property_info.GetValue(exp) as string ?? throw new Exception("DebugView() returned null!");
 		}
-
-		public class NullLineIO : ILineIO
-		{
-			byte ILineIO.ReadLineValue(ushort line) => 0;
-			void ILineIO.WriteLineValue(ushort line, byte value) { }
-		}
+	}
+	
+	public class NullLineIO : ILineIO
+	{
+		byte ILineIO.ReadLineValue(ushort line) => 0;
+		void ILineIO.WriteLineValue(ushort line, byte value) { }
 	}
 }

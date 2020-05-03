@@ -9,12 +9,12 @@ namespace Swis
 {
 	public sealed partial class JittedCpu : CpuBase, ICpu
 	{
-		[NotNull] // TODO: remove this with DI
+		[NotNull]
 		private JitCacheInvalidator _Memory;
 		public override IMemoryController Memory
 		{
-			get { return _Memory.Parent; }
-			set { _Memory = new JitCacheInvalidator(this, value); }
+			get { return _Memory; }
+			set { _Memory = _Memory = new JitCacheInvalidator(value, this); }
 		}
 
 		public uint JitCostFactor = 100; // how much slower the first time code is JITed approx is, to prevent abuse
