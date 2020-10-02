@@ -1,9 +1,22 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Swis
 {
 	public sealed partial class InterpretedCpu
 	{
+		private struct ListWrapper<T> : IReadWriteList<T>
+		{
+			private IList<T> Source { get; }
+			public ListWrapper(IList<T> source)
+			{
+				Source = source;
+			}
+
+			T IReadWriteList<T>.this[int index] { get => Source[index]; set => Source[index] = value; }
+			int IReadWriteList<T>.Count { get => Source.Count; }
+		}
+
 		//ref Register StackRegister = null;
 		public override ref uint TimeStampCounter
 		{
@@ -40,11 +53,8 @@ namespace Swis
 			get { return ref InternalRegisters[(int)NamedRegister.ProtectedInterrupt]; }
 		}
 
-		public override void Interrupt(uint code)
-		{
-			InterruptQueue.Enqueue(code);
-		}
 
-		private ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
+		public uint[] InternalRegisters = new uint[(int)NamedRegister.L + 1];
+		public override IReadWriteList<uint> Registers { get => new ListWrapper<uint>(InternalRegisters); }
 	}
 }

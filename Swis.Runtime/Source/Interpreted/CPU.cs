@@ -37,168 +37,19 @@ namespace Swis
 		[FieldOffset(3)] public Byte ByteD;
 	}
 
-	public abstract class IExternalDebugger
-	{
-		public abstract bool Clock(CpuBase cpu);
-	}
-
-	public interface IReadWriteList<T>
-	{
-		T this[int index] { get; set; }
-		int Count { get; }
-	}
-
-	public interface ILineIO
-	{
-		byte ReadLineValue(UInt16 line);
-		void WriteLineValue(UInt16 line, byte value);
-	}
-	
-	public interface ICpu
-	{
-		public static uint NativeSizeBits = 32;
-		public static uint NativeSizeBytes = NativeSizeBits / 8;
-		
-		IReadWriteList<uint> Registers { get; }
-		IMemoryController Memory { get; set; }
-		ILineIO LineIO { get; set; }
-		int Clock(int cycles = 1);
-		void Interrupt(uint code);
-		void Reset();
-
-		ref uint TimeStampCounter { get; }
-		ref uint InstructionPointer { get; }
-		ref uint StackPointer { get; }
-		ref uint BasePointer { get; }
-		ref uint Flags { get; }
-		ref uint ProtectedMode { get; }
-		ref uint ProtectedInterrupt { get; }
-
-		bool Halted { get; }
-	}
-
-	public abstract class CpuBase : ICpu
-	{
-		public CpuBase(IMemoryController memory, ILineIO line_io)
-		{
-			Memory = memory;
-			LineIO = line_io;
-		}
-		
-
-		public virtual IExternalDebugger? Debugger { get; set; }
-		public virtual IMemoryController Memory { get; set; }
-		public virtual ILineIO LineIO { get; set; }
-		public abstract IReadWriteList<uint> Registers { get; }
-		
-		public abstract int Clock(int clocks = 1);
-		public abstract void Interrupt(uint code);
-		public abstract void Reset();
-
-		public abstract ref uint TimeStampCounter { get; }
-		public abstract ref uint InstructionPointer { get; }
-		public abstract ref uint StackPointer { get; }
-		public abstract ref uint BasePointer { get; }
-		public abstract ref uint Flags { get; }
-		public abstract ref uint ProtectedMode { get; }
-		public abstract ref uint ProtectedInterrupt { get; }
-
-		public virtual bool Halted { get { return (ProtectedMode & (uint)ProtectedModeRegisterFlags.Halted) != 0; } }
-
-		protected virtual bool HandleInterrupts(IProducerConsumerCollection<uint> interrupt_queue)
-		{
-			if (interrupt_queue.Count == 0)
-				return false;
-
-			ref uint sp = ref StackPointer;
-			ref uint bp = ref BasePointer;
-			ref uint ip = ref InstructionPointer;
-			ref uint pm = ref ProtectedMode;
-			ref uint pi = ref ProtectedInterrupt;
-			uint mode = (pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u) >> 8;
-
-			switch (mode)
-			{
-				case 0b00: /*disabled silent*/
-					while (interrupt_queue.TryTake(out _)) { } // clear the remaining
-					return false;
-				case 0b10: return false; /*queued*/
-				case 0b11: pm |= (uint)ProtectedModeRegisterFlags.Halted; return true; /*disabled halt*/
-				case 0b01:
-				default: /*consume one*/
-					if (!interrupt_queue.TryTake(out uint @int))
-						return false;
-
-					uint ivt = (pi & 0b0000_0000__0000_0000__0000_0000__1111_1111u) << 8;
-					uint ivtn = @int > 255 ? 255 : @int;
-					uint addr = Memory[ivt + ivtn * ICpu.NativeSizeBytes, ICpu.NativeSizeBits];
-
-					// simulate call to the interrupt address if it's enabled
-					if (addr != 0)
-					{
-						pi &= ~0b0000_0000__0000_0000__0000_0011__0000_0000u; // clear mode
-						pi |=  0b0000_0000__0000_0000__0000_0010__0000_0000u; // set mode to queue
-
-						// push ip
-						Memory[sp, ICpu.NativeSizeBits] = ip;
-						sp += ICpu.NativeSizeBytes;
-						// push bp
-						Memory[sp, ICpu.NativeSizeBits] = bp;
-						sp += ICpu.NativeSizeBytes;
-						// push flags
-						Memory[sp, ICpu.NativeSizeBits] = Flags;
-						sp += ICpu.NativeSizeBytes;
-						// mov bp, sp
-						bp = sp;
-						// jmp loc
-						ip = addr;
-
-						if (ivtn == 255) // extended interrupt, push the interrupt code
-						{
-							// push @int
-							Memory[sp, ICpu.NativeSizeBits] = @int;
-							sp += ICpu.NativeSizeBytes;
-						}
-						return false;
-					}
-					else
-					{
-						if (@int == (uint)Interrupts.DoubleFault)
-						{
-							pm |= (uint)ProtectedModeRegisterFlags.Halted;
-							return true;
-						}
-						else
-						{
-							this.Interrupt((uint)Interrupts.DoubleFault);
-							return this.HandleInterrupts(interrupt_queue);
-						}
-					}
-			}
-		}
-	}
-
 	public sealed partial class InterpretedCpu : CpuBase, ICpu
 	{
-		private struct ListWrapper<T> : IReadWriteList<T>
-		{
-			private IList<T> Source { get; }
-			public ListWrapper(IList<T> source)
-			{
-				Source = source;
-			}
-
-			T IReadWriteList<T>.this[int index] { get => Source[index]; set => Source[index] = value; }
-			int IReadWriteList<T>.Count { get => Source.Count; }
-		}
-
-		public uint[] InternalRegisters = new uint[(int)NamedRegister.L + 1];
-		public override IReadWriteList<uint> Registers { get => new ListWrapper<uint>(InternalRegisters); }
-		
 		public InterpretedCpu(IMemoryController memory, ILineIO line_io) :
 			base(memory, line_io)
 		{
 		}
+
+		public override void Interrupt(uint code)
+		{
+			InterruptQueue.Enqueue(code);
+		}
+
+		private readonly ConcurrentQueue<uint> InterruptQueue = new ConcurrentQueue<uint>();
 
 		public override int Clock(int count = 1)
 		{
