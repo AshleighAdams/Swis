@@ -19,7 +19,7 @@ namespace Swis
 
 		public uint JitCostFactor = 100; // how much slower the first time code is JITed approx is, to prevent abuse
 		private Dictionary<uint, (Action λ, uint cycles)> JitCache;
-		private uint _JitBlockSize = 16;
+		private uint _JitInstructionBatchSize = 16;
 		private uint JitCacheFirst;
 		private uint JitCacheLast; // track the jitted bounds so as to clear JIT instructions
 
@@ -49,10 +49,10 @@ namespace Swis
 			}
 		}
 
-		public uint JitBlockSize
+		public uint JitInstructionBatchSize
 		{
-			get { return _JitBlockSize; }
-			set { _JitBlockSize = value; this.ClearJitCache(); }
+			get { return _JitInstructionBatchSize; }
+			set { _JitInstructionBatchSize = value; this.ClearJitCache(); }
 		}
 
 		private long CycleBank = 0; // don't execute the next instruction block until we can afford it
@@ -78,7 +78,7 @@ namespace Swis
 					if (simulated_ip < JitCacheFirst)
 						JitCacheFirst = simulated_ip;
 
-					for (uint n = 0; n < JitBlockSize; n++)
+					for (uint n = 0; n < JitInstructionBatchSize; n++)
 					{
 						if (simulated_ip >= Memory.Length)
 							break;

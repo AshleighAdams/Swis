@@ -256,6 +256,10 @@ It needs to be rebuilt from the ground up, but for now, it is sufficient.
 
 Compile your IR by calling `string asm = LlvmIrCompiler.Compile(ircode)`.
 
-## JIT
+## JittedCpu Internals
 
-TOWRITE: this
+The `JittedCpu` leverages a `System.Linq.Expressions`'s expression trees to produce IL code at runtime, compiling an expression tree until either `JitInstructionBatchSize` (default: 16) total instructions have been processed, or a potentially branching instruction is reached. This expression tree is then compiled into IL and inserted as a function into a cache, mapping memory addresses to batches. These batches return the number of instructions executed, and the new instruction pointer.
+
+Because self modifying programs are possible, the JIT cache must be cleared if any writes happen to jitted memory areas. For performance reasons, this is done by keeping track of the upper and lower bounds, and thus it is encouraged to not mix data and code sections to reduce or eliminate cache invalidations. Given that JITing code is a very expensive operation and this CPU is intended for emulating CPUs in video games (such as Wiremod's ZCPU in Garry's Mod), the property `JitCostFactor` is exposed to consume extra cycles when JITing to prevent the rouge programs performing denial of service attacks against the host.
+
+Attaching a debugger automatically invalidates the JIT cache, as debugging related operations can be omitted for performance reasons.
