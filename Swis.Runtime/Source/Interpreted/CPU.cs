@@ -639,7 +639,22 @@ namespace Swis
 						}
 					#endregion
 					default:
-						throw new NotImplementedException(); // todo: make it interrupt
+						{
+							ref uint pi = ref InternalRegisters[(int)NamedRegister.ProtectedInterrupt];
+							uint mode = pi & 0b0000_0000__0000_0000__0000_0011__0000_0000u;
+
+							// if we can't handle the invalid opcode right now, halt the CPU
+							if (mode == 0b0000_0000__0000_0000__0000_0001__0000_0000u)
+							{
+								this.Interrupt((uint)Interrupts.InvalidOpcode);
+							}
+							else
+							{
+								ProtectedMode |= (uint)ProtectedModeRegisterFlags.Halted;
+								count = 0; // so we break from the loop
+							}
+							break;
+						}
 				}
 
 				tsc++;

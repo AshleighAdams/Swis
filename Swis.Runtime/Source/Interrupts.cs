@@ -1,4 +1,6 @@
-﻿namespace Swis
+﻿using System.Runtime.CompilerServices;
+
+namespace Swis
 {
 	public enum Interrupts : uint
 	{
@@ -15,5 +17,13 @@
 		StackException = 10,
 
 		InputBase = 251
+	}
+
+	public static class InterruptsEx
+	{
+		public static uint AsUInt(this Interrupts self)
+		{
+			return (uint)self;
+		}
 	}
 }
