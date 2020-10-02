@@ -99,7 +99,7 @@ Each of the address parts can specify a register or a constant (encoded as a sig
 If a constant can be encoded in 5 bits<sup>2a</sup>, 13 bits<sup>2b</sup>, or
 21 bits<sup>2c</sup> then it will be encoded in 0, 1, or 2 extra bytes respectively.
 Above 21 bits, it will be encoded in 4 extra bytes, with 5 unused bits.
-  
+
 <sub>
 	<sup>1</sup> Segments are not finalized, and are likely to be removed if I find a better use for those bits. <br/>
 	<sup>2a</sup> [-16, 15]&emsp;
@@ -146,7 +146,77 @@ The general purpose registers are `eax` thru `elx`.
 
 ## Interrupts
 
-TOWRITE: this, talk about the IVT, enabling interrupts, and `cli`/`sti`.
+Interrupts to a CPU can be raised by either calling `ICpu.Interrupt(uint code)`, or the `int` instruction being executed by the compiler.
+Upon an interrupt being raised, the interrupt code is added to a queue. The when of the interrupt is handled depends upon whether you're using the `InterpretedCpu` or the `JittedCpu`. The former provides the guarantee that the interrupt is handled before the next instruction is executed, while the latter JITed CPU only provides that guarantee when the `int` instruction is used.
+If `JittedCpu.Interrupt()` is used, the guarantee is relaxed to the start of the next `Clock()`, or the start of the next JIT instruction batch, which are currently 16 instructions in length.
+
+Once the CPU has begun to handle the interrupts, the mode from the interrupt register will be read, and act in 1 of 4 ways. 3 of these are trivial, and are as follows:
+
+1. disabled-silent (`0b00`): Default mode, clear the queue without handling any interrupts.
+1. queued (`0b10`): Yield back to the CPU without clearing the queue or handling any interrupts.
+1. disabled-fault (`0b11`): Halt the CPU, no further instructions shall be executed.
+
+If the mode was none of the above, then it means the CPU is ready to handle an interrupt from the queue, assuming one exists.
+The Interrupt Vector Table's (IVT) memory location will be read from the Protected Interrupt register's (`epi`) lower 8 bits, then shifted left by 8.
+This allows the IVT to be located anywhere below 64K so long as it is 256-byte aligned. The IVT is a fixed array of 256 x 32bit pointers.
+
+Under normal operation, once the IVT location is known, the interrupt address is read from the table, and the interrupt mode set to queued. Registers `eip`, `ebp`, and `flags` are pushed to the stack. Additionally, if the interrupt code is extended (greater than or equal to 255), the exact code is also pushed onto the stack. The instruction pointer `eip` is then set to the IVT's entry for that interrupt&mdash;with interrupts over 255 being clamped to 255. If the address read from the IVT is a null pointer, then a double fault interrupt will be raised instead.
+
+Now that the CPU interrupt has been raised, the CPU will begin executing the registered interrupt routine as a part of its normal instruction path during subsequent clock cycles. The code here must be careful to restore any registers back to their original states upon returning from the interrupt with the `iret` instruction, which will then restore the registers `esp`, `ebp`, `flags`, and finally the original `eip`, at which point the CPU state will be restored to before the interrupt was handled, returning execution as if nothing had changed.
+
+Interrupts can be enabled or disabled using the set interrupt instruction (`sti`) and clear interrupt instruction (`cli`).
+
+A full example of using interrupts can be found in `Test/TestProgram/interrupt-test.asm`. Here are the relevant parts:
+
+```asm
+; setup interrupts
+;; set the vector table location
+shr epi, $interrupt_vector_table, 8 
+and epi, epi, 255
+;; set up interrupt #251 to handle stdin
+mov [$interrupt_vector_table + 251 * 4], $int251_stdin
+;; activate them
+sti
+
+; carve out 1K of memory to store our IVT
+.align 256
+$interrupt_vector_table:
+	.data pad 1024
+
+; interrupt #251: buffer stdin to a ring buffer so data isn't missed
+$stdin_buff:
+	.data pad 16
+$stdin_buffreadpos:
+	.data int32 0
+$stdin_buffwritepos:
+	.data int32 0
+$int251_stdin:
+	; read the input line before the data changes into the stack
+	in ptr8 [ebp + 0], 0
+	; repurpose the eflag register as some temporary storage
+	; as iret will restore this, wrap the value around the ring buffer's size
+	modu eflag, ptr32 [$stdin_buffwritepos], 16
+	; store the data read from the first instruction
+	mov ptr8 [$stdin_buff + eflag], ptr8 [ebp + 0]
+	; incremeant the next address to write to
+	add ptr32 [$stdin_buffwritepos], ptr32 [$stdin_buffwritepos], 1
+	; return control back, will restore eflags for us
+	iret
+```
+
+And the accompanying C# code:
+
+```cs
+byte line0_in = 0;
+cpu.LineRead = (line) => line0_in; // don't block on IO
+
+// ...
+
+line0_in = (byte)'H';
+cpu.Interrupt((uint)Swis.Interrupts.InputBase + 0);
+```
+
+
 
 ## Debugger
 
