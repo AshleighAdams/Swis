@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dirkster.AvalonDock" Version="4.50.0" />
-    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.40.0" />
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.50.0" />
     <PackageReference Include="fernandreu.ScintillaNET.WPF" Version="3.0.2" />
   </ItemGroup>
 
