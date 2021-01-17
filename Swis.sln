@@ -8,19 +8,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
-		azure-pipelines.yml = azure-pipelines.yml
+		Directory.Build.props = Directory.Build.props
+		NuGet.config = NuGet.config
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Runtime", "Swis.Runtime\Swis.Runtime.csproj", "{306C1217-B205-4123-8B57-A413E49B4CA5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Runtime", "src\Swis.Runtime\Swis.Runtime.csproj", "{306C1217-B205-4123-8B57-A413E49B4CA5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{880BD934-DAAE-43E1-AE77-74B914DEBA47}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "tests\Test\Test.csproj", "{880BD934-DAAE-43E1-AE77-74B914DEBA47}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Development", "Swis.Development\Swis.Development.csproj", "{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.Development", "src\Swis.Development\Swis.Development.csproj", "{EC1E830D-1456-4D56-9253-EF4BA27B6DD4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.WpfDebugger", "Swis.WpfDebugger\Swis.WpfDebugger.csproj", "{5582A013-FFB3-4296-A661-98C6CCAF1945}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Swis.WpfDebugger", "src\Swis.WpfDebugger\Swis.WpfDebugger.csproj", "{5582A013-FFB3-4296-A661-98C6CCAF1945}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "UnitTests\UnitTests.csproj", "{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "tests\UnitTests\UnitTests.csproj", "{B870CEC6-A955-4BDB-9BCB-EEE568BDA753}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{822C85C4-D55D-43B2-8D5D-1B05AC9A99A1}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\continuous-delivery.yml = .github\workflows\continuous-delivery.yml
+		.github\workflows\continuous-integration.yml = .github\workflows\continuous-integration.yml
+		.github\workflows\deploy-release.yml = .github\workflows\deploy-release.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +59,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{822C85C4-D55D-43B2-8D5D-1B05AC9A99A1} = {D0F10406-C62D-49CE-A369-4CEDB84DC800}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D84CD382-9544-4A08-9994-A30053AE2052}

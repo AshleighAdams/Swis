@@ -52,7 +52,6 @@ artifacts/
 *_p.c
 *_i.h
 *.ilk
-*.meta
 *.obj
 *.pch
 *.pdb
@@ -286,6 +285,6 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
-Test/TestProgram/program.bin
-Test/TestProgram/program.dbg
-UnitTests/coverage.cobertura.xml
+tests/Test/TestProgram/program.bin
+tests/Test/TestProgram/program.dbg
+tests/UnitTests/coverage.cobertura.xml

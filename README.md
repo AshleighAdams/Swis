@@ -2,9 +2,6 @@
 
 Simple Wire Instruction Set, intended for an emulated CPU in a sandbox-style game.
 Includes a super-bad-but-gets-the-job-done IR to SwisASM compiler, assembler, interpreted CPU, and jitted CPU.
-
-[![](https://codescene.io/projects/6331/status.svg) Get more details at **codescene.io**.](https://codescene.io/projects/6331/jobs/latest-successful/results)
-
 ## Sample Code
 
 ```asm
@@ -224,7 +221,7 @@ The CPU communicates to the debugger by setting the `Cpu`'s `Debugger` property
 to an instance of a `RemoteDebugger`, which will pipe the necessary information to and from the
 debugger that it connects to over a TCP stream.<sup>4</sup>
 
-![](Images/swisual-debugger-disassembler.png?raw=true "Swisual Debugger")
+![](docs/Images/swisual-debugger-disassembler.png?raw=true "Swisual Debugger")
 
 <sub>
 	<sup>4</sup> Modifying the `Debugger` property on a `JittedCpu` will cause the JIT cache to be flushed.

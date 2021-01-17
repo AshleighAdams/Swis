@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>Link</TrimMode>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- The below will cause our exception messages to be translated. -->
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+    <!-- This is an exe, so don't try to use SourceLink -->
+    <IsPackable>false</IsPackable>
+    <DeterministicSourcePaths>false</DeterministicSourcePaths>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dirkster.AvalonDock" Version="4.50.1" />
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.50.1" />
+    <PackageReference Include="fernandreu.ScintillaNET.WPF" Version="3.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Swis.Development\Swis.Development.csproj" />
+    <ProjectReference Include="..\Swis.Runtime\Swis.Runtime.csproj" />
+  </ItemGroup>
+
+
+</Project>
