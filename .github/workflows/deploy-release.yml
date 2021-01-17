@@ -88,6 +88,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish Nuget
-      run: dotnet nuget push src/**/*.nupkg -k ${GITHUB_TOKEN} -s github --skip-duplicate --no-symbols 1
+      run: |
+        dotnet nuget push src/**/*.nupkg -k ${NUGETORG_TOKEN} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols 1
+        dotnet nuget push src/**/*.nupkg -k ${GITHUB_TOKEN} -s github --skip-duplicate --no-symbols 1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NUGETORG_TOKEN: ${{ secrets.NUGETORG_TOKEN }}
