@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Product>Swis Runtime</Product>
     <Title>Swis Runtime</Title>
     <PackageProjectUrl>https://github.com/AshleighAdams/Swis</PackageProjectUrl>
-    <Description>Simple Wire Instruction Set</Description>
+    <Description>Simple Wire Instruction Set. A virtual architecture and emulator focused on running virtual CPUs in games.</Description>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

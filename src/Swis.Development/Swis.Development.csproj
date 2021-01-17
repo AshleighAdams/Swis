@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <PackageProjectUrl>https://github.com/AshleighAdams/Swis</PackageProjectUrl>
+    <Description>Development package to facilitate working with Swis.</Description>
   </PropertyGroup>
 
   <ItemGroup>
