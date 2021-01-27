@@ -42,7 +42,7 @@ jobs:
       run: |
         git fetch --tags --force
         git checkout "${GITHUB_REF#refs/*/}"
-        dotnet tool install --global GitVersion.Tool --version 5.5.1
+        dotnet tool install --global minver-cli --version 2.4.0
         curl https://github.com/AshleighAdams.gpg | gpg --import
 
     - name: Restore
@@ -73,8 +73,7 @@ jobs:
         git tag -v --format='%(body)' "$tag" >> msg.txt
         options+=("-F" "msg.txt")
 
-        pretag="$(dotnet gitversion -nonormalize -output json -showvariable PreReleaseTag)"
-        if [[ "$pretag" != "" ]]; then
+        if [[ "$(minver --tag-prefix=v --verbosity=e)" == *"-"* ]]; then
           options+=("--prerelease")
         fi
 
