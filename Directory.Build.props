@@ -42,14 +42,10 @@
 
   <!-- Automatic versioning -->
   <PropertyGroup>
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-    <MinVerMinimumMajorMinor>0.2</MinVerMinimumMajorMinor>
+    <VerliteMinimumVersion>0.2.1</VerliteMinimumVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="2.4.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Verlite.MsBuild" Version="0.1.0-alpha.0.28" PrivateAssets="All" />
   </ItemGroup>
 
   <!-- Deterministic CI builds, normalizing file paths etc... -->
