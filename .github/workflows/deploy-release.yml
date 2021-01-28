@@ -15,8 +15,6 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: '0'
 
     - name: Setup .NET Core 3.1
       uses: actions/setup-dotnet@v1
@@ -38,11 +36,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
 
-    - name: Setup GitVersion for release
+    - name: Setup Verlite
       run: |
-        git fetch --tags --force
-        git checkout "${GITHUB_REF#refs/*/}"
-        dotnet tool install --global minver-cli --version 2.4.0
+        dotnet tool install --global Verlite.CLI --version 0.1.0-alpha.0.28
+        verlite --auto-fetch
         curl https://github.com/AshleighAdams.gpg | gpg --import
 
     - name: Restore
@@ -73,7 +70,7 @@ jobs:
         git tag -v --format='%(body)' "$tag" >> msg.txt
         options+=("-F" "msg.txt")
 
-        if [[ "$(minver --tag-prefix=v --verbosity=e)" == *"-"* ]]; then
+        if [[ "$(verlite --show prerelease)" != "" ]]; then
           options+=("--prerelease")
         fi
 

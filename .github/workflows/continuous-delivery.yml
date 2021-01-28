@@ -16,8 +16,6 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
-      with:
-        fetch-depth: '0'
 
     - name: Setup .NET Core 3.1
       uses: actions/setup-dotnet@v1
@@ -38,6 +36,12 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Build.props') }}-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
+
+    - name: Setup Verlite
+      run: |
+        dotnet tool install --global Verlite.CLI --version 0.1.0-alpha.0.28
+        verlite --auto-fetch
+        curl https://github.com/AshleighAdams.gpg | gpg --import
 
     - name: Restore
       run: dotnet restore
