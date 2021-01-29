@@ -39,7 +39,7 @@ jobs:
 
     - name: Setup Verlite
       run: |
-        dotnet tool install --global Verlite.CLI --version 0.1.0-alpha.0.28
+        dotnet tool install --global Verlite.CLI --version 0.1.0
         verlite --auto-fetch
         curl https://github.com/AshleighAdams.gpg | gpg --import
 
