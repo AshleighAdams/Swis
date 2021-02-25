@@ -45,13 +45,16 @@
     <VerliteMinimumVersion>0.2.1</VerliteMinimumVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Verlite.MsBuild" Version="0.5.0" PrivateAssets="All" />
+    <PackageReference Include="Verlite.MsBuild" Version="1.0.0-rc.1" PrivateAssets="All" />
   </ItemGroup>
 
   <!-- Deterministic CI builds, normalizing file paths etc... -->
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == ''">
+    <VerliteBuildMetadata>local</VerliteBuildMetadata>
   </PropertyGroup>
 
   <!-- SourceLink support -->
