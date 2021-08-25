@@ -25,7 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dirkster.AvalonDock" Version="4.60.0" />
-    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.51.1" />
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.60.0" />
     <PackageReference Include="fernandreu.ScintillaNET.WPF" Version="3.0.2" />
   </ItemGroup>
 
