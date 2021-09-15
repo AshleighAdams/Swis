@@ -46,7 +46,7 @@
     <VerliteFilterTags Condition="'$(GITHUB_ACTIONS)' == 'true'">git tag --verify {}</VerliteFilterTags>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Verlite.MsBuild" Version="1.2.0" PrivateAssets="All" />
+    <PackageReference Include="Verlite.MsBuild" Version="2.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <!-- Deterministic CI builds, normalizing file paths etc... -->
