@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Allow using `init` and records in .NET Core versions prior to .NET 5 -->
-    <PackageReference Include="IsExternalInit" Version="1.0.1" PrivateAssets="All" />
+    <PackageReference Include="IsExternalInit" Version="1.0.2" PrivateAssets="All" />
   </ItemGroup>
   <!-- <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)/.meta/packageicon.png" Pack="true" PackagePath="/images/" Visible="false" />
