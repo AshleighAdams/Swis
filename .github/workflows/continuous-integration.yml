@@ -42,7 +42,7 @@ jobs:
       run: |
         verlite_version="$(grep '"Verlite\.MsBuild"' Directory.Build.props | LC_ALL=en_US.utf8 grep -Po 'Version="\K[^"]+')"
         dotnet tool install --global Verlite.CLI --version "$verlite_version"
-        verlite . --auto-fetch --verbosity verbatim
+        verlite . --auto-fetch --enable-lightweight-tags --verbosity verbatim
         curl https://github.com/AshleighAdams.gpg | gpg --import
 
     - name: Restore

@@ -42,7 +42,7 @@ jobs:
       run: |
         verlite_version="$(grep '"Verlite\.MsBuild"' Directory.Build.props | LC_ALL=en_US.utf8 grep -Po 'Version="\K[^"]+')"
         dotnet tool install --global Verlite.CLI --version "$verlite_version"
-        verlite . --auto-fetch --verbosity verbatim
+        verlite . --auto-fetch --enable-lightweight-tags --verbosity verbatim
         curl https://github.com/AshleighAdams.gpg | gpg --import
         echo "BDE36CC9850449DD77ED51CFBF8DF4780B7BD0AD:6:" | gpg --import-ownertrust # Ashleigh Adams
         [[ "v$(verlite . --filter-tags 'git tag --verify {}')" == "${GITHUB_REF#refs/*/}" ]] # error out if the versions don't match

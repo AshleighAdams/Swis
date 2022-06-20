@@ -43,7 +43,6 @@
   <!-- Automatic versioning -->
   <PropertyGroup>
     <VerliteMinimumVersion>0.2.1</VerliteMinimumVersion>
-    <VerliteFilterTags Condition="'$(GITHUB_ACTIONS)' == 'true'">git tag --verify {}</VerliteFilterTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Verlite.MsBuild" Version="2.2.0-rc.1" PrivateAssets="All" />
