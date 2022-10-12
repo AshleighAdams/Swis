@@ -45,7 +45,7 @@
     <VerliteMinimumVersion>0.2.1</VerliteMinimumVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Verlite.MsBuild" Version="2.3.0" PrivateAssets="All" />
+    <PackageReference Include="Verlite.MsBuild" Version="2.3.1" PrivateAssets="All" />
   </ItemGroup>
 
   <!-- Deterministic CI builds, normalizing file paths etc... -->
